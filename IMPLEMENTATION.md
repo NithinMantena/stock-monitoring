@@ -33,4 +33,4 @@ This is a working first release of the research desk and monitoring pipeline. It
 
 The initial release intentionally shows missing data, uncertain news and incomplete coverage instead of filling those gaps with model guesses.
 
-The implementation is committed locally on `codex/initial-app`. GitHub publication awaits explicit approval. Temporary service-role and scheduler-secret setup files were removed after verification; production secrets remain in Supabase.
+The implementation is published to the private GitHub repository [NithinMantena/stock-monitoring](https://github.com/NithinMantena/stock-monitoring) on `codex/initial-app`. Secrets, local databases and full imported research files are excluded from Git. Temporary service-role and scheduler-secret setup files were removed after verification; production secrets remain in Supabase.
