@@ -1,0 +1,5 @@
+project_id = "stock-monitoring"
+[functions.desk]
+verify_jwt = false
+entrypoint = "./functions/desk/index.ts"
+import_map = "./functions/desk/deno.json"
