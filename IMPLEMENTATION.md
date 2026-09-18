@@ -4,6 +4,7 @@ This is a working first release of the research desk and monitoring pipeline. It
 
 ## Verified
 
+- Permanent Cloudflare Pages website: [Research Desk](https://research-desk-2p0.pages.dev). Its login page loads in the browser; Supabase sign-in redirects and backend origin allowlist use this hostname. Actual sign-in email delivery remains for the owner to exercise from the login page.
 - TypeScript compilation and production build pass. Initial production JavaScript is 135.92 KB compressed; formatted-note rendering loads separately (35.11 KB compressed).
 - 19 automated checks pass: Chicago/DST cadence, weekly frequency, historical price crossings, repeat suppression and rearming, wrong-currency/future/invalid-P/E rejection, suspicious price discontinuities, optimistic concurrency, atomic budgets/leases, note export/restore, original import preservation, duplicate import prevention, RSS/Atom parsing, feed URL restrictions, validated model answers, visible classification failures, and safe disabled email behavior, and restoring daily research snapshots with normalized schema defaults.
 - Real cloud API rejects unauthenticated calls. Anonymous database reads cannot access private records.
@@ -16,7 +17,6 @@ This is a working first release of the research desk and monitoring pipeline. It
 
 ## Setup still required
 
-- Cloudflare login and permanent frontend deployment; configure the final sign-in redirect URL.
 - Market-data credentials, instrument mapping/coverage validation, and a decision on affordable automatic P/E/market-cap data. No market subscription purchased.
 - Resend key and verified sender; activate and test Chicago-time daily email. No real email sent.
 - Review the staged import before adding its entries to the live company list.

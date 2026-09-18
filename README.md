@@ -2,6 +2,8 @@
 
 A private stock research notebook and monitoring app for a few hundred researched companies. The approved product plan is in [PRD.md](PRD.md).
 
+Open [Research Desk](https://research-desk-2p0.pages.dev) on any device. Enter `nithin@mantena.com` and choose **Email me a sign-in link**; open the link on the device you want to use.
+
 ## What works
 
 - Add a company by name, search its notes, change its status, archive it, and use research groups and tags.
@@ -37,7 +39,7 @@ npm run backup
 npm run import:preview
 ```
 
-`.env.production.local`, when configured, makes the production bundle connect to Supabase. `npm run dev` continues to use local SQLite unless development Vite variables are set. With the production bundle built, `npm start` also serves the cloud-connected sign-in page at `http://127.0.0.1:8787` while permanent static hosting is being configured. Local and cloud desks are separate; JSON export/restore moves research between them.
+`.env.production.local`, when configured, makes the production bundle connect to Supabase. `npm run dev` continues to use local SQLite unless development Vite variables are set. With the production bundle built, `npm start` also serves the cloud-connected sign-in page at `http://127.0.0.1:8787`. Local and cloud desks are separate; JSON export/restore moves research between them.
 
 ## Hosted project
 

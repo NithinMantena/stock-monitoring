@@ -4,18 +4,19 @@ The Supabase database, private owner account, TypeSafe integration, and monitori
 
 ## Frontend hosting
 
-Cloudflare authentication is still needed to publish the permanent web address:
+The permanent website is [Research Desk](https://research-desk-2p0.pages.dev), hosted in the Cloudflare Pages project `research-desk`. Open it on any device, enter `nithin@mantena.com`, and choose **Email me a sign-in link**. Open the emailed link on the device where you want to sign in; no password was assigned during setup.
+
+To publish subsequent frontend updates from this workspace:
 
 ```powershell
 npx wrangler login
-npx wrangler pages project create research-desk --production-branch main
 npm run build
-npx wrangler pages deploy dist --project-name research-desk
+npx wrangler pages deploy dist --project-name research-desk --branch codex/initial-app
 ```
 
-Use the project name actually created if the name is unavailable. The Cloudflare build needs these **public** values: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL`. The local `.env.production.local` was prepared from the selected project. No secret belongs in the frontend bundle.
+The production branch is `codex/initial-app`. Deployment is a direct upload; pushing to GitHub alone does not publish frontend changes. The build needs these **public** values: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL`. The local `.env.production.local` was prepared from the selected project. No secret belongs in the frontend bundle.
 
-The current Auth Site URL is the local cloud-connected build at `http://127.0.0.1:8787`. It must change when permanent hosting is deployed. After obtaining the final hostname:
+Supabase Auth's Site URL and redirect allowlist now include `https://research-desk-2p0.pages.dev`, and the backend's `APP_ORIGIN` allows this exact origin plus the local development origins. Public signup remains disabled. When changing the hostname:
 
 1. Add its exact HTTPS origin to the Supabase `APP_ORIGIN` secret (alongside local origins if desired).
 2. Configure Supabase Auth's Site URL and redirect allowlist to this hostname. Review `npx supabase config diff` before `config push`.

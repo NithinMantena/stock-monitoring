@@ -42,7 +42,7 @@ const secrets: Record<string, string> = {
   OWNER_EMAIL: "nithin@mantena.com",
   MONITOR_OWNER_ID: owner.id,
   CRON_SECRET: setup.cronSecret,
-  APP_ORIGIN: "http://127.0.0.1:5173,http://127.0.0.1:8787",
+  APP_ORIGIN: "https://research-desk-2p0.pages.dev,http://127.0.0.1:5173,http://127.0.0.1:8787",
   TYPESAFE_MODEL: "jev-1.13.0",
   TYPESAFE_MONTHLY_BUDGET_USD: "2",
   ENABLE_EMAIL_DELIVERY: "false",
