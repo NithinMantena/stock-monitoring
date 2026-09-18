@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ConflictError, type Doc, type Store } from "./model.ts";
+import { readDatabase } from "./database-read.ts";
 export class SupabaseStore implements Store {
   private db: SupabaseClient;
   private owner: string;
@@ -20,29 +21,31 @@ export class SupabaseStore implements Store {
     const out: Doc<T>[] = [];
     for (let start = 0; ; start += 500) {
       if (options?.limit && start >= options.limit) break;
-      const { data, error } = await this.db
-        .from(options?.summary ? "desk_ui_records" : "desk_records")
-        .select("*")
-        .eq("owner_id", this.owner)
-        .eq("kind", kind)
-        .order("updated_at", { ascending: false })
-        .order("id")
-        .range(start, Math.min(start + 499, (options?.limit || 1000000) - 1));
-      if (error) throw new Error("Database read failed.");
-      out.push(...data.map((r) => this.decode<T>(r)));
-      if (data.length < 500) break;
+      const data = await readDatabase(`list:${kind}`, () =>
+        this.db
+          .from(options?.summary ? "desk_ui_records" : "desk_records")
+          .select("*")
+          .eq("owner_id", this.owner)
+          .eq("kind", kind)
+          .order("updated_at", { ascending: false })
+          .order("id")
+          .range(start, Math.min(start + 499, (options?.limit || 1000000) - 1)),
+      );
+      out.push(...(data || []).map((r) => this.decode<T>(r)));
+      if (!data || data.length < 500) break;
     }
     return out;
   }
   async get<T>(kind: string, id: string) {
-    const { data, error } = await this.db
-      .from("desk_records")
-      .select("*")
-      .eq("owner_id", this.owner)
-      .eq("kind", kind)
-      .eq("id", id)
-      .maybeSingle();
-    if (error) throw new Error("Database read failed.");
+    const data = await readDatabase(`get:${kind}`, () =>
+      this.db
+        .from("desk_records")
+        .select("*")
+        .eq("owner_id", this.owner)
+        .eq("kind", kind)
+        .eq("id", id)
+        .maybeSingle(),
+    );
     return data ? this.decode<T>(data) : null;
   }
   async put<T>(

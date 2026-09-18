@@ -35,6 +35,7 @@ if (authError || !auth.session) throw new Error("Test authentication failed.");
 const headers = {
   Authorization: `Bearer ${auth.session.access_token}`,
   "Content-Type": "application/json",
+  Origin: "https://research-desk-2p0.pages.dev",
 };
 const call = async (path: string, body?: any) => {
   const response = await fetch(setup.url + "/functions/v1/desk" + path, {
@@ -47,6 +48,8 @@ const call = async (path: string, body?: any) => {
     throw new Error(
       `${path}: ${response.status} ${result.error || result.message}`,
     );
+  if (response.headers.get("access-control-allow-origin") !== headers.Origin)
+    throw new Error("Hosted website origin is not allowed.");
   return result;
 };
 const state = await call("/bootstrap");
@@ -55,6 +58,7 @@ console.log(
     unauthenticatedBlocked: true,
     anonymousDatabaseBlocked: true,
     cloudBootstrap: true,
+    hostedOriginAllowed: true,
     typeSafeConnected: state.configuration.typesafe,
     stagedImports: state.imports.length,
   }),

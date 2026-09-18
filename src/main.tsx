@@ -214,6 +214,7 @@ interface Bootstrap {
 function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
   const [section, setSection] = useState("companies");
   const [filter, setFilter] = useState<Status | "all" | "archived">("all");
@@ -235,6 +236,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const flushing = useRef(new Set<string>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const reload = useCallback(async () => {
+    setLoadError("");
     try {
       const next = await api<Bootstrap>("/bootstrap");
       for (const doc of next.companies) {
@@ -249,7 +251,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       }
       setData(next);
     } catch (e) {
-      setError((e as Error).message);
+      setLoadError((e as Error).message);
     }
   }, []);
   useEffect(() => {
@@ -411,8 +413,9 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     return (
       <main className="login">
         <div className="brand">RESEARCH DESK</div>
-        <p>{error || "Opening your desk…"}</p>
-        {error && <button onClick={reload}>Retry</button>}
+        <p role="status">{loadError || "Opening your desk…"}</p>
+        {loadError && <button onClick={reload}>Retry</button>}
+        {loadError && onLogout && <button onClick={onLogout}>Sign out</button>}
       </main>
     );
   return (
@@ -500,6 +503,11 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
           </div>
         </aside>
         <main className="workspace">
+          {loadError && (
+            <div className="notice" role="alert">
+              {loadError} <button onClick={reload}>Retry</button>
+            </div>
+          )}
           {error && (
             <div className="banner error" role="alert">
               {error}

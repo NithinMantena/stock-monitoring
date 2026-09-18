@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { DatabaseReadError } from "./database-read.ts";
 import { z, ZodError } from "zod";
 import {
   CompanySchema,
@@ -47,7 +48,11 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
                 .join("; ")
             : error.message || "Request failed",
       },
-      error instanceof ConflictError ? 409 : 400,
+      error instanceof ConflictError
+        ? 409
+        : error instanceof DatabaseReadError
+          ? error.status
+          : 400,
     ),
   );
   api.get("/bootstrap", async (c) => {
