@@ -8,6 +8,7 @@ This is a working first release of the research desk and monitoring pipeline. It
 - 19 automated checks pass: Chicago/DST cadence, weekly frequency, historical price crossings, repeat suppression and rearming, wrong-currency/future/invalid-P/E rejection, suspicious price discontinuities, optimistic concurrency, atomic budgets/leases, note export/restore, original import preservation, duplicate import prevention, RSS/Atom parsing, feed URL restrictions, validated model answers, visible classification failures, and safe disabled email behavior, and restoring daily research snapshots with normalized schema defaults.
 - Real cloud API rejects unauthenticated calls. Anonymous database reads cannot access private records.
 - A tiny synthetic live request to TypeSafe `jev-1.13.0` classified an earnings warning as important and selected supporting evidence. Synthetic cloud company/event records were removed afterward. This proves connectivity and typed integration, not real-world recall or calibration.
+- Live TypeSafe evaluation on 12 hand-written synthetic cases surfaced all 9 material cases, matched all 4 watch-point cases and all 3 directional expectations, and retained one incidental story for review. No model errors. Median request 205 ms, slowest/p95 537 ms; 11,945 input tokens, estimated cost $0.00050169. These are fixture results, not measured real-universe recall. Full results: `validation/news-evaluation.json`; reproduce with `node scripts/evaluate-news.ts`.
 - Hosted scheduler is active and returned HTTP 200. It checks due companies every five minutes; it does not refresh every company that often.
 - Browser-created company, note editing, tab switching and reload retained the saved notes.
 - A 501-company local fixture returned the entire warm bootstrap in **38.2 ms p95** across 30 samples (1,506,769 bytes, median 23.49 ms). This measures the local API and response transfer, not browser paint time or remote latency. Browser search reduced the 501 entries to the exact requested company.
@@ -31,3 +32,5 @@ This is a working first release of the research desk and monitoring pipeline. It
 - Optional migration of the old app's actual Drive `data.json`; the supplied HTML does not contain that data.
 
 The initial release intentionally shows missing data, uncertain news and incomplete coverage instead of filling those gaps with model guesses.
+
+The implementation is committed locally on `codex/initial-app`. GitHub publication awaits explicit approval. Temporary service-role and scheduler-secret setup files were removed after verification; production secrets remain in Supabase.
