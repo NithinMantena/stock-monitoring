@@ -15,11 +15,11 @@ npx wrangler pages deploy dist --project-name research-desk
 
 Use the project name actually created if the name is unavailable. The Cloudflare build needs these **public** values: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL`. The local `.env.production.local` was prepared from the selected project. No secret belongs in the frontend bundle.
 
-After obtaining the final hostname:
+The current Auth Site URL is the local cloud-connected build at `http://127.0.0.1:8787`. It must change when permanent hosting is deployed. After obtaining the final hostname:
 
 1. Add its exact HTTPS origin to the Supabase `APP_ORIGIN` secret (alongside local origins if desired).
 2. Configure Supabase Auth's Site URL and redirect allowlist to this hostname. Review `npx supabase config diff` before `config push`.
-3. Disable new account signup for this single-owner desk. The allowed owner account already exists.
+3. Public signup has been disabled for this single-owner desk. The allowed owner account already exists.
 4. Test a sign-in link requested from the app, company creation, notes, refresh and sign-out. Do not send a login email automatically without the user requesting it.
 
 ## Quote data

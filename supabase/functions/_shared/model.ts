@@ -1,22 +1,7 @@
 import { z } from "zod";
-
-export const statuses = [
-  "inbox",
-  "watchlist",
-  "perpetual",
-  "owned",
-  "pass",
-  "sold",
-] as const;
-export type Status = (typeof statuses)[number];
-export const statusLabels: Record<Status, string> = {
-  inbox: "Inbox",
-  watchlist: "Watchlist",
-  perpetual: "Perpetual watch",
-  owned: "Portfolio",
-  pass: "Passed",
-  sold: "Sold",
-};
+import { statuses, type Status } from "./constants.ts";
+export { statuses, statusLabels, defaultSettings } from "./constants.ts";
+export type { Status } from "./constants.ts";
 const text = (max = 500) => z.string().max(max);
 const optionalNumber = z.number().finite().nullable();
 export const QuoteSchema = z.object({
@@ -125,7 +110,6 @@ export const SettingsSchema = z.object({
   digestEnabled: z.boolean().default(false),
   skipEmpty: z.boolean().default(false),
 });
-export const defaultSettings: Settings = SettingsSchema.parse({});
 export function newCompany(name: string, status: Status = "inbox"): Company {
   const now = new Date().toISOString();
   const query = new URLSearchParams({

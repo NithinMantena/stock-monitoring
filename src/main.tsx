@@ -8,18 +8,19 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import { createClient, type Session } from "@supabase/supabase-js";
-import ReactMarkdown from "react-markdown";
+const ReactMarkdown = React.lazy(() => import("react-markdown"));
 import {
-  CompanySchema,
-  RuleSchema,
   defaultSettings,
   statusLabels,
   statuses,
+} from "../supabase/functions/_shared/constants";
+import {
   type Company,
   type DeskEvent,
   type Doc,
   type Settings,
   type Status,
+  type Rule,
 } from "../supabase/functions/_shared/model";
 import {
   cadenceOf,
@@ -154,7 +155,7 @@ function Root() {
               autoComplete="username"
               type="email"
               name="email"
-              
+
               required
             />
           </Field>
@@ -1047,16 +1048,18 @@ function CompanyDetail({
             </div>
             {preview ? (
               <div className="markdown">
-                <ReactMarkdown
-                  skipHtml
-                  components={{
-                    a: (props) => (
-                      <a {...props} target="_blank" rel="noreferrer" />
-                    ),
-                  }}
-                >
-                  {c.notes || "*No notes yet.*"}
-                </ReactMarkdown>
+                <React.Suspense fallback={<p>Formatting notes…</p>}>
+                  <ReactMarkdown
+                    skipHtml
+                    components={{
+                      a: (props) => (
+                        <a {...props} target="_blank" rel="noreferrer" />
+                      ),
+                    }}
+                  >
+                    {c.notes || "*No notes yet.*"}
+                  </ReactMarkdown>
+                </React.Suspense>
               </div>
             ) : (
               <textarea
@@ -1283,15 +1286,21 @@ function CompanyDetail({
               onSubmit={(e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
-                const rule = RuleSchema.parse({
+                const rule: Rule = {
                   id: crypto.randomUUID(),
-                  metric: f.get("metric"),
+                  metric: f.get("metric") as Rule["metric"],
                   threshold: Number(f.get("threshold")),
                   currency: String(f.get("currency")).toUpperCase(),
                   baseline: f.get("baseline")
                     ? Number(f.get("baseline"))
                     : null,
-                });
+                  enabled: true,
+                  triggered: false,
+                  episode: 0,
+                  lastSession: "",
+                  lastFingerprint: "",
+                  basis: "Trailing P/E",
+                };
                 if (rule.metric === "decline" && !rule.baseline) {
                   alert("A decline alert needs a baseline price.");
                   return;

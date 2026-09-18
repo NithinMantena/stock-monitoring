@@ -23,10 +23,14 @@ export interface Judgment {
   tokens: number;
 }
 export function configuration(env: Env) {
+  const requestedBudget = Number(env.TYPESAFE_MONTHLY_BUDGET_USD ?? 2);
   return {
     typesafe: !!env.TYPESAFE_API_KEY,
     model: env.TYPESAFE_MODEL || "jev-1.13.0",
-    modelBudget: Number(env.TYPESAFE_MONTHLY_BUDGET_USD || 2),
+    modelBudget:
+      Number.isFinite(requestedBudget) && requestedBudget >= 0
+        ? requestedBudget
+        : 2,
     eodhd: !!env.EODHD_API_KEY,
     fmp: false,
     email:

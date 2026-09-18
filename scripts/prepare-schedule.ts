@@ -10,6 +10,8 @@ create extension if not exists pg_net with schema extensions;
 do $block$ begin
  if not exists(select 1 from vault.secrets where name='research_desk_cron') then
   perform vault.create_secret('${setup.cronSecret}', 'research_desk_cron', 'Research Desk scheduler credential');
+ else
+  perform vault.update_secret((select id from vault.secrets where name='research_desk_cron'), '${setup.cronSecret}');
  end if;
 end $block$;
 select cron.schedule('research-desk-monitor','*/5 * * * *',$job$

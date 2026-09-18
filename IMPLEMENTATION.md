@@ -4,8 +4,8 @@ This is a working first release of the research desk and monitoring pipeline. It
 
 ## Verified
 
-- TypeScript compilation and production build pass.
-- 18 automated checks pass: Chicago/DST cadence, weekly frequency, historical price crossings, repeat suppression and rearming, wrong-currency/future/invalid-P/E rejection, suspicious price discontinuities, optimistic concurrency, atomic budgets/leases, note export/restore, original import preservation, duplicate import prevention, RSS/Atom parsing, feed URL restrictions, validated model answers, visible classification failures, and safe disabled email behavior.
+- TypeScript compilation and production build pass. Initial production JavaScript is 135.92 KB compressed; formatted-note rendering loads separately (35.11 KB compressed).
+- 19 automated checks pass: Chicago/DST cadence, weekly frequency, historical price crossings, repeat suppression and rearming, wrong-currency/future/invalid-P/E rejection, suspicious price discontinuities, optimistic concurrency, atomic budgets/leases, note export/restore, original import preservation, duplicate import prevention, RSS/Atom parsing, feed URL restrictions, validated model answers, visible classification failures, and safe disabled email behavior, and restoring daily research snapshots with normalized schema defaults.
 - Real cloud API rejects unauthenticated calls. Anonymous database reads cannot access private records.
 - A tiny synthetic live request to TypeSafe `jev-1.13.0` classified an earnings warning as important and selected supporting evidence. Synthetic cloud company/event records were removed afterward. This proves connectivity and typed integration, not real-world recall or calibration.
 - Hosted scheduler is active and returned HTTP 200. It checks due companies every five minutes; it does not refresh every company that often.

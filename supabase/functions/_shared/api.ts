@@ -466,8 +466,10 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       .parse(await c.req.json());
     // Validate all company/settings records before writing. Restore only missing records, never overwrite newer work.
     for (const record of input.records) {
-      if (record.kind === "company") CompanySchema.parse(record.data);
-      if (record.kind === "settings") SettingsSchema.parse(record.data);
+      if (record.kind === "company")
+        record.data = CompanySchema.parse(record.data);
+      if (record.kind === "settings")
+        record.data = SettingsSchema.parse(record.data);
     }
     let restored = 0;
     for (const record of input.records)

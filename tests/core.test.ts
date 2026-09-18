@@ -14,6 +14,7 @@ import {
   validateFeedUrl,
 } from "../supabase/functions/_shared/providers";
 import {
+  dailySnapshot,
   processArticle,
   saveQuoteObservations,
   sendDueDigest,
@@ -157,6 +158,37 @@ describe("numerical alerts", () => {
   });
 });
 describe("durable data and API", () => {
+  it("restores a daily research snapshot with schema defaults and preserves an existing newer note", async () => {
+    const source = store();
+    const c = newCompany("Snapshot Company");
+    c.notes = "Research to preserve";
+    await source.put("company", c.id, c, 0);
+    await dailySnapshot(source, new Date("2026-09-18T13:00:00Z"));
+    const snapshot = (await source.get<any>("backup", "2026-09-18"))!.data;
+    expect(snapshot.records[0].data.quoteHistory).toBeUndefined();
+    const target = store();
+    const app = createApi(target, {}, "local");
+    const request = () =>
+      app.request("/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      });
+    expect((await request()).status).toBe(200);
+    const restored = (await target.get<any>("company", c.id))!;
+    expect(restored.data.quoteHistory).toEqual([]);
+    expect(restored.data.notes).toBe(c.notes);
+    await target.put(
+      "company",
+      c.id,
+      { ...restored.data, notes: "Newer work" },
+      restored.version,
+    );
+    await request();
+    expect((await target.get<any>("company", c.id))!.data.notes).toBe(
+      "Newer work",
+    );
+  });
   it("rejects stale writes without losing the latest note", async () => {
     const s = store();
     const c = newCompany("Example");

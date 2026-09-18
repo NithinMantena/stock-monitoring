@@ -1,4 +1,8 @@
 project_id = "stock-monitoring"
+[auth]
+site_url = "http://127.0.0.1:8787"
+additional_redirect_urls = ["http://127.0.0.1:8787"]
+enable_signup = false
 [functions.desk]
 verify_jwt = false
 entrypoint = "./functions/desk/index.ts"

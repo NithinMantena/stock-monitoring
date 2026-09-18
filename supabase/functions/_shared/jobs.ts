@@ -404,7 +404,7 @@ export async function dailySnapshot(store: Store, now = new Date()) {
     },
     0,
   );
-  const cutoff = new Date(now.getTime() - 30 * 86400000)
+  const cutoff = new Date(now.getTime() - 29 * 86400000)
     .toISOString()
     .slice(0, 10);
   for (const old of await store.list("backup", { summary: true }))
