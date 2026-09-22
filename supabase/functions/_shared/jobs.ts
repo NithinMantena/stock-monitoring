@@ -10,6 +10,13 @@ import {
 } from "./model.ts";
 import { cadenceOf, chicagoParts, due, evaluateRules, hash } from "./engine.ts";
 import {
+  companyNewsUrl,
+  isDefaultNewsFeed,
+  newsBucket,
+  newsPriority,
+  eventPriority,
+} from "./news.ts";
+import {
   classifyArticle,
   configuration,
   fetchFeed,
@@ -17,6 +24,21 @@ import {
   type Article,
   type Env,
 } from "./providers.ts";
+import {
+  enrichArticle,
+  discoverPrimary,
+  canonicalUrl,
+  primaryUrls,
+} from "./article-content.ts";
+import {
+  SCREENING_VERSION,
+  articleAgeDays,
+  digestImportance,
+  excludedSource,
+  groupNews,
+  currentAssessment,
+  type NewsAssessment,
+} from "./screening-policy.ts";
 
 export async function addEvent(store: Store, event: DeskEvent) {
   if (await store.get("event", event.id)) return;
@@ -31,10 +53,41 @@ export async function processArticle(
   article: Article,
   store: Store,
   env: Env,
+  options: {
+    existingId?: string;
+    reprocess?: boolean;
+    preferredLookup?: boolean;
+  } = {},
 ): Promise<DeskEvent> {
-  const id = `news-${c.id}-${article.id}`;
+  const id = options.existingId || `news-${c.id}-${article.id}`;
+  const old = await store.get<DeskEvent>("event", id);
+  if (old && !options.reprocess) return old.data;
+  // Automatic monitoring, manual searches and retries have different job locks.
+  // Serialize their shared paid work for an article.
+  const key = `article-${id}`,
+    lease = await store.claim(key, 600);
+  if (!lease) throw new ConflictError();
+  try {
+    return await processUnlockedArticle(c, article, store, env, options);
+  } finally {
+    await store.release(key, lease);
+  }
+}
+
+async function processUnlockedArticle(
+  c: Company,
+  article: Article,
+  store: Store,
+  env: Env,
+  options: {
+    existingId?: string;
+    reprocess?: boolean;
+    preferredLookup?: boolean;
+  },
+): Promise<DeskEvent> {
+  const id = options.existingId || `news-${c.id}-${article.id}`;
   const existing = await store.get<DeskEvent>("event", id);
-  if (existing) return existing.data;
+  if (existing && !options.reprocess) return existing.data;
   const event: DeskEvent = {
     id,
     companyId: c.id,
@@ -49,32 +102,379 @@ export async function processArticle(
     rawText: article.text,
     classification: { source: article.source, official: article.official },
   };
+  const baseAssessment: NewsAssessment = {
+    version: SCREENING_VERSION,
+    at: new Date().toISOString(),
+    disposition: "uncertain",
+    reason: "Awaiting fundamental screening.",
+    category: "other",
+    identity: 0,
+    materiality: 0,
+    quality: 0,
+    addedValue: 0,
+    evidenceSufficiency: 0,
+    primary: article.official,
+    contentDepth: article.contentDepth || "snippet",
+    charactersRead: 0,
+    availableCharacters: article.text.length,
+    retrievalNote: "",
+    possibleMajor: false,
+    sourceUrl: article.url,
+    attempts:
+      (existing?.data.screening?.contextRevision === c.newsRevision
+        ? existing?.data.screening?.attempts || 0
+        : 0) + 1,
+    contextRevision: c.newsRevision,
+  };
   try {
-    const result = await classifyArticle(c, article, env, store);
-    event.classification = { ...event.classification, ...result };
-    event.evidence = result.evidence;
-    event.matches = result.matches.filter((x) => x.relevance >= 0.35);
-    // Low-confidence identities/materiality stay visible. Suppression requires both strong identity and little relevance, or a very clear mismatch.
-    const relevant = result.matches.some((x) => x.relevance >= 0.35);
-    event.priority =
-      result.identity >= 0.7 && result.major >= 0.65 && result.evidence
-        ? "major"
-        : result.identity < 0.1 ||
-            (result.identity >= 0.8 && result.major < 0.15 && !relevant)
-          ? "suppressed"
-          : "possible";
-    if (relevant && event.priority === "suppressed")
-      event.priority = "possible";
+    const excluded = excludedSource(
+      article.source,
+      article.url,
+      c.excludedNewsSources,
+    );
+    if (excluded) {
+      event.screening = {
+        ...baseAssessment,
+        disposition: "suppressed",
+        reason: "Source excluded by your news preferences.",
+        reasonCode: "explicit_exclusion",
+        articleRole: "rejected",
+        development: { status: "irrelevant" },
+      };
+      event.priority = "suppressed";
+    } else {
+      article = await enrichArticle(c, article, env, store);
+      event.url = article.url;
+      event.publishedAt = article.publishedAt || event.publishedAt;
+      event.rawText = article.text;
+      event.body = article.text.slice(0, 1000);
+      event.classification = {
+        source: article.source,
+        official: article.official,
+      };
+      if (excludedSource(article.source, article.url, c.excludedNewsSources)) {
+        event.screening = {
+          ...baseAssessment,
+          disposition: "suppressed",
+          reason: "Source excluded by your news preferences.",
+          sourceUrl: article.url,
+        };
+        event.priority = "suppressed";
+      } else {
+        const documentHash = await hash(
+          JSON.stringify([
+            article.title,
+            article.text,
+            article.publishedAt,
+            article.official,
+            article.contentDepth,
+          ]),
+        );
+        const history = (
+          await store.list<DeskEvent>("event", {
+            companyId: c.id,
+            summary: true,
+            limit: 200,
+          })
+        )
+          .map((d) => d.data)
+          .filter(
+            (e) =>
+              e.kind === "news" &&
+              e.id !== id &&
+              e.screening?.version === SCREENING_VERSION,
+          );
+        const terms = new Set(
+          article.title.toLowerCase().match(/[a-z0-9]{4,}/g) || [],
+        );
+        const overlap = (e: DeskEvent) =>
+          [
+            ...new Set(
+              `${e.title} ${e.evidence || ""}`
+                .toLowerCase()
+                .match(/[a-z0-9]{4,}/g) || [],
+            ),
+          ].filter((t) => terms.has(t)).length;
+        const recent = history
+          .map((e) => ({ e, overlap: overlap(e) }))
+          .filter(
+            (item) =>
+              item.overlap >= 2 &&
+              item.e.screening?.documentHash !== documentHash,
+          )
+          .sort(
+            (a, b) =>
+              b.overlap - a.overlap ||
+              b.e.discoveredAt.localeCompare(a.e.discoveredAt),
+          )
+          .slice(0, 3)
+          .map((item) => item.e);
+        // Compare visible primary evidence; raw inference caching includes the comparison hash.
+        const reference = recent.find((e) => e.screening?.primary);
+        if (reference) {
+          const full = (await store.get<DeskEvent>("event", reference.id))
+            ?.data;
+          if (full?.rawText)
+            article.primaryReference = {
+              id: full.id,
+              url: full.url,
+              title: full.title,
+              text: full.rawText,
+              publishedAt: full.publishedAt,
+            };
+        }
+        let result = await classifyArticle(c, article, env, store, recent);
+        // One alternate primary document, never an unbounded recursive search.
+        if (
+          !options.preferredLookup &&
+          !article.official &&
+          env.TYPESAFE_API_KEY &&
+          baseAssessment.attempts === 1 &&
+          primaryUrls(c).length &&
+          (result.screening.articleRole === "coverage_only" ||
+            result.screening.reasonCode === "missing_text")
+        ) {
+          try {
+            const lookupKey = `${c.id}-${new Date().toISOString().slice(0, 10)}-${c.newsRevision}`;
+            const cached = await store.get<{ articles: Article[] }>(
+              "primary_lookup",
+              lookupKey,
+            );
+            const discovered = cached?.data || (await discoverPrimary(c, env));
+            if (!cached)
+              await store
+                .put(
+                  "primary_lookup",
+                  lookupKey,
+                  { articles: discovered.articles },
+                  0,
+                )
+                .catch(() => undefined);
+            const alternate = discovered.articles
+              .filter((a) => canonicalUrl(a.url) !== canonicalUrl(article.url))
+              .map((a) => ({
+                a,
+                overlap: (
+                  a.title.toLowerCase().match(/[a-z0-9]{4,}/g) || []
+                ).filter((t) => terms.has(t)).length,
+              }))
+              .filter((x) => x.overlap >= 3)
+              .sort((a, b) => b.overlap - a.overlap)[0]?.a;
+            if (alternate) {
+              const preferred = await processArticle(c, alternate, store, env, {
+                preferredLookup: true,
+              });
+              if (
+                preferred.rawText &&
+                preferred.screening?.articleRole === "primary_reading"
+              ) {
+                article.primaryReference = {
+                  id: preferred.id,
+                  url: preferred.url,
+                  title: preferred.title,
+                  text: preferred.rawText,
+                  publishedAt: preferred.publishedAt,
+                };
+                recent.unshift(preferred);
+                recent.splice(3);
+                result = await classifyArticle(c, article, env, store, recent);
+              }
+            }
+          } catch {
+            result.screening.retrievalNote +=
+              " Preferred-source lookup did not establish a readable matching primary document.";
+          }
+        }
+        event.classification = {
+          ...event.classification,
+          ...result,
+          screening: undefined,
+        };
+        event.screening = {
+          ...result.screening,
+          attempts: baseAssessment.attempts,
+          contextRevision: c.newsRevision,
+        };
+        event.evidence = result.evidence;
+        if (result.evidence) event.body = result.evidence;
+        event.matches = result.matches.filter((x) => x.relevance >= 0.7);
+        const match = result.screening.comparisons
+          ?.filter((x) => x.relation !== "unrelated" && x.probability >= 0.85)
+          .sort((a, b) => b.probability - a.probability)[0];
+        const matched = recent.find((e) => e.id === match?.id);
+        if (match && matched) {
+          if (match.relation === "update")
+            event.relatedEventId = matched.clusterId || matched.id;
+          else {
+            event.clusterId = matched.clusterId || matched.id;
+            if (
+              match.relation === "duplicate" &&
+              !event.screening.primary &&
+              matched.screening?.disposition === "relevant"
+            ) {
+              event.screening.coverageDuplicateOf = matched.id;
+              event.screening = currentAssessment(event)!;
+            }
+            if (
+              matched.screening?.articleRole === "primary_reading" &&
+              event.screening.articleRole === "coverage_only"
+            ) {
+              event.screening.needsPreferredSource = false;
+              event.screening.preferredSourceId = matched.id;
+              event.screening.reason =
+                "Relevant development already covered by a primary document; this article adds no supported analysis.";
+            }
+            // Group duplicates without discarding the only accessible account.
+            // groupNews chooses the best available source for the development.
+          }
+        }
+        // Reused IR URLs must not collapse different reporting periods or updates.
+        const exact = history.find(
+          (e) =>
+            article.url &&
+            canonicalUrl(e.url) === canonicalUrl(article.url) &&
+            e.screening?.documentHash === documentHash &&
+            e.title === article.title &&
+            !!article.publishedAt &&
+            e.publishedAt === article.publishedAt,
+        );
+        if (exact && match?.relation !== "update")
+          event.clusterId = exact.clusterId || exact.id;
+        event.priority = newsPriority({
+          ...result,
+          screening: event.screening,
+        });
+      }
+    }
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Classification unavailable";
+    const budgetDeferred = /TypeSafe.*budget/i.test(message);
+    const attempts = (baseAssessment.attempts || 1) - Number(budgetDeferred);
     event.classification = {
       ...event.classification,
-      error:
-        error instanceof Error ? error.message : "Classification unavailable",
+      error: message,
     };
     event.body = `Unclassified — review the source. ${event.body}`;
+    event.screening = {
+      ...baseAssessment,
+      attempts,
+      reasonCode: "processing_failed",
+      articleRole: "pending_verification",
+      development: { status: "uncertain" },
+      reason: budgetDeferred
+        ? "TypeSafe budget unavailable or reached; waiting to retry."
+        : attempts < 3
+          ? "Screening unavailable; queued for retry."
+          : "Screening unavailable after three attempts; review the source.",
+      contentDepth: article.contentDepth || "snippet",
+      availableCharacters: article.availableCharacters || article.text.length,
+      retrievalNote: article.retrievalNote || "",
+      retryAfter:
+        attempts < 3
+          ? new Date(Date.now() + 86400000).toISOString()
+          : undefined,
+    };
+  }
+  if (
+    event.screening?.disposition === "uncertain" &&
+    [
+      "missing_text",
+      "extraction_mismatch",
+      "incomplete_document",
+      "processing_failed",
+    ].includes(event.screening.reasonCode || "") &&
+    !event.screening.retryAfter &&
+    (event.screening.attempts || 0) < 3
+  )
+    event.screening.retryAfter = new Date(Date.now() + 86400000).toISOString();
+  if (existing) {
+    const fresh = (await store.get<DeskEvent>("event", id))!;
+    const updated = {
+      ...event,
+      discoveredAt: fresh.data.discoveredAt,
+      reviewed: fresh.data.reviewed,
+      saved: fresh.data.saved,
+      inboxAt: fresh.data.inboxAt,
+      feedback: fresh.data.feedback,
+      feedbackReason: fresh.data.feedbackReason,
+    };
+    await store.put("event", id, updated, fresh.version);
+    return updated;
   }
   await addEvent(store, event);
   return event;
+}
+
+export async function rescreenNews(
+  store: Store,
+  env: Env,
+  options: { companyId?: string; limit?: number; milliseconds?: number } = {},
+) {
+  const lease = await store.claim("news-rescreen", 150);
+  if (!lease) return { processed: 0, remaining: 0, busy: true };
+  const start = Date.now();
+  let processed = 0;
+  try {
+    const companies = new Map(
+      (await store.list<Company>("company", { summary: true })).map((d) => [
+        d.id,
+        d.data,
+      ]),
+    );
+    const pending = (
+      await store.list<DeskEvent>("event", {
+        companyId: options.companyId,
+        summary: true,
+      })
+    ).filter(
+      ({ data: e }) =>
+        e.kind === "news" &&
+        e.feedback !== "noise" &&
+        companies.has(e.companyId) &&
+        (e.screening?.version !== SCREENING_VERSION ||
+          e.screening.contextRevision !==
+            companies.get(e.companyId)!.newsRevision ||
+          (!!e.screening.retryAfter &&
+            e.screening.retryAfter <= new Date().toISOString() &&
+            (e.screening.attempts || 0) < 3)),
+    );
+    pending.sort((a, b) =>
+      b.data.discoveredAt.localeCompare(a.data.discoveredAt),
+    );
+    for (const doc of pending) {
+      if (
+        processed >= (options.limit || 10) ||
+        Date.now() - start > (options.milliseconds || 30000)
+      )
+        break;
+      const e = (await store.get<DeskEvent>("event", doc.id))!.data;
+      await processArticle(
+        companies.get(e.companyId)!,
+        {
+          id: e.id,
+          title: e.title,
+          text: e.rawText || e.body,
+          url: e.url,
+          publishedAt: e.publishedAt,
+          source: String(e.classification?.source || ""),
+          official: e.classification?.official === true,
+          contentDepth: e.screening?.contentDepth || "snippet",
+        },
+        store,
+        env,
+        { reprocess: true, existingId: e.id },
+      );
+      processed++;
+    }
+    return {
+      processed,
+      remaining: Math.max(0, pending.length - processed),
+      busy: false,
+    };
+  } finally {
+    await store.release("news-rescreen", lease);
+  }
 }
 export async function healthEvent(
   store: Store,
@@ -271,8 +671,22 @@ export async function runMonitor(
         }
         c = doc.data;
         if (options.force || due(c, c.lastNewsCheck)) {
+          const primary = await discoverPrimary(c, env);
+          for (const message of primary.errors)
+            await healthEvent(store, c, message);
+          let primaryComplete = true;
+          for (const article of primary.articles) {
+            if (Date.now() - started > 65000) {
+              primaryComplete = false;
+              break;
+            }
+            if (await store.get("event", `news-${c.id}-${article.id}`))
+              continue;
+            await processArticle(c, article, store, env);
+            result.articles++;
+          }
           const feeds = structuredClone(c.feeds);
-          let complete = true;
+          let complete = primaryComplete;
           if (!feeds.length)
             await healthEvent(
               store,
@@ -285,7 +699,11 @@ export async function runMonitor(
               break;
             }
             try {
-              const articles = await fetchFeed(feed.url, feed.official, env);
+              const articles = await fetchFeed(
+                isDefaultNewsFeed(feed) ? companyNewsUrl(c) : feed.url,
+                feed.official,
+                env,
+              );
               const since = feed.lastSuccess
                 ? Date.parse(feed.lastSuccess) - 2 * 86400000
                 : Date.now() - (cadenceOf(c) === "weekly" ? 9 : 3) * 86400000;
@@ -411,6 +829,10 @@ export async function dailySnapshot(store: Store, now = new Date()) {
     if (old.id < cutoff) await store.remove("backup", old.id, old.version);
   return { created: true, records: records.length };
 }
+// The morning email carries the most important developments; the rest stay in the
+// desk inbox rather than making the email unreadable.
+export const DIGEST_DEVELOPMENT_LIMIT = 20;
+
 export async function digestPreview(store: Store, now = new Date()) {
   const companies = await store.list<Company>("company");
   const names = new Map(companies.map((c) => [c.id, c.data.name]));
@@ -420,19 +842,32 @@ export async function digestPreview(store: Store, now = new Date()) {
   const since =
     previous?.data.deliveredAt ||
     new Date(now.getTime() - 86400000).toISOString();
-  const events = (await store.list<DeskEvent>("event"))
-    .map((x) => x.data)
-    .filter(
-      (e) =>
-        e.priority !== "suppressed" &&
-        e.discoveredAt > since &&
-        e.discoveredAt <= now.toISOString(),
+  const eligible = (
+    await store.list<DeskEvent>("event", { summary: true })
+  ).filter(
+    ({ data: e }) =>
+      e.discoveredAt <= now.toISOString() &&
+      (e.kind === "health" ||
+        newsBucket(e) === "relevant" ||
+        (newsBucket(e) === "uncertain" && e.screening?.possibleMajor)),
+  );
+  const ranked = groupNews(eligible)
+    .filter((g) =>
+      [g.lead, ...g.coverage].some((d) => d.data.discoveredAt > since),
     )
-    .sort((a, b) =>
-      a.kind === "health" && b.kind !== "health"
-        ? 1
-        : b.priority.localeCompare(a.priority),
-    );
+    .map((g) => ({
+      ...g.lead.data,
+      screening: currentAssessment(g.lead.data, now),
+      priority: eventPriority(g.lead.data),
+      coverage: g.coverage.slice(0, 3).map((d) => d.data.url),
+      importance: digestImportance(g.lead.data, now),
+    }));
+  const developments = ranked
+    .filter((e) => e.kind !== "health")
+    .sort((a, b) => b.importance - a.importance);
+  const alerts = ranked.filter((e) => e.kind === "health");
+  const featured = developments.slice(0, DIGEST_DEVELOPMENT_LIMIT);
+  const remainder = developments.slice(DIGEST_DEVELOPMENT_LIMIT);
   const missing = companies.filter(
     (c) =>
       !c.data.archived &&
@@ -443,17 +878,144 @@ export async function digestPreview(store: Store, now = new Date()) {
         c.data.quoteError),
   );
   const date = chicagoParts(now).date;
-  const subject = `Research Desk · ${date} · ${events.filter((e) => e.kind !== "health").length} developments`;
-  const text = `${subject}\nAmerica/Chicago · Coverage depends on configured sources.\n\n${events.map((e) => `${names.get(e.companyId) || "Company"} — ${e.title}\n${e.evidence || e.body}\n${e.url}\nPublished: ${e.publishedAt || "Unknown"}; discovered: ${e.discoveredAt}`).join("\n\n") || "No new developments from your configured sources."}\n\n${missing.length} companies have a missing source or a monitoring issue.\n${missing
-    .slice(0, 30)
-    .map((c) => c.data.name)
-    .join(", ")}${missing.length > 30 ? "…" : ""}`;
+  const majors = featured.filter((e) => e.priority === "major").length;
+  const subject = developments.length
+    ? `Research Desk · ${date} · ${developments.length} development${developments.length === 1 ? "" : "s"}${majors ? ` · ${majors} important` : ""}`
+    : `Research Desk · ${date} · nothing new`;
+
+  const company = (e: (typeof featured)[number]) =>
+    names.get(e.companyId) || "Company";
+  const dateLabel = (e: (typeof featured)[number]) => {
+    const age = articleAgeDays(e.publishedAt, now);
+    if (age === null) return "date unknown";
+    if (age < 1) return "today";
+    const days = Math.round(age);
+    return days === 1 ? "yesterday" : `${days} days ago`;
+  };
+  const verdict = (e: (typeof featured)[number]) =>
+    e.screening?.disposition === "uncertain"
+      ? "NEEDS VERIFICATION"
+      : e.priority === "major"
+        ? "IMPORTANT"
+        : "";
+
+  const textEntry = (e: (typeof featured)[number], n: number) =>
+    [
+      `${n}. ${company(e)} — ${e.title}`,
+      `   ${[verdict(e), e.screening?.reason].filter(Boolean).join(" · ")}`,
+      `   ${(e.evidence || e.body || "").slice(0, 400).trim()}`,
+      `   ${e.url}`,
+      `   Published ${dateLabel(e)}${e.screening?.primary ? " · company source" : ""}`,
+      e.coverage.length ? `   Also covered: ${e.coverage.join(" ")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+  const text = [
+    subject,
+    `America/Chicago · ${date} · coverage depends on your configured sources.`,
+    "",
+    developments.length
+      ? `TOP ${featured.length} OF ${developments.length}`
+      : "",
+    featured.map((e, i) => textEntry(e, i + 1)).join("\n\n") ||
+      "No new developments from your configured sources.",
+    remainder.length
+      ? `\n${remainder.length} further development${remainder.length === 1 ? "" : "s"} not shown; open the desk inbox to review them.`
+      : "",
+    alerts.length
+      ? `\nMONITORING ALERTS (${alerts.length})\n${alerts
+          .slice(0, 10)
+          .map((e) => `- ${company(e)}: ${e.title}`)
+          .join(
+            "\n",
+          )}${alerts.length > 10 ? `\n- and ${alerts.length - 10} more` : ""}`
+      : "",
+    missing.length
+      ? `\nCOVERAGE GAPS\n${missing.length} companies have a missing source or a monitoring issue: ${missing
+          .slice(0, 12)
+          .map((c) => c.data.name)
+          .join(
+            ", ",
+          )}${missing.length > 12 ? `, and ${missing.length - 12} more` : ""}.`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const htmlEntry = (e: (typeof featured)[number]) => {
+    const mark = verdict(e);
+    return `<li style="margin:0 0 20px">
+<div style="font-size:13px;color:#666">${escapeHtml(company(e))} · published ${escapeHtml(dateLabel(e))}${e.screening?.primary ? " · company source" : ""}</div>
+<div style="font-size:16px;font-weight:600;margin:2px 0 4px"><a href="${escapeHtml(e.url)}" style="color:#12492f;text-decoration:none">${escapeHtml(e.title)}</a></div>
+${mark ? `<div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;padding:2px 6px;border-radius:3px;background:${mark === "IMPORTANT" ? "#12492f;color:#fff" : "#fde68a;color:#78350f"}">${mark}</div> ` : ""}
+<div style="font-size:13px;color:#444;margin:4px 0">${escapeHtml(e.screening?.reason || "")}</div>
+<div style="font-size:14px;color:#222">${escapeHtml((e.evidence || e.body || "").slice(0, 400).trim())}</div>
+${e.coverage.length ? `<div style="font-size:12px;color:#666;margin-top:4px">Also covered: ${e.coverage.map((u) => `<a href="${escapeHtml(u)}" style="color:#666">${escapeHtml(new URL(u).hostname.replace(/^www\./, ""))}</a>`).join(" · ")}</div>` : ""}
+</li>`;
+  };
+  const section = (title: string, body: string) =>
+    `<h2 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#666;border-bottom:1px solid #e5e5e5;padding-bottom:6px;margin:28px 0 14px">${escapeHtml(title)}</h2>${body}`;
+  const html = `<div style="max-width:640px;margin:0 auto;padding:24px;font:15px/1.6 -apple-system,system-ui,'Segoe UI',sans-serif;color:#222">
+<div style="font-size:20px;font-weight:700">Research Desk</div>
+<div style="font-size:14px;color:#222;margin-top:2px">${escapeHtml(
+    developments.length
+      ? `${developments.length} development${developments.length === 1 ? "" : "s"}${majors ? `, ${majors} important` : ""}`
+      : "Nothing new from your configured sources",
+  )}</div>
+<div style="font-size:13px;color:#666;margin-top:2px">${escapeHtml(date)} · America/Chicago · coverage depends on your configured sources.</div>
+${
+  featured.length
+    ? section(
+        `Top ${featured.length} of ${developments.length}`,
+        `<ol style="padding-left:20px;margin:0">${featured.map(htmlEntry).join("")}</ol>` +
+          (remainder.length
+            ? `<div style="font-size:13px;color:#666">${remainder.length} further development${remainder.length === 1 ? "" : "s"} not shown; open the desk inbox to review them.</div>`
+            : ""),
+      )
+    : section(
+        "Developments",
+        `<div style="color:#666">No new developments from your configured sources.</div>`,
+      )
+}
+${
+  alerts.length
+    ? section(
+        `Monitoring alerts (${alerts.length})`,
+        `<ul style="padding-left:20px;margin:0;font-size:14px">${alerts
+          .slice(0, 10)
+          .map(
+            (e) =>
+              `<li><b>${escapeHtml(company(e))}:</b> ${escapeHtml(e.title)}</li>`,
+          )
+          .join(
+            "",
+          )}</ul>${alerts.length > 10 ? `<div style="font-size:13px;color:#666">and ${alerts.length - 10} more</div>` : ""}`,
+      )
+    : ""
+}
+${
+  missing.length
+    ? section(
+        "Coverage gaps",
+        `<div style="font-size:14px;color:#444"><b>${missing.length}</b> companies have a missing source or a monitoring issue: ${escapeHtml(
+          missing
+            .slice(0, 12)
+            .map((c) => c.data.name)
+            .join(", "),
+        )}${missing.length > 12 ? `, and ${missing.length - 12} more` : ""}.</div>`,
+      )
+    : ""
+}
+</div>`;
   return {
     date,
     subject,
     text,
-    html: `<pre style="white-space:pre-wrap;font:15px/1.6 system-ui">${escapeHtml(text)}</pre>`,
-    count: events.length,
+    html,
+    count: developments.length,
+    shown: featured.length,
+    alerts: alerts.length,
     missing: missing.length,
     generatedAt: now.toISOString(),
   };
@@ -485,7 +1047,12 @@ export async function sendDueDigest(store: Store, env: Env, now = new Date()) {
   if (!lease) return { sent: false, reason: "Digest already running." };
   try {
     const preview = await digestPreview(store, now);
-    if (settings.skipEmpty && preview.count === 0 && preview.missing === 0) {
+    if (
+      settings.skipEmpty &&
+      preview.count === 0 &&
+      preview.alerts === 0 &&
+      preview.missing === 0
+    ) {
       await store.put(
         "digest",
         key,

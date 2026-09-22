@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import {
   ConflictError,
+  CompanySchema,
   type Doc,
   type Store,
 } from "../supabase/functions/_shared/model.ts";
@@ -14,6 +15,7 @@ export class LocalStore implements Store {
     this.db = new DatabaseSync(path);
     this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
       CREATE TABLE IF NOT EXISTS records(kind TEXT NOT NULL,id TEXT NOT NULL,data TEXT NOT NULL,version INTEGER NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(kind,id));
+      CREATE INDEX IF NOT EXISTS records_updated ON records(kind,updated_at);
       CREATE TABLE IF NOT EXISTS locks(key TEXT PRIMARY KEY,token TEXT NOT NULL,expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS ai_usage(id TEXT PRIMARY KEY,month TEXT,amount REAL,tokens INTEGER DEFAULT 0,settled INTEGER DEFAULT 0);`);
   }
@@ -21,17 +23,34 @@ export class LocalStore implements Store {
     return {
       kind: r.kind,
       id: r.id,
-      data: JSON.parse(r.data),
+      data:
+        r.kind === "company"
+          ? CompanySchema.parse(JSON.parse(r.data))
+          : JSON.parse(r.data),
       version: r.version,
       updatedAt: r.updated_at,
     };
   }
-  async list<T>(kind: string, options?: { summary?: boolean; limit?: number }) {
+  async list<T>(
+    kind: string,
+    options?: {
+      summary?: boolean;
+      limit?: number;
+      companyId?: string;
+      updatedSince?: string;
+    },
+  ) {
     const docs = this.db
       .prepare(
-        "SELECT * FROM records WHERE kind=? ORDER BY updated_at DESC LIMIT ?",
+        "SELECT * FROM records WHERE kind=? AND (?='' OR json_extract(data, '$.companyId')=?) AND updated_at>=? ORDER BY CASE WHEN kind='event' THEN json_extract(data, '$.discoveredAt') ELSE updated_at END DESC,id LIMIT ?",
       )
-      .all(kind, options?.limit || 100000)
+      .all(
+        kind,
+        options?.companyId || "",
+        options?.companyId || "",
+        options?.updatedSince || "",
+        options?.limit || 100000,
+      )
       .map((r) => this.decode<T>(r));
     if (options?.summary)
       for (const doc of docs) {
@@ -52,12 +71,32 @@ export class LocalStore implements Store {
       .get(kind, id);
     return r ? this.decode<T>(r) : null;
   }
+  async changes(since: string) {
+    return this.db
+      .prepare(
+        "SELECT kind,id,version,updated_at AS updatedAt FROM records WHERE updated_at>=? AND kind IN ('company','event','settings','news_batch','job') ORDER BY updated_at,id",
+      )
+      .all(since) as {
+      kind: string;
+      id: string;
+      version: number;
+      updatedAt: string;
+    }[];
+  }
   async put<T>(
     kind: string,
     id: string,
     data: T,
     expected: number,
   ): Promise<Doc<T>> {
+    return this.write(kind, id, data, expected);
+  }
+  private write<T>(
+    kind: string,
+    id: string,
+    data: T,
+    expected: number,
+  ): Doc<T> {
     const at = new Date().toISOString();
     const json = JSON.stringify(data);
     if (expected === 0) {
@@ -74,6 +113,21 @@ export class LocalStore implements Store {
       if (!result.changes) throw new ConflictError();
     }
     return { kind, id, data, version: expected + 1, updatedAt: at };
+  }
+  async batch(
+    writes: { kind: string; id: string; data: unknown; expected: number }[],
+  ) {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = writes.map((w) =>
+        this.write(w.kind, w.id, w.data, w.expected),
+      );
+      this.db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   async remove(kind: string, id: string, expected: number) {
     if (

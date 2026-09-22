@@ -296,6 +296,13 @@ table {
   border: 1px solid #e0e5df;
   border-radius: 8px;
 }
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.integration-record { padding: 18px 0; border-top: 1px solid #e0e5df; overflow-wrap: anywhere; }
+.integration-secret { background: #edf4e9; padding: 16px; margin-bottom: 20px; border-radius: 8px; }
+fieldset { border: 1px solid #e0e5df; border-radius: 6px; padding: 14px; margin-bottom: 16px; min-width: 0; }
 th {
   font-weight: 500;
   color: #8a9489;
@@ -785,6 +792,12 @@ pre {
   margin: 6px 0;
 }
 .modal-backdrop {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
   position: fixed;
   inset: 0;
   background: #152a204a;
@@ -796,6 +809,8 @@ pre {
   padding: 20px;
 }
 .modal {
+  max-height: 100%;
+  overflow-y: auto;
   background: white;
   border: 1px solid #d8e4cb;
   box-shadow: 0 20px 80px #21392324;
@@ -994,4 +1009,97 @@ dd {
   * {
     transition: none !important;
   }
+}
+/* Keep filters visible and readable in both the news page and company panel. */
+.news-filters {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 10px;
+}
+.news-filters summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.news-filters .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+.news-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.event {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.event-actions button[aria-pressed="true"] {
+  background: #e9efea;
+  border-color: #526e5a;
+}
+
+.screening-summary {
+  border-left: 3px solid var(--accent, #486953);
+  padding-left: 12px;
+  margin: 12px 0;
+}
+.related-coverage {
+  margin: 12px 0;
+}
+.related-coverage p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.event-actions select {
+  max-width: 220px;
+  padding: 7px;
+}
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+.news-batch {
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  border: 1px solid var(--line, #dedbd4);
+  border-radius: 10px;
+  background: var(--paper, #faf9f6);
+}
+.news-batch small {
+  display: block;
+  margin-top: 0.6rem;
+  color: var(--muted, #69665e);
+}
+.news-batch progress {
+  display: block;
+  width: min(100%, 480px);
+  margin-top: 0.75rem;
+  accent-color: #27634d;
+}
+.news-batch details {
+  margin-top: 0.65rem;
+}
+.news-batch li {
+  margin: 0.35rem 0;
+}
+.inbox-folders {
+  margin-top: 1.2rem;
+  border-bottom: 1px solid var(--line, #dedbd4);
+  padding-bottom: 0.75rem;
+}
+/* Keep long source documents readable without stretching the entire inbox. */
+.article-reader {
+  margin: 12px 0;
+}
+.article-reader-text {
+  max-height: 32rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.65;
+  padding: 16px;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 8px;
 }

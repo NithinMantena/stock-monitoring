@@ -1,3 +1,8 @@
+import { api, apiText, setAccessToken } from "./api";
+import { IntegrationsPanel, JobsPanel } from "./integrations-panel";
+import { Field, chicagoDate } from "./ui";
+import { NewsBatchStatus, EventList, type EventUpdate } from "./news-panel";
+import { mergeDocuments, latestBatch } from "./sync";
 import React, {
   useCallback,
   useDeferredValue,
@@ -26,11 +31,24 @@ import {
   cadenceOf,
   formatMoney,
   quoteState,
-  safeLink,
 } from "../supabase/functions/_shared/engine";
 import type { ImportPreview } from "../supabase/functions/_shared/importer";
 import "./style.css";
 import { loadDrafts, saveDraft, type Draft } from "./drafts";
+import {
+  eventGroupKey,
+  filterCompanies,
+  inEventFolder,
+} from "../supabase/functions/_shared/event-inbox";
+import type { NewsBatchSummary } from "../supabase/functions/_shared/news-batch";
+import {
+  groupNews,
+  MAX_ARTICLE_CHARS,
+} from "../supabase/functions/_shared/screening-policy";
+import {
+  companyNewsQuery,
+  newsBucket,
+} from "../supabase/functions/_shared/news";
 
 const cloud = !!import.meta.env.VITE_SUPABASE_URL;
 const supabase = cloud
@@ -39,34 +57,6 @@ const supabase = cloud
       import.meta.env.VITE_SUPABASE_ANON_KEY,
     )
   : null;
-const base = import.meta.env.VITE_API_URL || "/api";
-let accessToken = "";
-async function api<T = any>(
-  path: string,
-  body?: unknown,
-  method = "POST",
-): Promise<T> {
-  const response = await fetch(base + path, {
-    method: body === undefined ? "GET" : method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  const json = await response.json();
-  if (!response.ok)
-    throw new Error(json.error || `Request failed (${response.status}).`);
-  return json;
-}
-function chicagoDate(value: string) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  return new Date(value).toLocaleString("en-US", {
-    timeZone: "America/Chicago",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
 function download(name: string, text: string, type = "application/json") {
   const a = document.createElement("a");
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -96,33 +86,30 @@ function StatusSelect({
     </select>
   );
 }
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
-    </label>
-  );
-}
 function Root() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(!cloud);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sentTo, setSentTo] = useState("");
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      accessToken = data.session?.access_token || "";
-      setSession(data.session);
-      setReady(true);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) setError(error.message);
+        setAccessToken(data.session?.access_token || "");
+        setSession(data.session);
+        setReady(true);
+      })
+      .catch((error: Error) => {
+        setError(
+          error.message || "Unable to open your session. Please sign in again.",
+        );
+        setReady(true);
+      });
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      accessToken = next?.access_token || "";
+      setAccessToken(next?.access_token || "");
       setSession(next);
       setReady(true);
     });
@@ -139,41 +126,17 @@ function Root() {
           Your thinking.
         </h1>
         <p>A private place to follow the businesses that matter to you.</p>
+        <h2>Sign in with your email</h2>
+        <p>We’ll email you a secure sign-in link. No password needed.</p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             const form = new FormData(e.currentTarget);
-            const { error } = await supabase!.auth.signInWithPassword({
-              email: String(form.get("email")),
-              password: String(form.get("password")),
-            });
-            setError(error?.message || "");
-          }}
-        >
-          <Field label="Email">
-            <input
-              autoComplete="username"
-              type="email"
-              name="email"
-
-              required
-            />
-          </Field>
-          <Field label="Password">
-            <input
-              autoComplete="current-password"
-              type="password"
-              name="password"
-              required
-            />
-          </Field>
-          <button className="primary">Sign in</button>
-          <button
-            type="button"
-            className="spaced"
-            onClick={async (e) => {
-              const form = e.currentTarget.closest("form")!;
-              const email = String(new FormData(form).get("email"));
+            const email = String(form.get("email")).trim();
+            setSending(true);
+            setError("");
+            setSentTo("");
+            try {
               const { error } = await supabase!.auth.signInWithOtp({
                 email,
                 options: {
@@ -181,14 +144,39 @@ function Root() {
                   emailRedirectTo: window.location.origin,
                 },
               });
-              setError(
-                error?.message || "Check your email for a sign-in link.",
-              );
-            }}
-          >
-            Email me a sign-in link
+              if (error) throw error;
+              setSentTo(email);
+            } catch (error) {
+              setError((error as Error).message);
+            } finally {
+              setSending(false);
+            }
+          }}
+        >
+          <Field label="Email">
+            <input
+              autoComplete="email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              autoFocus
+              required
+            />
+          </Field>
+          <button className="primary" disabled={sending}>
+            {sending
+              ? "Sending link…"
+              : sentTo
+                ? "Send another sign-in link"
+                : "Email me a sign-in link"}
           </button>
-          <p role="alert">{error}</p>
+          {sentTo && (
+            <p role="status">
+              Check <b>{sentTo}</b> and open the sign-in link to continue. If it
+              hasn’t arrived, check your spam folder.
+            </p>
+          )}
+          {error && <p role="alert">{error}</p>}
         </form>
       </main>
     );
@@ -208,6 +196,7 @@ interface Bootstrap {
   settingsVersion: number;
   configuration: any;
   run?: any;
+  newsBatch?: NewsBatchSummary | null;
   imports: any[];
   usage?: { month: string; cost: number; tokens: number; requests: number }[];
 }
@@ -220,11 +209,15 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const [filter, setFilter] = useState<Status | "all" | "archived">("all");
   const [group, setGroup] = useState("");
   const [query, setQuery] = useState("");
+  const [newsCompany, setNewsCompany] = useState("");
   const search = useDeferredValue(query.toLowerCase());
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(
+    () => new URLSearchParams(location.hash.slice(1)).get("company") || "",
+  );
   const [tab, setTab] = useState("research");
   const openCompany = useCallback((id: string) => {
     setSelected(id);
+    history.replaceState(null, "", "#company=" + encodeURIComponent(id));
     setTab("research");
   }, []);
   const [adding, setAdding] = useState(false);
@@ -235,25 +228,174 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const pending = useRef(new Map<string, Draft>());
   const flushing = useRef(new Set<string>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const eventWrites = useRef(new Map<string, Doc<DeskEvent>>());
+  const [savingEvents, setSavingEvents] = useState(new Set<string>());
+  const [batchStarting, setBatchStarting] = useState(false);
+  const [batchControlBusy, setBatchControlBusy] = useState(false);
+  const newsCursor = useRef("");
+  const newsRefresh = useRef<Promise<void> | null>(null);
+  const reloadNews = useCallback(() => {
+    if (newsRefresh.current) return newsRefresh.current;
+    newsRefresh.current = (async () => {
+      try {
+        const result = await api<{
+          events: Doc<DeskEvent>[];
+          batch: NewsBatchSummary | null;
+          cursor: string;
+        }>(
+          `/news/updates${newsCursor.current ? `?since=${encodeURIComponent(newsCursor.current)}` : ""}`,
+        );
+        newsCursor.current = result.cursor;
+        setData(
+          (old) =>
+            old && {
+              ...old,
+              events: mergeDocuments(
+                old.events,
+                result.events,
+                eventWrites.current,
+              ),
+              newsBatch: latestBatch(old.newsBatch, result.batch),
+            },
+        );
+      } catch (error) {
+        setError(`Could not refresh news: ${(error as Error).message}`);
+      } finally {
+        newsRefresh.current = null;
+      }
+    })();
+    return newsRefresh.current;
+  }, []);
   const reload = useCallback(async () => {
     setLoadError("");
     try {
-      const next = await api<Bootstrap>("/bootstrap");
-      for (const doc of next.companies) {
-        const draft = pending.current.get(doc.id);
-        if (draft) {
-          const existing = state.current?.companies.find(
-            (d) => d.id === doc.id,
-          );
-          doc.data = draft.data;
-          if (existing) doc.version = existing.version;
-        }
-      }
-      setData(next);
+      const next = await api<Bootstrap>(
+        state.current ? "/bootstrap?events=none" : "/bootstrap",
+      );
+      setData((old) => {
+        const known = new Map(old?.companies.map((d) => [d.id, d]) || []);
+        return {
+          ...next,
+          companies: next.companies.map((incoming) => {
+            const current = known.get(incoming.id);
+            const latest =
+              current && current.version > incoming.version
+                ? current
+                : incoming;
+            const draft = pending.current.get(latest.id);
+            return draft ? { ...latest, data: draft.data } : latest;
+          }),
+          events: mergeDocuments(
+            old?.events || [],
+            next.events,
+            eventWrites.current,
+          ),
+          newsBatch: latestBatch(old?.newsBatch, next.newsBatch),
+          ...(old && old.settingsVersion > next.settingsVersion
+            ? { settings: old.settings, settingsVersion: old.settingsVersion }
+            : {}),
+        };
+      });
     } catch (e) {
       setLoadError((e as Error).message);
     }
   }, []);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        void reload();
+        void reloadNews();
+      }
+    };
+    const timer = setInterval(refresh, 60000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [reload, reloadNews]);
+  useEffect(() => {
+    let live = true,
+      busy = false,
+      cursor = new Date().toISOString();
+    const versions = new Map<string, number>();
+    const tick = async () => {
+      if (!live || busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const result = await api<{
+          cursor: string;
+          items: { kind: string; id: string; version: number }[];
+        }>("/changes?since=" + encodeURIComponent(cursor));
+        if (!live) return;
+        cursor = result.cursor;
+        const changed = result.items.filter(
+          (d) => d.version > (versions.get(d.kind + ":" + d.id) || 0),
+        );
+        result.items.forEach((d) =>
+          versions.set(d.kind + ":" + d.id, d.version),
+        );
+        if (changed.some((d) => d.kind !== "event")) await reload();
+        if (changed.some((d) => d.kind === "event" || d.kind === "news_batch"))
+          await reloadNews();
+      } catch {
+        /* The minute refresh still reports connectivity errors. */
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = setInterval(tick, 5000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [reload, reloadNews]);
+  useEffect(() => {
+    const batch = data?.newsBatch;
+    if (!batch || batch.status !== "running") return;
+    let live = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const advance = async () => {
+      try {
+        if (document.visibilityState !== "visible") {
+          timer = setTimeout(advance, 15000);
+          return;
+        }
+        const result = await api<{ batch: NewsBatchSummary | null }>(
+          `/news/batches/${batch.id}/advance`,
+          {},
+        );
+        if (!live) return;
+        setData(
+          (old) =>
+            old && {
+              ...old,
+              newsBatch: latestBatch(old.newsBatch, result.batch),
+            },
+        );
+        await reloadNews();
+        if (result.batch?.status === "running" && live)
+          timer = setTimeout(advance, 2000);
+      } catch (error) {
+        if (live) {
+          setError(
+            `News batch progress could not refresh: ${(error as Error).message} Saved progress will be retried automatically.`,
+          );
+          timer = setTimeout(advance, 15000);
+        }
+      }
+    };
+    timer = setTimeout(advance, 0);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [data?.newsBatch?.id, data?.newsBatch?.status, reloadNews]);
+  useEffect(() => {
+    if (data && (selected || section === "news")) void reloadNews();
+  }, [!!data, selected, section, reloadNews]);
   useEffect(() => {
     let live = true;
     loadDrafts(owner)
@@ -377,37 +519,167 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     try {
       await fn();
       if (message) setNotice(message);
-      await reload();
+      await Promise.all([reload(), reloadNews()]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   };
+  const updateEvent: EventUpdate = async (
+    doc,
+    patch,
+    scope = "development",
+  ) => {
+    const members = (state.current?.events || []).filter((d) =>
+      scope === "article"
+        ? d.id === doc.id
+        : eventGroupKey(d.data) === eventGroupKey(doc.data),
+    );
+    if (members.some((d) => eventWrites.current.has(d.id))) return;
+    for (const d of members)
+      eventWrites.current.set(d.id, { ...d, data: { ...d.data, ...patch } });
+    setSavingEvents(new Set(eventWrites.current.keys()));
+    const replace = (items: Doc<DeskEvent>[]) =>
+      setData(
+        (old) =>
+          old && {
+            ...old,
+            events: old.events.map(
+              (d) => items.find((x) => x.id === d.id) || d,
+            ),
+          },
+      );
+    replace(members.map((d) => eventWrites.current.get(d.id)!));
+    setError("");
+    try {
+      const result = await api<{ items: Doc<DeskEvent>[] }>(
+        `/developments/${encodeURIComponent(doc.id)}`,
+        {
+          versions: Object.fromEntries(members.map((d) => [d.id, d.version])),
+          scope,
+          patch: {
+            ...patch,
+            ...(Object.hasOwn(patch, "feedback")
+              ? { feedback: patch.feedback ?? null }
+              : {}),
+          },
+        },
+        "PATCH",
+      );
+      replace(result.items);
+    } catch (error) {
+      replace(members);
+      setError(`Could not save development: ${(error as Error).message}`);
+    } finally {
+      for (const d of members) eventWrites.current.delete(d.id);
+      setSavingEvents(new Set(eventWrites.current.keys()));
+    }
+  };
   const docs = data?.companies || [];
   const filtered = useMemo(
-    () =>
-      docs
-        .filter(
-          ({ data: c }) =>
-            (filter === "archived"
-              ? c.archived
-              : !c.archived && (filter === "all" || c.status === filter)) &&
-            (!group || c.originalGroup === group) &&
-            (!search ||
-              `${c.name} ${c.ticker} ${c.exchange} ${c.tags.join(" ")} ${c.thesis} ${c.notes}`
-                .toLowerCase()
-                .includes(search)),
-        )
-        .sort((a, b) => a.data.name.localeCompare(b.data.name)),
+    () => filterCompanies(docs, { status: filter, group, search }),
     [docs, filter, group, search],
   );
+  const activeNewsCompany = filtered.some((d) => d.id === newsCompany)
+    ? newsCompany
+    : "";
+  const batchCompanies =
+    section === "news" && activeNewsCompany
+      ? filtered.filter((d) => d.id === activeNewsCompany)
+      : filtered;
+  const startBatch = async () => {
+    if (
+      batchStarting ||
+      data?.newsBatch?.status === "running" ||
+      data?.newsBatch?.status === "paused" ||
+      !batchCompanies.length
+    )
+      return;
+    setBatchStarting(true);
+    setError("");
+    const label = [
+      filter === "all"
+        ? "All companies"
+        : filter === "archived"
+          ? "Archived"
+          : statusLabels[filter],
+      group,
+      query && `Search: ${query}`,
+      section === "news" && activeNewsCompany && batchCompanies[0]?.data.name,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+      .slice(0, 300);
+    try {
+      const batch = await api<NewsBatchSummary>("/news/batches", {
+        id: crypto.randomUUID(),
+        label,
+        companyIds: batchCompanies.map((d) => d.id),
+      });
+      setData((old) => old && { ...old, newsBatch: batch });
+      setNotice("");
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBatchStarting(false);
+    }
+  };
+  const controlBatch = async (action: "pause" | "resume" | "cancel") => {
+    if (!data?.newsBatch || batchControlBusy) return;
+    setBatchControlBusy(true);
+    try {
+      const batch = await api<NewsBatchSummary>(
+        `/news/batches/${data.newsBatch.id}/control`,
+        { action },
+      );
+      setData((old) => old && { ...old, newsBatch: batch });
+      await reload();
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBatchControlBusy(false);
+    }
+  };
+  const batchButton = (
+    <button
+      className="primary"
+      disabled={
+        batchStarting ||
+        data?.newsBatch?.status === "running" ||
+        data?.newsBatch?.status === "paused" ||
+        !batchCompanies.length
+      }
+      onClick={startBatch}
+      title={`Up to 10 articles per day for each of the last 7 UTC calendar days, including today; up to ${(batchCompanies.length * 70).toLocaleString()} Google News articles across this selection, plus configured primary sources.`}
+    >
+      {batchStarting
+        ? "Starting…"
+        : data?.newsBatch?.status === "running"
+          ? "News batch running…"
+          : data?.newsBatch?.status === "paused"
+            ? "News search paused"
+            : `Search news · ${batchCompanies.length} ${batchCompanies.length === 1 ? "company" : "companies"}`}
+    </button>
+  );
+  const companyFilters = (
+    <CompanyScopeFilters
+      docs={docs}
+      filter={filter}
+      setFilter={(value) => {
+        setFilter(value);
+        setNewsCompany("");
+      }}
+      group={group}
+      setGroup={setGroup}
+    />
+  );
   const selectedDoc = docs.find((c) => c.id === selected);
-  const unseen = (data?.events || []).filter(
-    (e) =>
-      !e.data.reviewed &&
-      e.data.priority !== "suppressed" &&
-      e.data.kind !== "health",
+  const unseen = groupNews(
+    (data?.events || []).filter(
+      (e) =>
+        inEventFolder(e.data, "inbox") && newsBucket(e.data) === "relevant",
+    ),
   ).length;
   if (!data)
     return (
@@ -574,44 +846,18 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
-              <div
-                className="filters"
-                role="group"
-                aria-label="Filter companies"
-              >
-                {(["all", ...statuses, "archived"] as const).map((s) => (
-                  <button
-                    key={s}
-                    className={filter === s ? "chip selected" : "chip"}
-                    onClick={() => {
-                      setFilter(s);
-                      setGroup("");
-                    }}
-                  >
-                    {s === "all"
-                      ? "All companies"
-                      : s === "archived"
-                        ? "Archived"
-                        : statusLabels[s]}
-                  </button>
-                ))}
-                <select
-                  aria-label="Original research group"
-                  value={group}
-                  onChange={(e) => setGroup(e.target.value)}
-                >
-                  <option value="">All research groups</option>
-                  {[
-                    ...new Set(
-                      docs.map((c) => c.data.originalGroup).filter(Boolean),
-                    ),
-                  ]
-                    .sort()
-                    .map((g) => (
-                      <option key={g}>{g}</option>
-                    ))}
-                </select>
+              {companyFilters}
+              <div className="batch-toolbar">
+                {batchButton}
+                <span className="muted">
+                  News only, for companies matching these filters.
+                </span>
               </div>
+              <NewsBatchStatus
+                batch={data.newsBatch}
+                onControl={controlBatch}
+                controlBusy={batchControlBusy}
+              />
               <div className="desk-columns">
                 <div
                   className={
@@ -671,13 +917,22 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                     tab={tab}
                     setTab={setTab}
                     edit={(patch) => edit(selectedDoc.id, patch)}
-                    close={() => setSelected("")}
+                    close={() => {
+                      setSelected("");
+                      history.replaceState(
+                        null,
+                        "",
+                        location.pathname + location.search,
+                      );
+                    }}
                     events={data.events.filter(
                       (e) => e.data.companyId === selected,
                     )}
                     config={data.configuration}
                     busy={busy || pending.current.has(selected)}
                     action={action}
+                    updateEvent={updateEvent}
+                    savingEvents={savingEvents}
                   />
                 )}
               </div>
@@ -690,19 +945,33 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   <p className="eyebrow">DEVELOPMENTS TO REVIEW</p>
                   <h1>News & alerts</h1>
                 </div>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    action(
-                      () => api("/monitor", {}),
-                      "Monitoring batch completed. See Monitoring health for remaining work.",
-                    )
-                  }
-                >
-                  {busy ? "Checking…" : "Check due companies"}
-                </button>
+                {batchButton}
               </div>
-              <EventList docs={data.events} companies={docs} action={action} />
+              <p className="muted">
+                New items appear at the top. Review to clear your inbox, or save
+                to keep. Unsaved unread items leave the inbox after 30 days.
+              </p>
+              <input
+                className="search"
+                aria-label="Search companies for news"
+                placeholder="Filter companies, tickers, notes…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {companyFilters}
+              <NewsBatchStatus
+                batch={data.newsBatch}
+                onControl={controlBatch}
+                controlBusy={batchControlBusy}
+              />
+              <EventList
+                docs={data.events}
+                companies={filtered}
+                companyFilter={activeNewsCompany}
+                onCompanyFilterChange={setNewsCompany}
+                updateEvent={updateEvent}
+                savingEvents={savingEvents}
+              />
             </>
           )}
           {section === "monitor" && (
@@ -716,8 +985,8 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   disabled={busy}
                   onClick={() =>
                     action(
-                      () => api("/monitor", {}),
-                      "Completed a monitoring batch.",
+                      () => api("/jobs", { type: "monitor" }),
+                      "Monitoring queued. Track it under Settings & digest → Background job history.",
                     )
                   }
                 >
@@ -760,66 +1029,92 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   ? "Hosted scheduling must be enabled for automatic runs."
                   : "This local preview checks sources on demand. The hosted worker runs while your computer is off."}
               </p>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Cadence</th>
-                    <th>Quotes</th>
-                    <th>News sources</th>
-                    <th>Last news check</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {docs
-                    .filter((d) => !d.data.archived)
-                    .map(({ data: c }) => (
-                      <tr key={c.id}>
-                        <td>
-                          <button
-                            className="company-name"
-                            onClick={() => {
-                              setSelected(c.id);
-                              setTab("monitoring");
-                              setSection("companies");
-                            }}
-                          >
-                            {c.name}
-                          </button>
-                        </td>
-                        <td>{cadenceOf(c)}</td>
-                        <td>{c.quoteError || quoteState(c)}</td>
-                        <td>
-                          {c.feeds.length
-                            ? c.feeds
-                                .map(
-                                  (f) =>
-                                    `${f.label}: ${f.error || (f.lastSuccess ? "last fetch succeeded" : "not checked")}`,
-                                )
-                                .join(" · ")
-                            : "Not configured"}
-                        </td>
-                        <td>
-                          {c.lastNewsCheck
-                            ? chicagoDate(c.lastNewsCheck)
-                            : "Never"}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <div
+                className="table-scroll"
+                role="region"
+                aria-label="Company monitoring coverage"
+                tabIndex={0}
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Company</th>
+                      <th>Cadence</th>
+                      <th>Quotes</th>
+                      <th>News sources</th>
+                      <th>Last news check</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {docs
+                      .filter((d) => !d.data.archived)
+                      .map(({ data: c }) => (
+                        <tr key={c.id}>
+                          <td>
+                            <button
+                              className="company-name"
+                              onClick={() => {
+                                setSelected(c.id);
+                                setTab("monitoring");
+                                setSection("companies");
+                              }}
+                            >
+                              {c.name}
+                            </button>
+                          </td>
+                          <td>{cadenceOf(c)}</td>
+                          <td>{c.quoteError || quoteState(c)}</td>
+                          <td>
+                            {c.feeds.length
+                              ? c.feeds
+                                  .map(
+                                    (f) =>
+                                      `${f.label}: ${f.error || (f.lastSuccess ? "last fetch succeeded" : "not checked")}`,
+                                  )
+                                  .join(" · ")
+                              : "Not configured"}
+                          </td>
+                          <td>
+                            {c.lastNewsCheck
+                              ? chicagoDate(c.lastNewsCheck)
+                              : "Never"}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
           {section === "import" && (
             <ImportPanel batches={data.imports} action={action} busy={busy} />
           )}
           {section === "settings" && (
-            <SettingsPanel data={data} action={action} busy={busy} />
+            <>
+              <SettingsPanel data={data} action={action} busy={busy} />
+              <IntegrationsPanel />
+              <JobsPanel />
+            </>
           )}
         </main>
       </div>
       {adding && (
-        <div className="modal-backdrop">
+        <dialog
+          className="modal-backdrop"
+          aria-labelledby="add-company-title"
+          ref={(node) => {
+            if (node && !node.open) {
+              node.showModal();
+              node
+                .querySelector<HTMLInputElement>('input[name="name"]')
+                ?.focus();
+            }
+          }}
+          onCancel={(e) => {
+            e.preventDefault();
+            if (!busy) setAdding(false);
+          }}
+        >
           <form
             className="modal"
             onSubmit={async (e) => {
@@ -829,6 +1124,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 const doc = await api<Doc<Company>>("/companies", {
                   name: f.get("name"),
                   ticker: f.get("ticker"),
+                  ideaSource: f.get("ideaSource"),
                   status: f.get("status"),
                 });
                 setSelected(doc.id);
@@ -844,12 +1140,13 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
               type="button"
               className="dismiss"
               aria-label="Close add company"
+              disabled={busy}
               onClick={() => setAdding(false)}
             >
               ×
             </button>
             <p className="eyebrow">CAPTURE AN IDEA</p>
-            <h2>Add company</h2>
+            <h2 id="add-company-title">Add company</h2>
             <Field label="Company name">
               <input
                 autoFocus
@@ -876,11 +1173,18 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
             <p className="muted">
               You can link market data and news sources after adding it.
             </p>
+            <Field label="Where did you find this idea?">
+              <input
+                name="ideaSource"
+                maxLength={2000}
+                placeholder="Screener, newsletter, person, podcast or link…"
+              />
+            </Field>
             <button className="primary" disabled={busy}>
               {busy ? "Adding…" : "Add company"}
             </button>
           </form>
-        </div>
+        </dialog>
       )}
     </div>
   );
@@ -953,6 +1257,8 @@ interface DetailProps {
   config: any;
   busy: boolean;
   action: (fn: () => Promise<unknown>, message?: string) => Promise<void>;
+  updateEvent: EventUpdate;
+  savingEvents: Set<string>;
 }
 function CompanyDetail({
   doc,
@@ -964,6 +1270,8 @@ function CompanyDetail({
   config,
   busy,
   action,
+  updateEvent,
+  savingEvents,
 }: DetailProps) {
   const c = doc.data;
   const [preview, setPreview] = useState(false);
@@ -1031,6 +1339,15 @@ function CompanyDetail({
       <div className="detail-body">
         {tab === "research" && (
           <>
+            <Field label="Where did you find this idea?">
+              <textarea
+                rows={2}
+                maxLength={2000}
+                placeholder="Screener, newsletter, person, podcast or link…"
+                value={c.ideaSource || ""}
+                onChange={(e) => edit({ ideaSource: e.target.value })}
+              />
+            </Field>
             <Field label="My thesis / one-line summary">
               <textarea
                 rows={2}
@@ -1108,28 +1425,25 @@ function CompanyDetail({
                 `Source: ${c.source} ${c.sourceLines ? "· original lines " + c.sourceLines : ""}`}
             </p>
             <button
-              onClick={async () => {
-                setHistory(await api(`/companies/${c.id}/revisions`));
-              }}
+              onClick={() =>
+                action(async () => {
+                  setHistory(await api(`/companies/${c.id}/revisions`));
+                })
+              }
             >
               Note history
             </button>
             <button
-              onClick={async () => {
-                const response = await fetch(
-                  base + `/companies/${c.id}/markdown`,
-                  {
-                    headers: accessToken
-                      ? { Authorization: `Bearer ${accessToken}` }
-                      : {},
-                  },
-                );
-                download(
-                  `${c.name.replace(/[^a-z0-9 -]/gi, "")}.md`,
-                  await response.text(),
-                  "text/markdown",
-                );
-              }}
+              onClick={() =>
+                action(async () => {
+                  const markdown = await apiText(`/companies/${c.id}/markdown`);
+                  download(
+                    `${c.name.replace(/[^a-z0-9 -]/gi, "")}.md`,
+                    markdown,
+                    "text/markdown",
+                  );
+                })
+              }
             >
               Export Markdown
             </button>
@@ -1226,8 +1540,12 @@ function CompanyDetail({
                 const f = new FormData(e.currentTarget);
                 action(
                   () =>
-                    api(`/companies/${c.id}/analyze`, Object.fromEntries(f)),
-                  "Article screened. See News & alerts for evidence.",
+                    api("/jobs", {
+                      type: "analyze",
+                      companyId: c.id,
+                      article: Object.fromEntries(f),
+                    }),
+                  "Article analysis queued. Track it under Settings & digest → Background job history.",
                 );
               }}
             >
@@ -1235,7 +1553,12 @@ function CompanyDetail({
                 <input name="title" required />
               </Field>
               <Field label="Article text">
-                <textarea name="text" rows={5} maxLength={16000} required />
+                <textarea
+                  name="text"
+                  rows={5}
+                  maxLength={MAX_ARTICLE_CHARS}
+                  required
+                />
               </Field>
               <Field label="Source URL (optional)">
                 <input name="url" type="url" />
@@ -1358,7 +1681,8 @@ function CompanyDetail({
             <EventList
               docs={events}
               companies={[doc]}
-              action={action}
+              updateEvent={updateEvent}
+              savingEvents={savingEvents}
               compact
             />
           </>
@@ -1432,6 +1756,125 @@ function CompanyDetail({
               </>
             )}
             <h3>News sources</h3>
+            <div className="form-grid">
+              <Field label="Business scale for news screening">
+                <select
+                  value={c.businessScale}
+                  onChange={(e) =>
+                    edit({
+                      businessScale: e.target.value as Company["businessScale"],
+                    })
+                  }
+                >
+                  <option value="unknown">Not established</option>
+                  <option value="small">Small business</option>
+                  <option value="medium">Medium business</option>
+                  <option value="large">Large business</option>
+                </select>
+              </Field>
+              <Field label="Context as of">
+                <input
+                  type="date"
+                  value={c.contextAsOf}
+                  onChange={(e) => edit({ contextAsOf: e.target.value })}
+                />
+              </Field>
+            </div>
+            <Field label="Business and financial context">
+              <textarea
+                rows={4}
+                maxLength={6000}
+                value={c.businessContext}
+                onChange={(e) => edit({ businessContext: e.target.value })}
+                placeholder="Key profit drivers, segment exposure, revenue/earnings scale and financial capacity. Include units and dates for figures."
+              />
+            </Field>
+            <Field label="Context source">
+              <input
+                value={c.contextSource}
+                maxLength={2000}
+                onChange={(e) => edit({ contextSource: e.target.value })}
+                placeholder="Source URL or research reference"
+              />
+            </Field>
+            <Field label="Primary document pages or RSS feeds (one URL per line)">
+              <textarea
+                rows={3}
+                key={`${c.id}-primary`}
+                defaultValue={c.primarySources.join("\n")}
+                onBlur={(e) =>
+                  edit({
+                    primarySources: e.target.value
+                      .split("\n")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="https://company.example/investors/results"
+              />
+            </Field>
+            <Field label="SEC CIK (optional)">
+              <input
+                inputMode="numeric"
+                maxLength={10}
+                value={c.secCik}
+                onChange={(e) =>
+                  edit({ secCik: e.target.value.replace(/\D/g, "") })
+                }
+                placeholder="SEC company identifier for US filings"
+              />
+            </Field>
+            <Field label="Additional publisher domains to read (one per line)">
+              <textarea
+                rows={2}
+                key={`${c.id}-publishers`}
+                defaultValue={c.articleHosts.join("\n")}
+                onBlur={(e) =>
+                  edit({
+                    articleHosts: e.target.value
+                      .split("\n")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="research-publication.example"
+              />
+            </Field>
+            <p className="muted">
+              Netflix, Progressive, Zoom and American Coastal have built-in
+              investor-relations sources. Other companies use the sources
+              entered here and official feeds below. Unreadable sources appear
+              in Monitoring health.
+            </p>
+            <Field label="Excluded publishers (one name or domain per line)">
+              <textarea
+                rows={3}
+                key={`${c.id}-excluded`}
+                defaultValue={c.excludedNewsSources.join("\n")}
+                onBlur={(e) =>
+                  edit({
+                    excludedNewsSources: e.target.value
+                      .split("\n")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Company news search">
+              <input
+                maxLength={500}
+                value={c.newsQuery || ""}
+                placeholder={companyNewsQuery({ ...c, newsQuery: "" })}
+                onChange={(e) => edit({ newsQuery: e.target.value })}
+              />
+            </Field>
+            <p className="muted">
+              Optional: refine the search for names shared by other businesses.
+              TypeSafe screens available article text for company-scale
+              significance, evidence quality and original contribution.
+              Incomplete evidence stays in Needs verification.
+            </p>
             <p className="muted">
               Use company investor-relations and regulator feeds where
               available. Broad news feeds help catch events outside your thesis.
@@ -1497,8 +1940,8 @@ function CompanyDetail({
               disabled={busy}
               onClick={() =>
                 action(
-                  () => api("/monitor", { companyId: c.id }),
-                  "Company check completed.",
+                  () => api("/jobs", { type: "monitor", companyId: c.id }),
+                  "Company check queued. Track it under Settings & digest → Background job history.",
                 )
               }
             >
@@ -1570,157 +2013,52 @@ function CompanyDetail({
   );
 }
 
-function EventList({
+function CompanyScopeFilters({
   docs,
-  companies,
-  action,
-  compact = false,
+  filter,
+  setFilter,
+  group,
+  setGroup,
 }: {
-  docs: Doc<DeskEvent>[];
-  companies: Doc<Company>[];
-  action: DetailProps["action"];
-  compact?: boolean;
+  docs: Doc<Company>[];
+  filter: Status | "all" | "archived";
+  setFilter: (value: Status | "all" | "archived") => void;
+  group: string;
+  setGroup: (value: string) => void;
 }) {
-  const [show, setShow] = useState("unread");
-  const names = new Map(companies.map((x) => [x.id, x.data.name]));
-  const filtered = docs
-    .filter(({ data: e }) =>
-      show === "all" || show === "suppressed"
-        ? show === "all" || e.priority === "suppressed"
-        : !e.reviewed && e.priority !== "suppressed" && e.kind !== "health",
-    )
-    .sort((a, b) => b.data.discoveredAt.localeCompare(a.data.discoveredAt));
   return (
-    <div className={compact ? "event-list compact" : "event-list"}>
-      <div className="filters">
-        {["unread", "all", "suppressed"].map((s) => (
-          <button
-            key={s}
-            className={show === s ? "chip selected" : "chip"}
-            onClick={() => setShow(s)}
-          >
-            {s === "unread"
-              ? "Needs review"
-              : s === "all"
-                ? "Recent events & issues"
-                : "Screened out"}
-          </button>
-        ))}
-      </div>
-      {!filtered.length && (
-        <div className="empty">
-          <h3>No events in this view</h3>
-          <p>
-            Source coverage and failures appear in Monitoring health. An empty
-            feed does not establish that nothing happened.
-          </p>
-        </div>
-      )}
-      {filtered.map((doc) => {
-        const e = doc.data;
-        return (
-          <article className={"event " + e.priority} key={e.id}>
-            <div className="event-meta">
-              <b>{names.get(e.companyId) || "Company"}</b>
-              <span>
-                {e.kind === "health"
-                  ? "Coverage issue"
-                  : e.priority === "major"
-                    ? "Important"
-                    : e.priority === "possible"
-                      ? "Review / uncertain"
-                      : "Screened out"}
-              </span>
-              <span>
-                {e.publishedAt
-                  ? chicagoDate(e.publishedAt)
-                  : "Publication date unknown"}
-              </span>
-            </div>
-            <h3>
-              {safeLink(e.url) ? (
-                <a href={safeLink(e.url)} target="_blank" rel="noreferrer">
-                  {e.title} ↗
-                </a>
-              ) : (
-                e.title
-              )}
-            </h3>
-            <p>{e.body}</p>
-            {e.evidence && <blockquote>{e.evidence}</blockquote>}
-            {e.matches?.map((m, i) => (
-              <p className="match" key={i}>
-                <b>
-                  {m.direction === "concern"
-                    ? "Concern increased"
-                    : m.direction === "reassuring"
-                      ? "Potentially reassuring"
-                      : "Relevant / uncertain"}
-                </b>{" "}
-                · {m.text}
-              </p>
-            ))}
-            <div className="event-actions">
-              <button
-                onClick={() =>
-                  action(() =>
-                    api(
-                      `/events/${e.id}`,
-                      { version: doc.version, reviewed: !e.reviewed },
-                      "PUT",
-                    ),
-                  )
-                }
-              >
-                {e.reviewed ? "Mark unread" : "Mark reviewed"}
-              </button>
-              <button
-                onClick={() =>
-                  action(() =>
-                    api(
-                      `/events/${e.id}`,
-                      {
-                        version: doc.version,
-                        reviewed: true,
-                        feedback: "useful",
-                      },
-                      "PUT",
-                    ),
-                  )
-                }
-              >
-                Useful
-              </button>
-              <button
-                onClick={() =>
-                  action(() =>
-                    api(
-                      `/events/${e.id}`,
-                      {
-                        version: doc.version,
-                        reviewed: true,
-                        feedback: "noise",
-                      },
-                      "PUT",
-                    ),
-                  )
-                }
-              >
-                Noise
-              </button>
-              <details>
-                <summary>Evidence & model details</summary>
-                <pre>{JSON.stringify(e.classification || {}, null, 2)}</pre>
-                <p>Discovered {e.discoveredAt}</p>
-              </details>
-            </div>
-          </article>
-        );
-      })}
+    <div className="filters" role="group" aria-label="Filter companies">
+      {(["all", ...statuses, "archived"] as const).map((s) => (
+        <button
+          key={s}
+          className={filter === s ? "chip selected" : "chip"}
+          onClick={() => {
+            setFilter(s);
+            setGroup("");
+          }}
+        >
+          {s === "all"
+            ? "All companies"
+            : s === "archived"
+              ? "Archived"
+              : statusLabels[s]}
+        </button>
+      ))}
+      <select
+        aria-label="Original research group"
+        value={group}
+        onChange={(e) => setGroup(e.target.value)}
+      >
+        <option value="">All research groups</option>
+        {[...new Set(docs.map((c) => c.data.originalGroup).filter(Boolean))]
+          .sort()
+          .map((g) => (
+            <option key={g}>{g}</option>
+          ))}
+      </select>
     </div>
   );
 }
-
 function ImportPanel({
   batches,
   action,
@@ -2127,6 +2465,12 @@ function SettingsPanel({
           </dd>
           <dt>TypeSafe spending ceiling</dt>
           <dd>${data.configuration.modelBudget}/month · server enforced</dd>
+          <dt>AI credential & pricing</dt>
+          <dd>
+            TypeSafe API key stored on the server · $0.042 per million input
+            tokens; output is free. The app does not use ChatGPT sign-in or an
+            OpenAI Platform key.
+          </dd>
           <dt>Recorded TypeSafe usage</dt>
           <dd>
             $
@@ -2147,19 +2491,40 @@ function SettingsPanel({
           <dd>
             {cloud ? "Supabase · private account" : "SQLite · this computer"}
           </dd>
+          <dt>Hosting & database billing</dt>
+          <dd>
+            Cloudflare Pages and Supabase. This app cannot read your provider
+            invoices or account plan charges; check those dashboards for account
+            totals.
+          </dd>
+          <dt>News retrieval</dt>
+          <dd>
+            Google News discovery + configured primary sources. Accessible
+            HTML/PDF text is assessed up to 120,000 characters; unavailable text
+            is labeled. No paid news API.
+          </dd>
+          <dt>Email digest</dt>
+          <dd>
+            {data.configuration.email
+              ? "Resend configured; charged under your Resend plan"
+              : "Delivery disabled · no Resend sending costs from this app"}
+          </dd>
         </dl>
         <p className="muted">
           Missing financial data stays blank. Model probabilities are screening
-          signals, not calibrated investment probabilities. Your full research
-          notes are not sent to TypeSafe; screening uses company identity,
-          thesis, watch points and the supplied article.
+          signals, not calibrated investment probabilities. Screening sends
+          company identity, bounded excerpts of research notes and thesis,
+          business context, watch points and the supplied article to TypeSafe.
         </p>
       </div>
     </>
   );
 }
 
-createRoot(document.getElementById("root")!).render(
+const root =
+  import.meta.hot?.data.root ?? createRoot(document.getElementById("root")!);
+if (import.meta.hot) import.meta.hot.data.root = root;
+root.render(
   <React.StrictMode>
     <Root />
   </React.StrictMode>,

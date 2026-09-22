@@ -123,8 +123,45 @@ export function candidateToCompany(
     importBatch: batch,
     sourceLines: `${item.start}–${item.end}`,
     source: "Investment Pitch List.md",
+    ideaSource: /\bUk screen\b/i.test(item.name)
+      ? "UK screen"
+      : /Australia screen/i.test(item.name)
+        ? "Australia screen"
+        : /experimental screener/i.test(item.name)
+          ? "Experimental screener"
+          : "",
   };
 }
+export function consolidatedCandidates(source: string): ImportCandidate[] {
+  const grouped = new Map<string, ImportCandidate>();
+  for (const item of parseInvestmentMarkdown(source).candidates) {
+    const name = item.name
+      .replace(/\s*\*?Uk screen\s*$/i, "")
+      .replace(
+        /\s*\((?:Australia screen|experimental screener|reach out|found feb[^)]*)\)/gi,
+        "",
+      )
+      .replace(/\s+\d+(?:\.\d+)?x$/i, "")
+      .replace(/^Keepers currently trading.*$/i, "Keepers")
+      .replace(/^PGOLD is trading.*$/i, "PGOLD")
+      .trim();
+    const key = name.toLowerCase();
+    const prior = grouped.get(key);
+    const notes = `### ${item.group} · original lines ${item.start}–${item.end}\n\n${item.notes.trim()}`;
+    if (!prior) grouped.set(key, { ...item, name, notes });
+    else {
+      prior.notes += `\n\n${notes}`;
+      prior.end = item.end;
+      // Later research sections supersede an earlier inbox mention; retain every note.
+      if (item.status !== "inbox") {
+        prior.status = item.status;
+        prior.group = item.group;
+      }
+      prior.review ||= item.review;
+    }
+  }
+  return [...grouped.values()];
+}
 export function markdownExport(c: Company): string {
-  return `---\nid: ${JSON.stringify(c.id)}\nname: ${JSON.stringify(c.name)}\nstatus: ${c.status}\nticker: ${JSON.stringify(c.ticker)}\ncurrency: ${JSON.stringify(c.currency)}\nmonitoring: ${c.cadence}\ntags: ${JSON.stringify(c.tags)}\n---\n\n# ${c.name}\n\n${c.thesis ? "## Thesis\n\n" + c.thesis + "\n\n" : ""}${c.passReason ? "## Why I passed\n\n" + c.passReason + "\n\n" : ""}## Notes\n\n${c.notes}\n\n## Watching\n\n${c.watchPoints.map((w) => "- " + w.text).join("\n")}\n`;
+  return `---\nid: ${JSON.stringify(c.id)}\nname: ${JSON.stringify(c.name)}\nstatus: ${c.status}\nticker: ${JSON.stringify(c.ticker)}\ncurrency: ${JSON.stringify(c.currency)}\nmonitoring: ${c.cadence}\ntags: ${JSON.stringify(c.tags)}\nideaSource: ${JSON.stringify(c.ideaSource || "")}\nimportSource: ${JSON.stringify(c.source)}\n---\n\n# ${c.name}\n\n${c.thesis ? "## Thesis\n\n" + c.thesis + "\n\n" : ""}${c.passReason ? "## Why I passed\n\n" + c.passReason + "\n\n" : ""}## Notes\n\n${c.notes}\n\n## Watching\n\n${c.watchPoints.map((w) => "- " + w.text).join("\n")}\n`;
 }

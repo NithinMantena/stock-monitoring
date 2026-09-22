@@ -2,14 +2,21 @@
 
 A private stock research notebook and monitoring app for a few hundred researched companies. The approved product plan is in [PRD.md](PRD.md).
 
+Read [ARCHITECTURE.md](ARCHITECTURE.md) for the system logic, news pipeline, token use, module map, synchronization, and review/verification results.
+
 Open [Research Desk](https://research-desk-2p0.pages.dev) on any device. Enter `nithin@mantena.com` and choose **Email me a sign-in link**; open the link on the device you want to use.
 
 ## What works
 
+- One versioned read/write API for the website, MCP and OpenClaw. See [connection setup](docs/INTEGRATIONS.md) and the [API contract](docs/API.md). Settings includes scoped, expiring/revocable integration credentials and durable background-job history.
 - Add a company by name, search its notes, change its status, archive it, and use research groups and tags.
 - Edit Markdown notes and a thesis with automatic saves, revision history, device draft recovery, and conflict detection. Background market updates do not overwrite notes.
-- Keep personal watch points. TypeSafe screens each supplied news item for company identity, material events, watch-point relevance, direction, and supporting evidence. Uncertain or failed classifications remain visible.
-- New companies receive a broad Google News RSS search. Add official IR/regulatory RSS/Atom feeds on explicitly enabled hosts. The feed supplies headlines/snippets; the app does not scrape full articles or claim complete news coverage.
+- Keep personal watch points. TypeSafe screens identity, business significance, attribution, contribution and currentness. Primary evidence and supported additional reporting or analysis become recommended readings. Recaps remain in Coverage; missing or uncertain evidence needs verification. [Screening architecture and thresholds](docs/fundamental-screening-v2.md).
+- News & alerts opens as a newest-first inbox. Review clears a development; Save moves it to Saved, where it remains without a time limit. Unsaved unread items age into History 30 days after discovery; returning an item to the inbox starts a fresh 30-day window. Saved/reviewed state survives re-screening, and full exports retain it. News refreshes every minute while the page is visible.
+- **Search news** takes up to 10 Google News items from each of the last seven UTC calendar days, including today, per selected company, preserving the feed's order within each day. Configured primary sources are also checked. Pause saves the queue, Resume continues it, and Cancel ends it while retaining completed articles. An in-flight article may finish before stopping. Progress and recorded TypeSafe tokens are shown. The saved queue continues on hosted scheduler ticks after the page closes; those bounded five-minute ticks can make a large search take hours. Automatic monitoring and the digest have independent schedules.
+- Filter articles by keyword, company, publisher, importance and publication dates. Noise/Useful/Reviewed/Save update immediately, save in the background, and roll back visibly if saving fails. Review and save actions cover all stored sources for the same development. Feedback can be undone.
+- New companies receive a Google News RSS search with business context for ambiguous names. Refine it in Monitoring → Company news search. Add official IR/regulatory RSS/Atom feeds on explicitly enabled hosts. Accessible public HTTPS publisher pages can be retrieved after destination checks; every redirect is checked. Set `ALLOW_PUBLIC_ARTICLE_HOSTS=false` to require the explicit host list. Netflix, Progressive, Zoom and American Coastal have built-in SEC/IR discovery; other companies can configure primary pages, RSS feeds and a SEC CIK. **Read available text** fetches source text without AI screening. Paywalls, script-only pages and server blocks can prevent extraction; open the publisher link in that case. Reading and screening remain bounded to 120,000 characters.
+- Record where an idea came from when adding a company or in its Research tab. Idea source is separate from original import-file provenance and is included in exports.
 - Owned and perpetual-watch companies run daily. Other active companies run weekly, with individual overrides. Weekly checks retain a full lookback and preserve publication/discovery dates.
 - Price, positive trailing P/E, and baseline-decline rules, with repeat suppression, recovery/rearming, currency checks and discontinuity warnings.
 - EODHD daily-close adapter. **A provider key and confirmed instrument mapping are required. P/E and market cap are manual observations in this first version.** No unverified numbers are populated.
@@ -45,7 +52,7 @@ npm run import:preview
 
 - Supabase project: **Stock Monitoring**, `tcfricxifanwwzgxgexj`.
 - API: `https://tcfricxifanwwzgxgexj.supabase.co/functions/v1/desk`.
-- Owner: `nithin@mantena.com`. Every API request validates a Supabase session and the allowed owner. The public key is not an authorization bypass.
+- Owner: `nithin@mantena.com`. Requests validate the owner's Supabase session or a scoped integration credential for the v1 API. The public key is not an authorization bypass.
 - Function: `desk`. JWT verification at the platform gateway is disabled because the scheduled endpoint uses a separate secret; user JWTs are explicitly verified in the function itself.
 - Tables use row-level security. Client roles cannot directly mutate records. Service-only RPCs implement version checks, leases, and atomic AI-budget reservations.
 - Postgres cron invokes the worker every five minutes. The worker selects only due companies, resumes bounded batches, and sends at most one digest per Chicago day after 07:00 when enabled.
@@ -55,13 +62,15 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for remaining account setup and deployment co
 
 ## Importing the existing research
 
-The original Investment Pitch List is staged privately for review. Open **Import & backup → Review prepared import**. The parser found 257 candidate company sections; 48 require review. Duplicate names are kept separate and flagged. Narrative bullets stay with their company, original research-group headings are retained, and historic valuation notes are never treated as current quotes.
+The original Investment Pitch List has been imported into the hosted website: 257 source sections were consolidated into 245 company records. The existing Progressive and Deckers Outdoors records retained their edits and received their original research notes. Repeated names were combined with all source sections preserved; ambiguous short names are tagged for identity confirmation and their automatic monitoring is paused. The original file remains in private import archives and exports.
 
-Review checked entries and ambiguous names before committing. The original file is preserved in exports even if an entry is not selected. A rollback removes untouched imported companies and preserves companies edited after import.
+For additional files, use Import & backup to preview the entries before importing. A rollback removes untouched imported companies and preserves companies edited after import. The initial hosted import can be reproduced idempotently with `scripts/seed-prepared-import.ts`; it previews by default and applies only with `--apply`.
 
 ## Data and cost boundaries
 
-TypeSafe judges text that the app supplies; it does not discover news or retrieve financial data. The server reserves a worst-case request cost before classification and enforces a $2/month TypeSafe ceiling. Settings shows recorded usage, including reservations for failed requests. Provider-side billing remains the source of truth. Numerical prices, dates, schedules and alert arithmetic are computed in code.
+TypeSafe judges text that the app supplies; it does not discover news or retrieve financial data. The server reserves a worst-case request cost before classification and enforces a $5/month default TypeSafe ceiling (configurable up to $10). Settings shows recorded usage, including reservations for failed requests. Provider-side billing remains the source of truth. Numerical prices, dates, schedules and alert arithmetic are computed in code.
+
+Admission policy changes reuse stored judgments without an automatic full AI re-screen. Unchanged article retries and identical canonical content reuse the existing classification. For 247 companies, the manual seven-day scope allows up to 17,290 Google News items; this is a maximum, not a target. `node scripts/diagnose-news.ts` reads hosted counts and usage without model calls. Monthly usage includes all monitoring, retries and manual searches, not just the latest button click.
 
 The $25/month total budget is a target, not an assurance of comprehensive global market/fundamental/news coverage. Choose subscriptions only after verifying actual instrument coverage, valuation fields, and whether personal or business licensing applies. Small companies and non-English news can have significant coverage gaps. A successful feed fetch establishes that the feed responded, not that all material events were found.
 
@@ -70,6 +79,7 @@ The $25/month total budget is a target, not an assurance of comprehensive global
 | Path | Purpose |
 | --- | --- |
 | `src/main.tsx`, `src/style.css` | Fast browser workspace and company editor |
+| `src/news-panel.tsx`, `src/api.ts`, `src/sync.ts` | News UI, request/error handling and incremental synchronization |
 | `src/drafts.ts` | Asynchronous IndexedDB recovery for unsynced edits |
 | `supabase/functions/_shared` | Shared API, schemas, import logic, monitor, TypeSafe and RSS/EODHD adapters |
 | `server` | Local Hono server and SQLite store |

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { advanceJob } from "./job-queue.ts";
 import { bodyLimit } from "hono/body-limit";
 import { DatabaseReadError } from "./database-read.ts";
 import { z, ZodError } from "zod";
@@ -19,24 +20,48 @@ import {
   parseInvestmentMarkdown,
 } from "./importer.ts";
 import { hash, safeLink } from "./engine.ts";
+import { companyNewsUrl, isDefaultNewsFeed } from "./news.ts";
 import { configuration, validateFeedUrl, type Env } from "./providers.ts";
+import {
+  contentHosts,
+  validateContentUrl,
+  enrichArticle,
+} from "./article-content.ts";
+import { MAX_ARTICLE_CHARS } from "./screening-policy.ts";
+import { inEventFolder, isExpired } from "./event-inbox.ts";
+import { validateRestoreRecords } from "./restore.ts";
+import {
+  advanceNewsBatch,
+  startNewsBatch,
+  newsBatchSummary,
+  controlNewsBatch,
+  type NewsBatch,
+} from "./news-batch.ts";
 import {
   dailySnapshot,
   digestPreview,
   processArticle,
   runMonitor,
+  rescreenNews,
   saveQuoteObservations,
   sendDueDigest,
 } from "./jobs.ts";
 
 export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
   const api = new Hono();
-  api.use(
-    "*",
-    bodyLimit({
-      maxSize: 2500000,
-      onError: (c) => c.json({ error: "File exceeds the 2.5 MB limit." }, 413),
-    }),
+  const normalLimit = bodyLimit({
+    maxSize: 2500000,
+    onError: (c) => c.json({ error: "File exceeds the 2.5 MB limit." }, 413),
+  });
+  const backupLimit = bodyLimit({
+    maxSize: 100000000,
+    onError: (c) =>
+      c.json({ error: "Backup exceeds the 100 MB restore limit." }, 413),
+  });
+  api.use("*", (c, next) =>
+    c.req.path.endsWith("/restore")
+      ? backupLimit(c, next)
+      : normalLimit(c, next),
   );
   api.onError((error, c) =>
     c.json(
@@ -56,30 +81,38 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     ),
   );
   api.get("/bootstrap", async (c) => {
-    const [companies, events, settings, run, imports, usage] =
+    const [companies, events, settings, run, imports, usage, newsBatch] =
       await Promise.all([
         store.list<Company>("company", { summary: true }),
-        store.list<DeskEvent>("event", { summary: true, limit: 200 }),
+        c.req.query("events") === "none"
+          ? []
+          : store.list<DeskEvent>("event", { summary: true }),
         store.get("settings", "main"),
         store.get("run", "latest"),
         store.list<any>("import", { summary: true }),
         store.usage?.() || [],
+        store.get<NewsBatch>("news_batch", "latest"),
       ]);
     return c.json({
       companies,
-      events: events.slice(0, 1000),
+      events: events.filter(
+        (d) => inEventFolder(d.data, "inbox") || d.data.saved,
+      ),
       settings: settings?.data || defaultSettings,
       settingsVersion: settings?.version || 0,
       run: run?.data,
-      imports: imports.map((x) => ({
-        id: x.id,
-        count: x.data.count,
-        at: x.data.at,
-        rolledBack: x.data.rolledBack,
-        draft: x.data.draft,
-      })),
+      imports: imports
+        .filter((x) => !x.data.importedBatch)
+        .map((x) => ({
+          id: x.id,
+          count: x.data.count,
+          at: x.data.at,
+          rolledBack: x.data.rolledBack,
+          draft: x.data.draft,
+        })),
       configuration: { ...configuration(env), mode },
       usage,
+      newsBatch: newsBatchSummary(newsBatch?.data),
     });
   });
   api.post("/companies", async (c) => {
@@ -88,10 +121,12 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         name: z.string().trim().min(1).max(200),
         status: CompanySchema.shape.status,
         ticker: z.string().max(50).optional(),
+        ideaSource: z.string().max(2000).optional(),
       })
       .parse(await c.req.json());
     const company = newCompany(input.name, input.status);
     company.ticker = input.ticker || "";
+    company.ideaSource = input.ideaSource || "";
     return c.json(await store.put("company", company.id, company, 0), 201);
   });
   api.put("/companies/:id", async (c) => {
@@ -125,6 +160,16 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           "thesis",
           "passReason",
           "source",
+          "ideaSource",
+          "newsQuery",
+          "businessScale",
+          "businessContext",
+          "contextAsOf",
+          "contextSource",
+          "primarySources",
+          "secCik",
+          "articleHosts",
+          "excludedNewsSources",
           "dateFound",
           "lastReviewed",
           "nextReview",
@@ -137,10 +182,45 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           "providerSymbol",
         ] as const;
         const merged = { ...old.data };
+        // Background checkpoints are not user edits. Compare only editable
+        // fields; the server reapplies current feed/rule state below.
+        const comparable = (
+          company: Company,
+          key: (typeof editable)[number],
+        ) => {
+          if (key === "feeds")
+            return company.feeds.map(({ id, url, label, official }) => ({
+              id,
+              url,
+              label,
+              official,
+            }));
+          if (key === "rules")
+            return company.rules.map(
+              ({
+                id,
+                metric,
+                threshold,
+                currency,
+                baseline,
+                enabled,
+                basis,
+              }) => ({
+                id,
+                metric,
+                threshold,
+                currency,
+                baseline,
+                enabled,
+                basis,
+              }),
+            );
+          return company[key];
+        };
         for (const key of editable) {
-          const original = JSON.stringify(input.base[key]);
-          const proposed = JSON.stringify(input.data[key]);
-          const current = JSON.stringify(old.data[key]);
+          const original = JSON.stringify(comparable(input.base, key));
+          const proposed = JSON.stringify(comparable(input.data, key));
+          const current = JSON.stringify(comparable(old.data, key));
           if (original === proposed) continue;
           if (original !== current && proposed !== current)
             throw new ConflictError();
@@ -148,9 +228,20 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         }
         input.data = merged;
       }
+      input.data.feeds = input.data.feeds.map((feed) =>
+        isDefaultNewsFeed(feed)
+          ? {
+              ...feed,
+              label: "Google News · company news",
+              url: companyNewsUrl(input.data),
+            }
+          : feed,
+      );
       for (const feed of input.data.feeds)
         if (!old.data.feeds.some((f) => f.url === feed.url))
           validateFeedUrl(feed.url, env);
+      for (const url of input.data.primarySources)
+        validateContentUrl(url, contentHosts(input.data, env));
       if (
         old.data.notes !== input.data.notes ||
         old.data.thesis !== input.data.thesis
@@ -178,7 +269,8 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           prev.threshold === r.threshold &&
           prev.currency === r.currency &&
           prev.baseline === r.baseline &&
-          prev.enabled === r.enabled
+          prev.enabled === r.enabled &&
+          prev.basis === r.basis
           ? {
               ...r,
               triggered: prev.triggered,
@@ -203,6 +295,16 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         JSON.stringify(input.data.feeds.map((f) => [f.id, f.url]));
       const value: Company = {
         ...input.data,
+        feeds: input.data.feeds.map((feed) => {
+          const prior = old.data.feeds.find(
+            (f) => f.id === feed.id && f.url === feed.url,
+          );
+          return {
+            ...feed,
+            lastSuccess: prior?.lastSuccess || "",
+            error: prior?.error || "",
+          };
+        }),
         rules,
         quote: quoteMappingChanged ? null : old.data.quote,
         quoteHistory: quoteMappingChanged ? [] : old.data.quoteHistory,
@@ -211,6 +313,28 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         lastNewsCheck: feedsChanged ? "" : old.data.lastNewsCheck,
         createdAt: old.data.createdAt,
         revision: old.data.revision + 1,
+        newsRevision:
+          old.data.newsRevision +
+          ([
+            "name",
+            "ticker",
+            "exchange",
+            "thesis",
+            "watchPoints",
+            "businessScale",
+            "businessContext",
+            "contextAsOf",
+            "contextSource",
+            "primarySources",
+            "articleHosts",
+            "excludedNewsSources",
+          ].some(
+            (key) =>
+              JSON.stringify((old.data as any)[key]) !==
+              JSON.stringify((input.data as any)[key]),
+          )
+            ? 1
+            : 0),
         updatedAt: new Date().toISOString(),
       };
       return c.json(await store.put("company", id, value, old.version));
@@ -220,9 +344,10 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
   });
   api.get("/companies/:id/revisions", async (c) =>
     c.json(
-      (await store.list<any>("revision"))
-        .filter((r) => r.data.companyId === c.req.param("id"))
-        .slice(0, 50),
+      await store.list<any>("revision", {
+        companyId: c.req.param("id"),
+        limit: 50,
+      }),
     ),
   );
   api.get("/companies/:id/markdown", async (c) => {
@@ -261,7 +386,7 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     const input = z
       .object({
         title: z.string().min(1).max(1000),
-        text: z.string().min(1).max(16000),
+        text: z.string().min(1).max(MAX_ARTICLE_CHARS),
         url: z.string().max(2000).default(""),
         publishedAt: z.string().max(40).default(""),
       })
@@ -277,32 +402,110 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           url: safeLink(input.url),
           source: "Manually supplied article",
           official: false,
+          contentDepth: "supplied",
         },
         store,
         env,
       ),
     );
   });
+  api.post("/events/:id/content", async (c) => {
+    const doc = await store.get<DeskEvent>("event", c.req.param("id"));
+    if (!doc || doc.data.kind !== "news")
+      return c.json({ error: "Article not found." }, 404);
+    const e = doc.data;
+    const company = await store.get<Company>("company", e.companyId);
+    if (!company) return c.json({ error: "Company not found." }, 404);
+    const article = await enrichArticle(
+      company.data,
+      {
+        id: e.id,
+        title: e.title,
+        url: e.url,
+        text: e.rawText || e.body,
+        publishedAt: e.publishedAt,
+        source: String(e.classification?.source || ""),
+        official: e.classification?.official === true,
+        contentDepth: e.screening?.contentDepth || "snippet",
+      },
+      env,
+      store,
+    );
+    // Reading does not invoke TypeSafe or alter review/feedback/classification.
+    return c.json({
+      text: article.text,
+      url: article.url,
+      contentDepth: article.contentDepth,
+      note: article.retrievalNote,
+    });
+  });
   api.put("/events/:id", async (c) => {
     const input = z
       .object({
         version: z.number().int().positive(),
         reviewed: z.boolean(),
-        feedback: z.enum(["useful", "noise"]).optional(),
+        saved: z.boolean().optional(),
+        feedback: z.enum(["useful", "noise"]).nullable().optional(),
+        feedbackReason: z
+          .enum([
+            "too_minor",
+            "wrong_company",
+            "poor_source",
+            "duplicate",
+            "no_new_information",
+            "other",
+          ])
+          .optional(),
       })
       .parse(await c.req.json());
     const doc = await store.get<DeskEvent>("event", c.req.param("id"));
     if (!doc || doc.version !== input.version) throw new ConflictError();
+    const feedback =
+      input.feedback === undefined
+        ? doc.data.feedback
+        : input.feedback || undefined;
     return c.json(
       await store.put(
         "event",
         doc.id,
-        { ...doc.data, reviewed: input.reviewed, feedback: input.feedback },
+        {
+          ...doc.data,
+          reviewed: input.reviewed,
+          saved: input.saved ?? doc.data.saved ?? false,
+          inboxAt:
+            !input.reviewed && (doc.data.reviewed || isExpired(doc.data))
+              ? new Date().toISOString()
+              : doc.data.inboxAt,
+          feedback,
+          feedbackReason:
+            feedback === "noise"
+              ? (input.feedbackReason ?? doc.data.feedbackReason)
+              : undefined,
+        },
         doc.version,
       ),
     );
   });
-  api.get("/events", async (c) => c.json(await store.list<DeskEvent>("event")));
+  api.get("/events", async (c) =>
+    c.json(
+      await store.list<DeskEvent>("event", {
+        summary: true,
+        companyId: c.req.query("companyId") || undefined,
+      }),
+    ),
+  );
+  api.get("/news/updates", async (c) => {
+    const since = c.req.query("since");
+    if (since) z.iso.datetime().parse(since);
+    // Take the cursor before reading. Inclusive timestamp filtering avoids losing
+    // writes committed while a refresh is in flight or sharing its timestamp.
+    const cursor = new Date().toISOString();
+    const [events, batch] = await Promise.all([
+      store.list<DeskEvent>("event", { summary: true, updatedSince: since }),
+      store.get<NewsBatch>("news_batch", "latest"),
+    ]);
+    return c.json({ events, batch: newsBatchSummary(batch?.data), cursor });
+  });
   api.put("/settings", async (c) => {
     const input = z
       .object({ version: z.number().int().nonnegative(), data: SettingsSchema })
@@ -320,10 +523,62 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     );
   });
   api.post("/scheduled", async (c) => {
+    const started = Date.now();
+    // Give explicitly queued work one bounded step so a busy monitor cannot starve it.
+    const apiJob = await advanceJob(store, env);
+    const screening = await rescreenNews(store, env, {
+      limit: 12,
+      milliseconds: 20000,
+    });
     const monitor = await runMonitor(store, env);
     const backup = await dailySnapshot(store);
     const email = await sendDueDigest(store, env);
-    return c.json({ monitor, backup, email });
+    // Regular monitoring and the morning digest have priority; resume manual work only afterward.
+    const newsBatch =
+      Date.now() - started < 100000
+        ? await advanceNewsBatch(store, env, {
+            milliseconds: Math.min(20000, 100000 - (Date.now() - started)),
+          })
+        : null;
+    return c.json({ monitor, backup, email, screening, newsBatch, apiJob });
+  });
+  api.post("/news/batches", async (c) => {
+    const input = z
+      .object({
+        id: z.uuid(),
+        companyIds: z.array(z.string().min(1).max(100)).min(1).max(1000),
+        label: z.string().trim().min(1).max(300),
+        lookbackDays: z
+          .union([z.literal(1), z.literal(7), z.literal(30)])
+          .default(7),
+      })
+      .parse(await c.req.json());
+    return c.json(await startNewsBatch(store, input));
+  });
+  api.post("/news/batches/:id/control", async (c) => {
+    const { action } = z
+      .object({ action: z.enum(["pause", "resume", "cancel"]) })
+      .parse(await c.req.json());
+    return c.json(await controlNewsBatch(store, c.req.param("id"), action));
+  });
+  api.post("/news/batches/:id/advance", async (c) =>
+    c.json(
+      await advanceNewsBatch(store, env, {
+        id: c.req.param("id"),
+        milliseconds: 25000,
+      }),
+    ),
+  );
+  api.post("/news/rescreen", async (c) => {
+    const input = z
+      .object({
+        companyId: z.string().optional(),
+        limit: z.number().int().min(1).max(30).default(10),
+      })
+      .parse(await c.req.json());
+    return c.json(
+      await rescreenNews(store, env, { ...input, milliseconds: 45000 }),
+    );
   });
   api.get("/backups", async (c) =>
     c.json(await store.list("backup", { summary: true })),
@@ -363,7 +618,18 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     const fingerprint = await hash(input.source);
     const batch = `import-${fingerprint.slice(0, 24)}`;
     const previous = await store.get<any>("import", batch);
-    if (previous && !previous.data.rolledBack && previous.data.complete)
+    const matchingImport = (
+      await store.list<any>("import", { summary: true })
+    ).find(
+      (d) =>
+        d.data.fingerprint === fingerprint &&
+        d.data.complete &&
+        !d.data.rolledBack,
+    );
+    if (
+      (previous && !previous.data.rolledBack && previous.data.complete) ||
+      matchingImport
+    )
       throw new Error(
         "This source was already imported. Roll back that batch before reimporting.",
       );
@@ -469,13 +735,9 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           .max(20000),
       })
       .parse(await c.req.json());
-    // Validate all company/settings records before writing. Restore only missing records, never overwrite newer work.
-    for (const record of input.records) {
-      if (record.kind === "company")
-        record.data = CompanySchema.parse(record.data);
-      if (record.kind === "settings")
-        record.data = SettingsSchema.parse(record.data);
-    }
+    input.records = validateRestoreRecords(
+      input.records,
+    ) as typeof input.records;
     let restored = 0;
     for (const record of input.records)
       if (!(await store.get(record.kind, record.id))) {

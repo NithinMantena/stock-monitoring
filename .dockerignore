@@ -1,0 +1,11 @@
+*
+!package.json
+!package-lock.json
+!client/
+!client/**
+!mcp/
+!mcp/**
+!supabase/
+!supabase/functions/
+!supabase/functions/_shared/
+!supabase/functions/_shared/**

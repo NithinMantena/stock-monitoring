@@ -1,3 +1,4 @@
+import { modelResponse } from "./screening-fixtures.ts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { newCompany, type Quote } from "../supabase/functions/_shared/model";
 import {
@@ -350,21 +351,7 @@ describe("news and model boundaries", () => {
   it("validates typed model answers and stores selected evidence", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              model: "jev-1.13.0",
-              answers: {
-                identity: { type: "noul", noul: 0.95 },
-                major: { type: "noul", noul: 0.98 },
-                event: { type: "choice", choice: "earnings" },
-                evidence: { type: "choice", choice: "s0" },
-              },
-              usage: { input_tokens: 400 },
-            }),
-          ),
-      ),
+      vi.fn(async () => new Response(JSON.stringify(modelResponse()))),
     );
     const s = store();
     const judgment = await classifyArticle(
@@ -373,6 +360,7 @@ describe("news and model boundaries", () => {
         id: "a",
         title: "Example cuts guidance",
         text: "Profits expected to fall.",
+        contentDepth: "supplied",
         url: "",
         publishedAt: "",
         source: "Test",
@@ -381,7 +369,7 @@ describe("news and model boundaries", () => {
       { TYPESAFE_API_KEY: "synthetic-test-key" },
       s,
     );
-    expect(judgment.evidence).toContain("guidance");
+    expect(judgment.evidence).toContain("Profits");
     expect((s.usage()[0] as any).cost).toBeCloseTo(0.0000168);
   });
   it("keeps failures visible and is idempotent across retries", async () => {
@@ -398,7 +386,7 @@ describe("news and model boundaries", () => {
     };
     const e = await processArticle(c, article, s, {});
     expect(e.priority).toBe("possible");
-    expect(e.body).toContain("Unclassified");
+    expect(e.screening?.reasonCode).toBe("missing_text");
     await processArticle(c, article, s, {});
     expect(await s.list("event")).toHaveLength(1);
   });

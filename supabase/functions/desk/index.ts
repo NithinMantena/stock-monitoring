@@ -1,5 +1,10 @@
 import { Hono } from "hono";
 import { createApi } from "../_shared/api.ts";
+import { createV1Api } from "../_shared/api-v1.ts";
+import {
+  authenticateIntegration,
+  type Actor,
+} from "../_shared/integrations.ts";
 import { createClient, SupabaseStore } from "../_shared/supabase-store.ts";
 const env = Deno.env.toObject();
 const admin = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -23,16 +28,19 @@ app.all("*", async (c) => {
     headers.set("Access-Control-Allow-Origin", origin);
     headers.set(
       "Access-Control-Allow-Headers",
-      "authorization,content-type,apikey",
+      "authorization,content-type,apikey,idempotency-key",
     );
-    headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
+    headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,OPTIONS");
   }
+  // Include CORS on early authentication failures, so the website can report them.
+  for (const [key, value] of headers) c.header(key, value);
   if (c.req.method === "OPTIONS")
     return new Response(null, { status: 204, headers });
   const path =
     new URL(c.req.url).pathname.replace(/^\/(?:functions\/v1\/)?desk/, "") ||
     "/";
   let owner = "";
+  let actor: Actor | undefined;
   if (path === "/scheduled") {
     // This endpoint is only available to the configured scheduler, never to a browser session.
     if (
@@ -45,25 +53,49 @@ app.all("*", async (c) => {
   } else {
     const token = c.req.header("authorization")?.replace(/^Bearer /i, "");
     if (!token) return c.json({ error: "Sign in required." }, 401);
-    const { data, error } = await admin.auth.getUser(token);
-    if (
-      error ||
-      !data.user ||
-      !env.OWNER_EMAIL ||
-      data.user.email?.toLowerCase() !== env.OWNER_EMAIL.toLowerCase() ||
-      !data.user.email_confirmed_at
-    )
-      return c.json({ error: "This desk is private." }, 403);
-    owner = data.user.id;
+    if (token.startsWith("smt_")) {
+      if (!path.startsWith("/v1/") || !env.MONITOR_OWNER_ID)
+        return c.json(
+          { error: "Integration credentials require the v1 API." },
+          403,
+        );
+      owner = env.MONITOR_OWNER_ID;
+      actor =
+        (await authenticateIntegration(
+          new SupabaseStore(admin, owner),
+          token,
+        )) || undefined;
+      if (!actor)
+        return c.json(
+          {
+            error: "Integration expired, revoked or invalid.",
+            code: "unauthorized",
+          },
+          401,
+        );
+    } else {
+      const { data, error } = await admin.auth.getUser(token);
+      if (
+        error ||
+        !data.user ||
+        !env.OWNER_EMAIL ||
+        data.user.email?.toLowerCase() !== env.OWNER_EMAIL.toLowerCase() ||
+        !data.user.email_confirmed_at
+      )
+        return c.json({ error: "This desk is private." }, 403);
+      owner = data.user.id;
+    }
   }
   if (!owner)
     return c.json({ error: "Monitoring owner is not configured." }, 503);
   const url = new URL(c.req.url);
-  url.pathname = path;
-  const response = await createApi(
-    new SupabaseStore(admin, owner),
-    env,
-    "cloud",
+  const versioned = path.startsWith("/v1/");
+  url.pathname = versioned ? path.slice(3) : path;
+  const store = new SupabaseStore(admin, owner);
+  const response = await (
+    versioned
+      ? createV1Api(store, env, "cloud", actor)
+      : createApi(store, env, "cloud")
   ).fetch(new Request(url, c.req.raw));
   for (const [key, value] of headers) response.headers.set(key, value);
   return response;

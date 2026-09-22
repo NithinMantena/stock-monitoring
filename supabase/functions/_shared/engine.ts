@@ -75,7 +75,7 @@ export function evaluateRules(
         (r.lastSession && q.session < r.lastSession)
       )
         continue;
-      const fp = `${q.session}|${q.price}|${q.pe}|${q.peBasis}|${r.threshold}|${r.baseline}`;
+      const fp = `${q.session}|${q.price}|${q.pe}|${q.peBasis}|${r.threshold}|${r.baseline}|${r.basis}`;
       if (fp === r.lastFingerprint) continue;
       let value: number | null = null;
       if (r.metric === "price") value = q.price;

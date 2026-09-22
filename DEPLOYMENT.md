@@ -66,3 +66,36 @@ Daily hosted research snapshots retain 30 days. Use **Import & backup → Downlo
 - [Supabase scheduling](https://supabase.com/docs/guides/functions/schedule-functions) and installed CLI help/config-diff guidance.
 - [Cloudflare Vite deployment](https://developers.cloudflare.com/pages/framework-guides/deploy-a-vite3-project/).
 - EODHD's official API/pricing references and provider tradeoffs are preserved in the approved PRD.
+
+## Fundamental news upgrade
+
+Apply only the new `202609180004_fundamental_news.sql` migration. Set `TYPESAFE_MONTHLY_BUDGET_USD=5`, deploy `desk`, build and deploy the frontend. Additional text-retrieval hosts can be enabled with `ALLOWED_ARTICLE_HOSTS` or per-company publisher settings; private/non-HTTPS destinations are rejected. The model stays pinned to Jev 1.13.0.
+
+`node scripts/upgrade-news-screening.ts` previews a sample without changing live events. `--apply` first saves `.local/before-fundamental-screening.json`, then preserves user feedback while re-screening existing news. It uses four company workers, serializes each company's history, and renews its migration lease. `--limit=N` bounds the migration. Scheduled runs handle any later pending/retry work. Cached article bodies are derived data and are excluded from research exports.
+
+## Manual news batches and inbox
+
+Apply `202609180005_news_batches.sql` before deploying the updated `desk` function and frontend. It adds the derived `news_batch` record kind without changing research or events. No scheduler change is needed: the existing five-minute hosted scheduler resumes the manual queue after regular monitoring and the digest. Browser requests also advance the saved queue in bounded slices. The queue uses its own lease and never writes company monitoring timestamps, automatic attempt records or feed success cursors. The same TypeSafe budget applies to both paths.
+
+Inbox expiry is a view rule, not physical deletion: unsaved unread items leave the inbox after 30 days and remain in History/export. Saved events are retained indefinitely. Re-screening preserves save/review/inbox-return state. Full backups include these event fields; the lightweight daily research snapshot still excludes event history.
+
+## News controls and retrieval update (2026-09-19)
+
+Deploy the `desk` function and the frontend together; no new database migration is required. Existing batches keep their saved queue. New batches use 10 articles per UTC calendar day for seven days. The control endpoint uses optimistic writes independently of the worker lease, so pause/cancel is accepted during an active request; the worker retains finished work and honors the command before another article. A paused batch must be resumed or cancelled before starting a new one.
+
+Public HTTPS article retrieval is enabled by default, with DNS public-address checks for additional hosts and redirect validation. `ALLOW_PUBLIC_ARTICLE_HOSTS=false` restores explicit-host-only behavior. Old host-disabled cache entries are retried. Source exclusions, HTML restrictions, size limits and retrieval timeouts still apply. Article reading never invokes TypeSafe. The admission update does not bump the inference version: existing scores are re-evaluated in code, preserving user feedback and avoiding a costly full re-screen. `scripts/pause-news.ts` is a maintenance fallback that pauses the current batch without deleting progress.
+# API v1 rollout — September 20, 2026
+
+The live website and `desk` function now use the shared v1 API. A private research export was saved before migration. The deployed migration is `supabase/migrations/202609200006_shared_api.sql`; it extends record kinds, adds atomic versioned batch writes and excludes integration/request/audit records from direct owner-table reads.
+
+This existing project's older schema changes were applied without a matching Supabase CLI migration history. Do **not** blindly replay every migration with `db push`. For this rollout only the new migration was applied with `supabase db query --linked --file supabase/migrations/202609200006_shared_api.sql`. Reconcile migration history against actual schema before using automatic migration deployment in future.
+
+Verification: 82 automated tests; TypeScript and production build; real local MCP protocol tests; live paginated API reads; live atomic-write rollback; scope enforcement; credential revocation; authentication-error CORS; browser credential creation/revocation on disposable data; mobile layout with no horizontal overflow. The deployed sign-in page loads successfully. No paid AI jobs were started by these verification steps.
+
+MCP is installed as `stock-monitoring-mcp:local` in the existing Docker profile `nithin_mantena`. OpenClaw's skill is installed in the local workspace. Both passed authenticated read-only checks. Their initial credentials expire October 20, 2026, and allow read, research/monitoring/news edits and job pause/cancel. They do not allow paid job starts/resumes, settings changes, backup exports or imports. Manage or replace them in website Settings; see `docs/INTEGRATIONS.md`.
+
+## Fundamental screening v2 (2026-09-22)
+
+The implementation and gate definitions are documented in `docs/fundamental-screening-v2.md`. It uses the existing document store; no new SQL migration is required. Deploy the `desk` function and the Cloudflare frontend together. New discovery uses v2 immediately; existing assessments move through the scheduler's bounded rescreen queue. Old judgments do not count as new-framework approvals. Reader feedback and saved/reviewed state are preserved.
+
+A private local export was taken before rollout. Do not commit `.local`, research working files, account exports, raw model requests, or credentials. The GitHub repository is public. Public validation artifacts contain synthetic cases only.

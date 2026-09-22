@@ -3,9 +3,27 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { existsSync } from "node:fs";
 import { createApi } from "../supabase/functions/_shared/api.ts";
+import { createV1Api } from "../supabase/functions/_shared/api-v1.ts";
+import { authenticateIntegration } from "../supabase/functions/_shared/integrations.ts";
 import { LocalStore } from "./store.ts";
+import { advanceJob } from "../supabase/functions/_shared/job-queue.ts";
 if (existsSync(".env")) process.loadEnvFile(".env");
 const store = new LocalStore();
+// Work is explicitly enqueued by a client; the local worker survives closing the browser.
+let working = false;
+setInterval(async () => {
+  if (working) return;
+  working = true;
+  try {
+    await advanceJob(store, process.env);
+  } catch {
+    console.warn(
+      "Background worker tick failed; persisted job status is available in Settings.",
+    );
+  } finally {
+    working = false;
+  }
+}, 3000).unref();
 const app = new Hono();
 app.use("*", async (c, next) => {
   const host = c.req.header("host") || "";
@@ -29,6 +47,20 @@ app.use("*", async (c, next) => {
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Cache-Control", "no-store");
   await next();
+});
+app.all("/api/v1/*", async (c) => {
+  const token = c.req.header("authorization")?.replace(/^Bearer /i, "");
+  const actor = token ? await authenticateIntegration(store, token) : undefined;
+  if (token && !actor)
+    return c.json(
+      { error: "Invalid integration credential.", code: "unauthorized" },
+      401,
+    );
+  const url = new URL(c.req.url);
+  url.pathname = url.pathname.replace(/^\/api\/v1/, "") || "/";
+  return createV1Api(store, process.env, "local", actor || undefined).fetch(
+    new Request(url, c.req.raw),
+  );
 });
 app.route("/api", createApi(store, process.env, "local"));
 app.use("*", serveStatic({ root: "./dist" }));

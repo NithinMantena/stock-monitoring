@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { statuses, type Status } from "./constants.ts";
+import { companyNewsUrl } from "./news.ts";
 export { statuses, statusLabels, defaultSettings } from "./constants.ts";
 export type { Status } from "./constants.ts";
 const text = (max = 500) => z.string().max(max);
@@ -58,6 +59,25 @@ export const CompanySchema = z.object({
   thesis: text(3000).default(""),
   passReason: text(10000).default(""),
   source: text(2000).default(""),
+  ideaSource: text(2000).default(""),
+  newsQuery: text(500).default(""),
+  businessScale: z
+    .enum(["unknown", "small", "medium", "large"])
+    .default("unknown"),
+  businessContext: text(6000).default(""),
+  contextAsOf: text(40).default(""),
+  contextSource: text(2000).default(""),
+  primarySources: z.array(z.url().max(2000)).max(10).default([]),
+  secCik: z
+    .string()
+    .regex(/^\d{0,10}$/)
+    .default(""),
+  articleHosts: z.array(text(200)).max(40).default([]),
+  newsRevision: z.number().int().positive().default(1),
+  excludedNewsSources: z
+    .array(text(200))
+    .max(40)
+    .default(["247wallst.com", "24/7 Wall St.", "24/7 Wall Street"]),
   dateFound: text(40).default(""),
   lastReviewed: text(40).default(""),
   nextReview: text(40).default(""),
@@ -92,7 +112,19 @@ export interface DeskEvent {
   publishedAt: string;
   discoveredAt: string;
   reviewed: boolean;
+  saved?: boolean;
+  inboxAt?: string;
   feedback?: "useful" | "noise";
+  feedbackReason?:
+    | "wrong_company"
+    | "too_minor"
+    | "poor_source"
+    | "duplicate"
+    | "no_new_information"
+    | "other";
+  screening?: import("./screening-policy.ts").NewsAssessment;
+  clusterId?: string;
+  relatedEventId?: string;
   evidence?: string;
   matches?: { text: string; relevance: number; direction: string }[];
   classification?: Record<string, unknown>;
@@ -112,12 +144,6 @@ export const SettingsSchema = z.object({
 });
 export function newCompany(name: string, status: Status = "inbox"): Company {
   const now = new Date().toISOString();
-  const query = new URLSearchParams({
-    q: `"${name.trim().replace(/"/g, "")}" when:10d`,
-    hl: "en-US",
-    gl: "US",
-    ceid: "US:en",
-  });
   return CompanySchema.parse({
     id: crypto.randomUUID(),
     name: name.trim(),
@@ -127,8 +153,8 @@ export function newCompany(name: string, status: Status = "inbox"): Company {
     feeds: [
       {
         id: crypto.randomUUID(),
-        label: "Google News · broad headlines",
-        url: `https://news.google.com/rss/search?${query}`,
+        label: "Google News · company news",
+        url: companyNewsUrl({ name: name.trim(), ticker: "" }),
         official: false,
       },
     ],
@@ -142,9 +168,22 @@ export interface Doc<T = unknown> {
   updatedAt: string;
 }
 export interface Store {
+  changes(
+    since: string,
+  ): Promise<
+    { kind: string; id: string; version: number; updatedAt: string }[]
+  >;
+  batch(
+    writes: { kind: string; id: string; data: unknown; expected: number }[],
+  ): Promise<Doc[]>;
   list<T>(
     kind: string,
-    options?: { summary?: boolean; limit?: number },
+    options?: {
+      summary?: boolean;
+      limit?: number;
+      companyId?: string;
+      updatedSince?: string;
+    },
   ): Promise<Doc<T>[]>;
   get<T>(kind: string, id: string): Promise<Doc<T> | null>;
   put<T>(kind: string, id: string, data: T, expected: number): Promise<Doc<T>>;

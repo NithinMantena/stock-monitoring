@@ -1,5 +1,37 @@
 # Implementation status — 2026-09-17 Chicago
 
+## Filtered manual news searches and inbox — 2026-09-18
+
+- Search news uses the exact selected company IDs from status, research-group, text and individual-company filters. A persisted queue processes all selected companies across bounded requests, rather than the regular monitor's five-company slice. Existing events are deduplicated; no quotes are fetched.
+- Manual work has its own lease and leaves regular monitoring timestamps, attempt records, feed success cursors and digest settings unchanged. Browser requests advance the queue; the hosted five-minute scheduler continues it after normal monitoring/digest work if the page closes.
+- News & alerts defaults to an unread inbox, ordered by the newest discovered source in a development. Review and Save apply across its stored coverage. Saved items have no age limit; unsaved unread items age into History after 30 days. History supports returning to the inbox. Retention is a display rule, not deletion; exports retain events.
+- Save/review/return state survives re-screening. The page refreshes while visible and on return to the tab. Migration `202609180005_news_batches.sql` adds the queue record kind. Regression tests cover filter scope, resumability beyond five companies, scheduling independence, source failures, deduplication, expiry boundaries, saved retention and state persistence.
+
+
+## Fundamental news screening — 2026-09-18
+
+- Default feed now requires fundamental significance and sufficient evidence; secondary articles must also supply substantiated reporting and significant original analysis. Company identity alone no longer admits a story. Calendar notices, routine holdings changes, options chatter and excluded publishers are screened out.
+- Jev judges descriptive materiality/quality/added-value scales, supporting evidence and candidate event relationships. Actual results qualify as substantive primary evidence. Model, policy version, context revision, evidence depth, character counts and reasons are retained.
+- Accessible HTML and PDF extraction, explicit publisher-host controls and a cached best-effort Google News link resolver. No paywall/challenge bypass. Long text is assessed across bounded chunks up to 120,000 characters. EDGAR SGML wrappers, table cell boundaries and linked financial exhibits are supported.
+- Netflix and Progressive have built-in SEC submission/IR discovery. Their scale is set to large using the owner's instruction. Company monitoring provides dated business context, source references, SEC CIK, extra primary sources, enabled publishers and excluded-source preferences. Other companies still need source/scale setup where research context is inadequate.
+- One visible development groups matching coverage, prioritizes primary sources, and preserves meaningful subsequent developments separately. Digest grouping uses the same policy; potentially major uncertain items are labeled for verification. Review marks cover the displayed group. Feedback reasons and manual Useful/Noise decisions are preserved when re-screening.
+- Default TypeSafe budget raised to $5/month; configured ceilings are bounded at $10. Provider invoices remain authoritative. The scheduled worker processes pending legacy/retry items in bounded batches. Changing screening context queues re-evaluation.
+- Migration `202609180004_fundamental_news.sql` adds only the derived article-cache record kind and an event-discovery index; no research data is deleted. A private backup precedes the full production re-screen.
+- Validation: unit/integration checks, production build, 10 live synthetic acceptance cases (all passed; not an accuracy benchmark), real Netflix quarterly and Progressive monthly financial-document checks, and browser checks for grouped coverage and group review. Some IR pages return HTTP 403; SEC discovery remains independent. Unavailable or incomplete evidence is visible, not described as fully read.
+
+## Follow-up shipped — 2026-09-18
+
+- Imported the prepared research into production: 243 new companies plus research merged into the two existing records, for 245 total. Consolidated 257 original sections without dropping their notes. Saved a private full export before the import; the original Markdown remains archived. Unresolved short-name identities are tagged and paused for review.
+- Fixed a reproduced news-screening bug: scores around 0.10–0.18 were passing into the inbox, while high-identity routine stock stories were suppressed. Identity now gates the main feed; ordinary company news remains available. Uncertain and failed screening has its own view. Manual Useful/Noise overrides the model and can be undone. The same identity policy applies to digests.
+- Re-screened 60 existing Progressive articles with the improved identity prompt: 7 company matches, 2 uncertain and 51 screened out or user-marked noise. This is a real stored-news check, not a general recall claim. Narrowed Progressive retrieval to insurance/PGR and added a per-company search override.
+- Added keyword, company, publisher, importance, date-range and unread news filters, plus company-scoped full history retrieval. Decoded escaped RSS markup before screening/display and exposed publisher labels.
+- Added an editable idea-source field in quick add and Research, preserved separately from import-file provenance and included in Markdown/JSON exports.
+- Article feedback uses immediate local updates with a per-article save, conflict/error rollback and Undo. It no longer waits for a full bootstrap reload.
+- Login now has one email field and a primary email-link submit button, with loading/error/sent states and Enter-key submission.
+- Settings explains the server-held TypeSafe key, pinned `jev-1.13.0`, $0.042/million input tokens, recorded usage and $2 monthly server ceiling. OpenAI Platform keys are not used. Hosting/database account invoices remain outside the app's metering.
+- Financial-data setup deferred at the user's request. No provider subscription or key added; email delivery remains disabled.
+- Validation: 33 tests, TypeScript checking and the production build pass. Browser checks exercised keyword filtering, Noise removal/Undo, saved idea-source persistence and overflow-free news layout against an isolated in-memory copy. The deployed public login shows the single email form. Live API checks verified 245 companies, original notes/statuses and all prior feedback preserved. A real Progressive refresh completed in about 5.4 seconds, fetched 5 new articles and reported no failures; its resulting views held 10 company-news items, 4 uncertain and 51 screened out/noise. Recorded TypeSafe usage was $0.010594038 across 154 requests at verification time; this is application metering, not a provider invoice.
+
 This is a working first release of the research desk and monitoring pipeline. It is not a claim that every acceptance criterion in the comprehensive PRD has been satisfied.
 
 ## Verified
@@ -20,7 +52,7 @@ This is a working first release of the research desk and monitoring pipeline. It
 
 - Market-data credentials, instrument mapping/coverage validation, and a decision on affordable automatic P/E/market-cap data. No market subscription purchased.
 - Resend key and verified sender; activate and test Chicago-time daily email. No real email sent.
-- Review the staged import before adding its entries to the live company list.
+- Confirm ambiguous company identities where tagged; their research is already imported.
 
 ## Further PRD work
 

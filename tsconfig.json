@@ -8,6 +8,8 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -15,6 +17,9 @@
   },
   "include": [
     "src",
+    "client",
+    "mcp",
+    "bot",
     "server",
     "scripts",
     "tests",
