@@ -18,6 +18,16 @@ export function mergeDocuments<T>(
   if (!changed && !optimistic.size) return current;
   return [...merged.values()].map((doc) => optimistic.get(doc.id) || doc);
 }
+// Frequent scheduled-run updates omit the warning list; keep the last one seen.
+export function latestRun(
+  current?: NewsBatchSummary | null,
+  incoming?: NewsBatchSummary | null,
+) {
+  const next = latestBatch(current, incoming);
+  return next && !next.warnings && current?.id === next.id
+    ? { ...next, warnings: current.warnings }
+    : next;
+}
 export function latestBatch(
   current?: NewsBatchSummary | null,
   incoming?: NewsBatchSummary | null,

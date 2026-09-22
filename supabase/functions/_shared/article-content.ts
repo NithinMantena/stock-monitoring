@@ -6,6 +6,13 @@ import { cleanNewsText } from "./news.ts";
 import { hash } from "./engine.ts";
 import { MAX_ARTICLE_CHARS } from "./screening-policy.ts";
 import { resolve4, resolve6 } from "node:dns/promises";
+import {
+  hostSkipped,
+  noteHostResult,
+  paceGoogle,
+  ThrottledError,
+  throttleStatus,
+} from "./fetch-policy.ts";
 
 const DEFAULT_HOSTS = [
   "news.google.com",
@@ -201,19 +208,44 @@ export async function fetchDocument(
   init: RequestInit = {},
 ) {
   let current = await authorizeDocumentUrl(url, hosts, env);
-  const signal = AbortSignal.timeout(10000);
+  const first = new URL(current).hostname;
+  // No successful publisher read took over 8 s in the 2026-09-22 profile; configured
+  // and regulator sources keep a longer allowance for large primary documents.
+  const signal = AbortSignal.timeout(
+    hosts.has(first) || first.endsWith("sec.gov") ? 10000 : 8000,
+  );
   for (let redirects = 0; redirects <= 4; redirects++) {
-    const response = await fetch(current, {
-      ...init,
-      redirect: "manual",
-      signal,
-      headers: {
-        "User-Agent":
-          env.FEED_USER_AGENT ||
-          "ResearchDesk/0.2 (personal research; nithin@mantena.com)",
-        ...init.headers,
-      },
-    });
+    const host = new URL(current).hostname;
+    const google = host === "news.google.com";
+    if (!google && hostSkipped(host))
+      throw new Error(
+        `Skipped: ${host} blocked or timed out repeatedly earlier in this run.`,
+      );
+    if (google) await paceGoogle("page");
+    let response: Response;
+    try {
+      response = await fetch(current, {
+        ...init,
+        redirect: "manual",
+        signal,
+        headers: {
+          "User-Agent":
+            env.FEED_USER_AGENT ||
+            "ResearchDesk/0.2 (personal research; nithin@mantena.com)",
+          ...init.headers,
+        },
+      });
+    } catch (error) {
+      if ((error as Error)?.name === "TimeoutError") noteHostResult(host, false);
+      throw error;
+    }
+    if (google && throttleStatus(response.status)) {
+      await response.body?.cancel();
+      throw new ThrottledError(host, response.status);
+    }
+    if (response.status === 401 || response.status === 403)
+      noteHostResult(host, false);
+    else if (response.ok) noteHostResult(host, true);
     if (response.status >= 300 && response.status < 400) {
       const target = response.headers.get("location");
       await response.body?.cancel();
@@ -247,6 +279,9 @@ export async function fetchDocument(
           throw new Error("Document exceeds 8 MB retrieval limit.");
         chunks.push(value);
       }
+    } catch (error) {
+      if ((error as Error)?.name === "TimeoutError") noteHostResult(host, false);
+      throw error;
     } finally {
       await reader.cancel();
     }
@@ -329,7 +364,17 @@ async function resolveGoogle(
   hosts: Set<string>,
   env: Env,
 ): Promise<string> {
-  const response = await fetchDocument(url, hosts, env);
+  // Google redirects feed links to the same page with its locale parameters
+  // added; asking for that page directly saves one of three Google requests.
+  const page = new URL(url);
+  if (page.pathname.startsWith("/rss/articles/") && !page.searchParams.has("hl"))
+    for (const [key, value] of [
+      ["hl", "en-US"],
+      ["gl", "US"],
+      ["ceid", "US:en"],
+    ])
+      page.searchParams.set(key, value);
+  const response = await fetchDocument(page.href, hosts, env);
   if (new URL(response.url).hostname !== "news.google.com") return response.url;
   const html = new TextDecoder().decode(response.bytes);
   const { document } = parseHTML(html);
@@ -417,6 +462,7 @@ export async function enrichArticle(
   input: Article,
   env: Env,
   store: Store,
+  options: { throttleOk?: boolean } = {},
 ): Promise<Article> {
   if (input.contentDepth === "supplied") return input;
   const hosts = contentHosts(c, env);
@@ -512,6 +558,7 @@ export async function enrichArticle(
             },
             env,
             store,
+            options,
           );
           if (
             additional.contentDepth === "full" ||
@@ -547,6 +594,9 @@ export async function enrichArticle(
     };
     article.official = verifiedPrimary(c, doc.url);
   } catch (e) {
+    // Throttling says nothing about the article; retry it later rather than
+    // caching (and screening) it as unreadable.
+    if (e instanceof ThrottledError && !options.throttleOk) throw e;
     article.retrievalNote =
       e instanceof Error ? e.message : "Full text unavailable.";
   }

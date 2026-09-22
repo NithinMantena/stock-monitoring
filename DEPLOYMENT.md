@@ -99,3 +99,22 @@ MCP is installed as `stock-monitoring-mcp:local` in the existing Docker profile 
 The implementation and gate definitions are documented in `docs/fundamental-screening-v2.md`. It uses the existing document store; no new SQL migration is required. Deploy the `desk` function and the Cloudflare frontend together. New discovery uses v2 immediately; existing assessments move through the scheduler's bounded rescreen queue. Old judgments do not count as new-framework approvals. Reader feedback and saved/reviewed state are preserved.
 
 A private local export was taken before rollout. Do not commit `.local`, research working files, account exports, raw model requests, or credentials. The GitHub repository is public. Public validation artifacts contain synthetic cases only.
+
+## Scheduled news runs and egress reduction (2026-09-22)
+
+Measured on the live project before this change (4.7 days of `pg_stat_statements`): the five-minute scheduler re-read every stored article (about 15–18 MB) for the rescreen check, the full daily backup record (about 660 KB) to test whether it existed, and every company (about 470 KB) for monitoring, 288 times a day. That alone exceeded the free plan's 5 GB monthly egress within days. Open browser tabs added a full company reload every minute and a full article download on every page load.
+
+What runs now (`supabase/functions/_shared/scheduler.ts`; times in `NEWS_SCHEDULE`, `constants.ts`, America/Chicago):
+
+- **Every minute** the hosted scheduler calls `/scheduled`. An idle minute reads one small state record (`run/schedule`), a job-status projection and settings: a few hundred bytes.
+- **Daily run, 1am:** daily-cadence companies (portfolio and perpetual watch), articles since the previous run started minus a 2-hour overlap (normally the last 26 hours).
+- **Weekly run, Friday 6pm:** every non-paused company, last 7 days, daily companies first. Saturday's daily run is skipped because the weekly run covers it. A missed Friday is caught up after 8 days.
+- **Once per night:** closing prices (quotes only; news comes from the runs above), the daily snapshot, and up to 300 rescreens (retries, context changes, policy versions). The rescreen queue is computed once from a projected scan and stored in `run/rescreen-queue`.
+- The 7am digest, API jobs and a running manual batch still progress every minute. Manual batches no longer need an open browser tab.
+- Each tick processes at most 10 articles (measured ~80 ms CPU each against the 2 s Edge Function allowance) and about 45 seconds of work. Scheduled runs are stored in `news_batch/scheduled`, separate from the manual batch in `news_batch/latest`; the desk shows both.
+
+Google News politeness: searches are spaced 2 s apart and article/link requests 0.6 s apart. HTTP 429/503 from Google is a throttle, not a failure: the run waits 1, 3, 10, 20 then 30 minutes and retries the same step. Only after five consecutive refusals is that search reported and skipped. A throttled article is never cached or screened as unreadable. Publishers that return 401/403 or time out twice in a row are skipped for the rest of the run (the article is recorded as unreadable, as before). The publisher timeout is 8 s (10 s for configured and SEC hosts); no successful read in the 2026-09-22 profile took longer.
+
+Egress rules for future code: server scans must use `store.list(kind, { fields: [...] })` projections or `ids`; existence checks use `store.get(kind, id, { fields: [] })`; development members use the `cluster` filter. The browser keeps its articles in IndexedDB (`src/news-cache.ts`) and requests only changes; company data is re-read only for changed companies.
+
+Deployment: no SQL migration (no new record kinds). Deploy `desk` and the frontend together, then reinstall the schedule so it runs every minute: `node scripts/prepare-schedule.ts`, then `npx supabase db query --linked --file .local/install-schedule.sql`. `cron.schedule` replaces the existing `research-desk-monitor` job by name. The first tick after deployment writes `run/schedule` and starts with the next night's daily run.

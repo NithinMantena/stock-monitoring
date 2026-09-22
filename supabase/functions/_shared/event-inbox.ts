@@ -19,6 +19,10 @@ export function inEventFolder(
 export function eventGroupKey(e: DeskEvent): string {
   return `${e.companyId}:${e.kind === "news" ? e.clusterId || e.id : e.id}`;
 }
+// The cluster value shared by a development's members (store `cluster` filter).
+export function developmentKey(doc: Doc<DeskEvent>): string {
+  return doc.data.kind === "news" ? doc.data.clusterId || doc.id : doc.id;
+}
 export interface CompanyFilters {
   status: Status | "all" | "archived";
   group?: string;

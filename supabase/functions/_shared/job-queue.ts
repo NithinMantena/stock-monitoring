@@ -103,11 +103,14 @@ export async function controlJob(
   throw new ConflictError();
 }
 export async function advanceJob(store: Store, env: Env, id?: string) {
-  const candidate = id
-    ? await store.get<Job>("job", id)
-    : (await store.list<Job>("job"))
+  // Runs every scheduler tick: find work from statuses only, then read that job.
+  const queued = id
+    ? null
+    : (await store.list<Job>("job", { fields: ["status"] }))
         .reverse()
         .find((d) => ["queued", "running"].includes(d.data.status));
+  const candidate =
+    id || queued ? await store.get<Job>("job", id || queued!.id) : null;
   if (!candidate || !["queued", "running"].includes(candidate.data.status))
     return candidate ? jobSummary(candidate.data) : null;
   const lease = await store.claim(`api-job-${candidate.id}`, 600);

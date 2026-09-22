@@ -160,6 +160,32 @@ export function newCompany(name: string, status: Status = "inbox"): Company {
     ],
   });
 }
+export interface ListOptions {
+  summary?: boolean;
+  limit?: number;
+  companyId?: string;
+  updatedSince?: string;
+  // Read only these dotted data paths (e.g. "screening.version"). Every byte read
+  // by the server counts toward the hosted egress quota, so scans should project.
+  fields?: string[];
+  ids?: string[];
+  // Events whose clusterId or id equals this key (a development's members).
+  cluster?: string;
+}
+// Rebuilds a partial data object from a projected record. Missing paths stay absent.
+export function pickFields(data: any, fields: string[]) {
+  const out: any = {};
+  for (const field of fields) {
+    const path = field.split(".");
+    let value = data;
+    for (const key of path) value = value?.[key];
+    if (value === undefined) continue;
+    let target = out;
+    for (const key of path.slice(0, -1)) target = target[key] ??= {};
+    target[path.at(-1)!] = value;
+  }
+  return out;
+}
 export interface Doc<T = unknown> {
   id: string;
   kind: string;
@@ -176,16 +202,13 @@ export interface Store {
   batch(
     writes: { kind: string; id: string; data: unknown; expected: number }[],
   ): Promise<Doc[]>;
-  list<T>(
+  list<T>(kind: string, options?: ListOptions): Promise<Doc<T>[]>;
+  // With `fields`, only those dotted data paths are read (existence checks pass []).
+  get<T>(
     kind: string,
-    options?: {
-      summary?: boolean;
-      limit?: number;
-      companyId?: string;
-      updatedSince?: string;
-    },
-  ): Promise<Doc<T>[]>;
-  get<T>(kind: string, id: string): Promise<Doc<T> | null>;
+    id: string,
+    options?: { fields?: string[] },
+  ): Promise<Doc<T> | null>;
   put<T>(kind: string, id: string, data: T, expected: number): Promise<Doc<T>>;
   remove(kind: string, id: string, expected: number): Promise<void>;
   claim(key: string, seconds: number): Promise<string | null>;

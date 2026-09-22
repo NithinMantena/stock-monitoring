@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { advanceJob } from "./job-queue.ts";
 import { bodyLimit } from "hono/body-limit";
 import { DatabaseReadError } from "./database-read.ts";
 import { z, ZodError } from "zod";
@@ -33,19 +32,17 @@ import { validateRestoreRecords } from "./restore.ts";
 import {
   advanceNewsBatch,
   startNewsBatch,
-  newsBatchSummary,
   controlNewsBatch,
-  type NewsBatch,
+  readBatchSummary,
 } from "./news-batch.ts";
 import {
-  dailySnapshot,
   digestPreview,
   processArticle,
   runMonitor,
   rescreenNews,
   saveQuoteObservations,
-  sendDueDigest,
 } from "./jobs.ts";
+import { scheduleState, tick } from "./scheduler.ts";
 
 export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
   const api = new Hono();
@@ -80,24 +77,44 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           : 400,
     ),
   );
+  // Inbox and saved items only: select them from a small index, then read those.
+  const inboxEvents = async () => {
+    const index = await store.list<DeskEvent>("event", {
+      fields: ["reviewed", "saved", "inboxAt", "discoveredAt"],
+    });
+    const ids = index
+      .filter((d) => inEventFolder(d.data, "inbox") || d.data.saved)
+      .map((d) => d.id);
+    return (await store.list<DeskEvent>("event", { ids, summary: true })).sort(
+      (a, b) =>
+        b.data.discoveredAt.localeCompare(a.data.discoveredAt) ||
+        a.id.localeCompare(b.id),
+    );
+  };
   api.get("/bootstrap", async (c) => {
-    const [companies, events, settings, run, imports, usage, newsBatch] =
+    const companiesSince = c.req.query("companiesSince");
+    if (companiesSince) z.iso.datetime().parse(companiesSince);
+    const [companies, events, settings, run, imports, usage, newsBatch, newsRun, schedule] =
       await Promise.all([
-        store.list<Company>("company", { summary: true }),
-        c.req.query("events") === "none"
-          ? []
-          : store.list<DeskEvent>("event", { summary: true }),
+        // Browsers ask for changed companies only after an edit elsewhere.
+        store.list<Company>("company", {
+          summary: true,
+          updatedSince: companiesSince,
+        }),
+        c.req.query("events") === "none" ? [] : inboxEvents(),
         store.get("settings", "main"),
         store.get("run", "latest"),
         store.list<any>("import", { summary: true }),
         store.usage?.() || [],
-        store.get<NewsBatch>("news_batch", "latest"),
+        readBatchSummary(store, "latest"),
+        readBatchSummary(store, "scheduled"),
+        scheduleState(store),
       ]);
     return c.json({
       companies,
-      events: events.filter(
-        (d) => inEventFolder(d.data, "inbox") || d.data.saved,
-      ),
+      events,
+      newsRun,
+      newsRunHistory: schedule?.data.history || [],
       settings: settings?.data || defaultSettings,
       settingsVersion: settings?.version || 0,
       run: run?.data,
@@ -112,7 +129,7 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         })),
       configuration: { ...configuration(env), mode },
       usage,
-      newsBatch: newsBatchSummary(newsBatch?.data),
+      newsBatch,
     });
   });
   api.post("/companies", async (c) => {
@@ -500,11 +517,12 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     // Take the cursor before reading. Inclusive timestamp filtering avoids losing
     // writes committed while a refresh is in flight or sharing its timestamp.
     const cursor = new Date().toISOString();
-    const [events, batch] = await Promise.all([
+    const [events, batch, newsRun] = await Promise.all([
       store.list<DeskEvent>("event", { summary: true, updatedSince: since }),
-      store.get<NewsBatch>("news_batch", "latest"),
+      readBatchSummary(store, "latest"),
+      readBatchSummary(store, "scheduled", { warnings: false }),
     ]);
-    return c.json({ events, batch: newsBatchSummary(batch?.data), cursor });
+    return c.json({ events, batch, newsRun, cursor });
   });
   api.put("/settings", async (c) => {
     const input = z
@@ -522,26 +540,8 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       await runMonitor(store, env, { ...input, force: !!input.companyId }),
     );
   });
-  api.post("/scheduled", async (c) => {
-    const started = Date.now();
-    // Give explicitly queued work one bounded step so a busy monitor cannot starve it.
-    const apiJob = await advanceJob(store, env);
-    const screening = await rescreenNews(store, env, {
-      limit: 12,
-      milliseconds: 20000,
-    });
-    const monitor = await runMonitor(store, env);
-    const backup = await dailySnapshot(store);
-    const email = await sendDueDigest(store, env);
-    // Regular monitoring and the morning digest have priority; resume manual work only afterward.
-    const newsBatch =
-      Date.now() - started < 100000
-        ? await advanceNewsBatch(store, env, {
-            milliseconds: Math.min(20000, 100000 - (Date.now() - started)),
-          })
-        : null;
-    return c.json({ monitor, backup, email, screening, newsBatch, apiJob });
-  });
+  // Called every minute by the hosted scheduler; see scheduler.ts for the plan.
+  api.post("/scheduled", async (c) => c.json(await tick(store, env)));
   api.post("/news/batches", async (c) => {
     const input = z
       .object({

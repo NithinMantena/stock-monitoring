@@ -5,6 +5,8 @@ import type {
   Doc,
 } from "../supabase/functions/_shared/model";
 import type { NewsBatchSummary } from "../supabase/functions/_shared/news-batch";
+import type { ScheduleState } from "../supabase/functions/_shared/scheduler";
+import { NEWS_SCHEDULE } from "../supabase/functions/_shared/constants";
 import { safeLink } from "../supabase/functions/_shared/engine";
 import {
   eventGroupKey,
@@ -104,6 +106,99 @@ export function NewsBatchStatus({
           <ul>
             {batch.warnings.map((w, i) => (
               <li key={i}>{w.message}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
+export type ScheduledRunRecord = ScheduleState["history"][number];
+const chicagoTime = (iso?: string) =>
+  iso
+    ? new Date(iso).toLocaleString("en-US", {
+        timeZone: "America/Chicago",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "";
+const hourLabel = (h: number) =>
+  `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
+// The server runs these on its own schedule; there is nothing to start here.
+export function ScheduledRunStatus({
+  run,
+  history = [],
+}: {
+  run?: NewsBatchSummary | null;
+  history?: ScheduledRunRecord[];
+}) {
+  const waiting =
+    run?.status === "running" &&
+    !!run.backoffUntil &&
+    Date.parse(run.backoffUntil) > Date.now();
+  return (
+    <section className="news-batch" aria-label="Scheduled news runs">
+      <div role="status">
+        {run ? (
+          <>
+            <strong>
+              {run.status === "running"
+                ? "Scheduled news run in progress"
+                : `Last scheduled news run ${run.status}`}
+            </strong>{" "}
+            · {run.label}
+            <br />
+            {run.completedCompanies} / {run.totalCompanies} companies ·{" "}
+            {run.added} new source {run.added === 1 ? "item" : "items"} ·{" "}
+            {run.checked} checked
+            {run.status === "running" && run.currentCompany
+              ? ` · Checking ${run.currentCompany}`
+              : ""}
+            {run.finishedAt ? ` · finished ${chicagoTime(run.finishedAt)}` : ""}
+          </>
+        ) : (
+          <strong>No scheduled news run yet</strong>
+        )}
+      </div>
+      {run?.status === "running" && (
+        <progress
+          max={run.totalCompanies}
+          value={run.completedCompanies}
+          aria-label="Companies checked"
+        />
+      )}
+      <small>
+        {waiting &&
+          `Google News asked us to slow down; resuming around ${chicagoTime(run!.backoffUntil)}. No search is skipped for this. `}
+        Daily companies are checked every night at{" "}
+        {hourLabel(NEWS_SCHEDULE.dailyHour)} for the last day; every company is
+        checked {NEWS_SCHEDULE.weeklyDay} at{" "}
+        {hourLabel(NEWS_SCHEDULE.weeklyHour)} for the last 7 days. Runs on the
+        server; no open browser needed.
+      </small>
+      {!!run?.warningCount && !!run.warnings?.length && (
+        <details>
+          <summary>{run.warningCount} source or screening warnings</summary>
+          <ul>
+            {run.warnings.map((w, i) => (
+              <li key={i}>{w.message}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {history.length > 0 && (
+        <details>
+          <summary>Recent scheduled runs</summary>
+          <ul>
+            {history.slice(0, 7).map((h) => (
+              <li key={h.id}>
+                {chicagoTime(h.startedAt)} · {h.schedule} · {h.status} ·{" "}
+                {h.companies} companies · {h.added} new · {h.warnings} warnings
+              </li>
             ))}
           </ul>
         </details>

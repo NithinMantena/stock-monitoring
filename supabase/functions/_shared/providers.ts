@@ -2,6 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import { QuoteSchema, type Company } from "./model.ts";
 import { hash, safeLink } from "./engine.ts";
 import { cleanNewsText } from "./news.ts";
+import { paceGoogle, ThrottledError, throttleStatus } from "./fetch-policy.ts";
 
 export type Env = Record<string, string | undefined>;
 export interface Article {
@@ -69,7 +70,12 @@ async function boundedFetch(
     redirect: "error",
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error(`Source returned HTTP ${response.status}.`);
+  if (!response.ok) {
+    await response.body?.cancel();
+    if (throttleStatus(response.status))
+      throw new ThrottledError(new URL(url).hostname, response.status);
+    throw new Error(`Source returned HTTP ${response.status}.`);
+  }
   if (Number(response.headers.get("content-length")) > maxBytes)
     throw new Error("Source exceeds size limit.");
   const reader = response.body?.getReader();
@@ -173,8 +179,10 @@ export async function parseFeed(
   );
 }
 export async function fetchFeed(url: string, official: boolean, env: Env) {
+  const valid = validateFeedUrl(url, env);
+  if (new URL(valid).hostname === "news.google.com") await paceGoogle("search");
   return parseFeed(
-    await boundedFetch(validateFeedUrl(url, env), {
+    await boundedFetch(valid, {
       headers: {
         Accept:
           "application/rss+xml, application/atom+xml, application/xml, text/xml",

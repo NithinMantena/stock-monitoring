@@ -1,8 +1,15 @@
 import { api, apiText, setAccessToken } from "./api";
 import { IntegrationsPanel, JobsPanel } from "./integrations-panel";
 import { Field, chicagoDate } from "./ui";
-import { NewsBatchStatus, EventList, type EventUpdate } from "./news-panel";
-import { mergeDocuments, latestBatch } from "./sync";
+import {
+  NewsBatchStatus,
+  ScheduledRunStatus,
+  EventList,
+  type EventUpdate,
+  type ScheduledRunRecord,
+} from "./news-panel";
+import { mergeDocuments, latestBatch, latestRun } from "./sync";
+import { loadNewsCache, saveNewsCache } from "./news-cache";
 import React, {
   useCallback,
   useDeferredValue,
@@ -197,6 +204,8 @@ interface Bootstrap {
   configuration: any;
   run?: any;
   newsBatch?: NewsBatchSummary | null;
+  newsRun?: NewsBatchSummary | null;
+  newsRunHistory?: ScheduledRunRecord[];
   imports: any[];
   usage?: { month: string; cost: number; tokens: number; requests: number }[];
 }
@@ -234,6 +243,10 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const [batchControlBusy, setBatchControlBusy] = useState(false);
   const newsCursor = useRef("");
   const newsRefresh = useRef<Promise<void> | null>(null);
+  // Articles kept on this device (see news-cache.ts); null until checked.
+  const cachedNews = useRef<Doc<DeskEvent>[] | null>(null);
+  const cacheSave = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const lastFullReload = useRef(0);
   const reloadNews = useCallback(() => {
     if (newsRefresh.current) return newsRefresh.current;
     newsRefresh.current = (async () => {
@@ -241,6 +254,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         const result = await api<{
           events: Doc<DeskEvent>[];
           batch: NewsBatchSummary | null;
+          newsRun?: NewsBatchSummary | null;
           cursor: string;
         }>(
           `/news/updates${newsCursor.current ? `?since=${encodeURIComponent(newsCursor.current)}` : ""}`,
@@ -256,8 +270,19 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 eventWrites.current,
               ),
               newsBatch: latestBatch(old.newsBatch, result.batch),
+              newsRun: latestRun(old.newsRun, result.newsRun),
             },
         );
+        // Save a full, confirmed copy only: never mid-way through a review write.
+        clearTimeout(cacheSave.current);
+        cacheSave.current = setTimeout(() => {
+          if (!eventWrites.current.size && state.current)
+            void saveNewsCache(
+              owner,
+              newsCursor.current,
+              state.current.events,
+            ).catch(() => {});
+        }, 5000);
       } catch (error) {
         setError(`Could not refresh news: ${(error as Error).message}`);
       } finally {
@@ -265,18 +290,35 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       }
     })();
     return newsRefresh.current;
-  }, []);
-  const reload = useCallback(async () => {
+  }, [owner]);
+  // `companiesSince` (a server cursor) fetches only companies changed since then.
+  const reload = useCallback(async (companiesSince?: string) => {
     setLoadError("");
     try {
+      const partial = !!companiesSince && !!state.current;
+      // With this device's copy of the articles, only changes are downloaded.
       const next = await api<Bootstrap>(
-        state.current ? "/bootstrap?events=none" : "/bootstrap",
+        partial
+          ? `/bootstrap?events=none&companiesSince=${encodeURIComponent(companiesSince!)}`
+          : state.current || cachedNews.current
+            ? "/bootstrap?events=none"
+            : "/bootstrap",
       );
+      if (!partial) lastFullReload.current = Date.now();
+      const first = !state.current && cachedNews.current;
       setData((old) => {
         const known = new Map(old?.companies.map((d) => [d.id, d]) || []);
+        const incomingCompanies = partial
+          ? [
+              ...(old?.companies || []).filter(
+                (d) => !next.companies.some((x) => x.id === d.id),
+              ),
+              ...next.companies,
+            ]
+          : next.companies;
         return {
           ...next,
-          companies: next.companies.map((incoming) => {
+          companies: incomingCompanies.map((incoming) => {
             const current = known.get(incoming.id);
             const latest =
               current && current.version > incoming.version
@@ -286,26 +328,30 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
             return draft ? { ...latest, data: draft.data } : latest;
           }),
           events: mergeDocuments(
-            old?.events || [],
+            old?.events || cachedNews.current || [],
             next.events,
             eventWrites.current,
           ),
           newsBatch: latestBatch(old?.newsBatch, next.newsBatch),
+          newsRun: latestRun(old?.newsRun, next.newsRun),
           ...(old && old.settingsVersion > next.settingsVersion
             ? { settings: old.settings, settingsVersion: old.settingsVersion }
             : {}),
         };
       });
+      // Catch the device copy up with changes since the last visit.
+      if (first) void reloadNews();
     } catch (e) {
       setLoadError((e as Error).message);
     }
-  }, []);
+  }, [reloadNews]);
   useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState === "visible") {
-        void reload();
-        void reloadNews();
-      }
+    // News changes are fetched incrementally each minute. The company list is
+    // re-read only when /changes reports an edit, or on return after 10 minutes.
+    const refresh = (event?: Event) => {
+      if (document.visibilityState !== "visible") return;
+      if (event && Date.now() - lastFullReload.current > 600000) void reload();
+      void reloadNews();
     };
     const timer = setInterval(refresh, 60000);
     document.addEventListener("visibilitychange", refresh);
@@ -328,6 +374,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
           items: { kind: string; id: string; version: number }[];
         }>("/changes?since=" + encodeURIComponent(cursor));
         if (!live) return;
+        const since = cursor;
         cursor = result.cursor;
         const changed = result.items.filter(
           (d) => d.version > (versions.get(d.kind + ":" + d.id) || 0),
@@ -335,8 +382,11 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         result.items.forEach((d) =>
           versions.set(d.kind + ":" + d.id, d.version),
         );
-        if (changed.some((d) => d.kind !== "event")) await reload();
-        if (changed.some((d) => d.kind === "event" || d.kind === "news_batch"))
+        // Run progress arrives with the news update; only company or settings
+        // edits need company data again, and then only the changed companies.
+        if (changed.some((d) => d.kind === "company" || d.kind === "settings"))
+          await reload(since);
+        if (changed.some((d) => d.kind !== "company" && d.kind !== "settings"))
           await reloadNews();
       } catch {
         /* The minute refresh still reports connectivity errors. */
@@ -398,9 +448,17 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   }, [!!data, selected, section, reloadNews]);
   useEffect(() => {
     let live = true;
-    loadDrafts(owner)
-      .then((drafts) => {
+    Promise.all([
+      loadDrafts(owner),
+      // A missing or unreadable device copy only means a full first download.
+      loadNewsCache(owner).catch(() => null),
+    ])
+      .then(([drafts, news]) => {
         if (!live) return;
+        if (news) {
+          cachedNews.current = news.events;
+          newsCursor.current = news.cursor;
+        }
         for (const [id, draft] of drafts)
           if (!pending.current.has(id)) pending.current.set(id, draft);
         setPendingCount(pending.current.size);
@@ -686,7 +744,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       <main className="login">
         <div className="brand">RESEARCH DESK</div>
         <p role="status">{loadError || "Opening your desk…"}</p>
-        {loadError && <button onClick={reload}>Retry</button>}
+        {loadError && <button onClick={() => reload()}>Retry</button>}
         {loadError && onLogout && <button onClick={onLogout}>Sign out</button>}
       </main>
     );
@@ -777,7 +835,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         <main className="workspace">
           {loadError && (
             <div className="notice" role="alert">
-              {loadError} <button onClick={reload}>Retry</button>
+              {loadError} <button onClick={() => reload()}>Retry</button>
             </div>
           )}
           {error && (
@@ -959,6 +1017,10 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 onChange={(e) => setQuery(e.target.value)}
               />
               {companyFilters}
+              <ScheduledRunStatus
+                run={data.newsRun}
+                history={data.newsRunHistory}
+              />
               <NewsBatchStatus
                 batch={data.newsBatch}
                 onControl={controlBatch}

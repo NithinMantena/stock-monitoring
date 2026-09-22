@@ -249,44 +249,97 @@ describe("manual news batches", () => {
     expect(automatic.processed).toBe(1);
     await s.release("manual-news-batch", manualLease!);
   });
-  it("continues after a source failure, persists warnings, and skips already stored articles on the next run", async () => {
-    const s = store(),
-      c = newCompany("Acme");
-    c.feeds.push({
-      ...c.feeds[0],
-      id: "second",
-      label: "Second feed",
-      url: "https://news.google.com/rss/search?q=second",
-    });
-    await s.put("company", c.id, c, 0);
-    const fetcher = vi.fn(async (url: string) =>
-      url.includes("second")
-        ? new Response(
-            `<rss><channel><item><guid>x</guid><title>Acme to announce financial results</title></item></channel></rss>`,
-          )
-        : new Response("Unavailable", { status: 503 }),
-    );
-    vi.stubGlobal("fetch", fetcher);
-    const run = async () => {
-      const id = crypto.randomUUID();
-      await startNewsBatch(s, { id, label: "Acme", companyIds: [c.id] });
-      return await advanceNewsBatch(
-        s,
-        { ALLOW_PUBLIC_ARTICLE_HOSTS: "false" },
-        { id },
+  it("waits and retries a rate-limited search instead of skipping it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    try {
+      const s = store(),
+        c = newCompany("Acme");
+      await s.put("company", c.id, c, 0);
+      let refusals = 1;
+      const fetcher = vi.fn(async () =>
+        refusals-- > 0
+          ? new Response("Unavailable", { status: 503 })
+          : new Response(
+              `<rss><channel><item><guid>x</guid><title>Acme to announce financial results</title><pubDate>${new Date(now - 3600000).toUTCString()}</pubDate></item></channel></rss>`,
+            ),
       );
-    };
-    expect((await run()).batch).toMatchObject({
-      status: "completed",
-      warningCount: 7,
-      added: 1,
-    });
-    expect((await run()).batch).toMatchObject({
-      status: "completed",
-      warningCount: 7,
-      added: 0,
-    });
-    expect(await s.list("event")).toHaveLength(1);
+      vi.stubGlobal("fetch", fetcher);
+      const id = crypto.randomUUID();
+      const env = { ALLOW_PUBLIC_ARTICLE_HOSTS: "false" };
+      await startNewsBatch(s, { id, label: "Acme", companyIds: [c.id] });
+      const first = await advanceNewsBatch(s, env, { id });
+      expect(first.batch).toMatchObject({ status: "running", warningCount: 0 });
+      expect(Date.parse(first.batch!.backoffUntil!)).toBeGreaterThan(Date.now());
+      // Nothing is fetched again until the back-off has elapsed.
+      await advanceNewsBatch(s, env, { id });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      vi.setSystemTime(Date.now() + 2 * 60000);
+      const done = await advanceNewsBatch(s, env, { id });
+      expect(done.batch).toMatchObject({
+        status: "completed",
+        warningCount: 0,
+        added: 1,
+      });
+      expect(fetcher).toHaveBeenCalledTimes(8); // The refused day, retried, then the other six.
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("reports a search only after repeated rate limiting, continues, and skips stored articles next run", { timeout: 60000 }, async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const s = store(),
+        c = newCompany("Acme");
+      c.feeds.push({
+        ...c.feeds[0],
+        id: "second",
+        label: "Second feed",
+        url: "https://news.google.com/rss/search?q=second",
+      });
+      await s.put("company", c.id, c, 0);
+      const fetcher = vi.fn(async (url: string) =>
+        url.includes("second")
+          ? new Response(
+              `<rss><channel><item><guid>x</guid><title>Acme to announce financial results</title></item></channel></rss>`,
+            )
+          : new Response("Unavailable", { status: 503 }),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const run = async () => {
+        const id = crypto.randomUUID();
+        await startNewsBatch(s, { id, label: "Acme", companyIds: [c.id] });
+        let result;
+        for (let slice = 0; slice < 100; slice++) {
+          result = await advanceNewsBatch(
+            s,
+            { ALLOW_PUBLIC_ARTICLE_HOSTS: "false" },
+            { id },
+          );
+          if (result.batch?.status !== "running") break;
+          vi.setSystemTime(Date.now() + 31 * 60000); // Past the longest back-off.
+        }
+        return result!;
+      };
+      expect((await run()).batch).toMatchObject({
+        status: "completed",
+        warningCount: 7,
+        added: 1,
+      });
+      // Five attempts for each of the seven daily searches, plus the second feed.
+      expect(fetcher).toHaveBeenCalledTimes(36);
+      expect((await s.get<NewsBatch>("news_batch", "latest"))?.data.warnings[0].message).toMatch(
+        /skipped after 5 rate-limited attempts \(HTTP 503\)/,
+      );
+      expect((await run()).batch).toMatchObject({
+        status: "completed",
+        warningCount: 7,
+        added: 0,
+      });
+      expect(await s.list("event")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("rejects unknown company IDs and does not replace a running batch", async () => {
     const s = store(),

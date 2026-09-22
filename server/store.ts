@@ -4,7 +4,9 @@ import { dirname } from "node:path";
 import {
   ConflictError,
   CompanySchema,
+  pickFields,
   type Doc,
+  type ListOptions,
   type Store,
 } from "../supabase/functions/_shared/model.ts";
 
@@ -31,27 +33,26 @@ export class LocalStore implements Store {
       updatedAt: r.updated_at,
     };
   }
-  async list<T>(
-    kind: string,
-    options?: {
-      summary?: boolean;
-      limit?: number;
-      companyId?: string;
-      updatedSince?: string;
-    },
-  ) {
-    const docs = this.db
+  async list<T>(kind: string, options?: ListOptions) {
+    const ids = options?.ids;
+    if (ids && !ids.length) return [];
+    const rows = this.db
       .prepare(
-        "SELECT * FROM records WHERE kind=? AND (?='' OR json_extract(data, '$.companyId')=?) AND updated_at>=? ORDER BY CASE WHEN kind='event' THEN json_extract(data, '$.discoveredAt') ELSE updated_at END DESC,id LIMIT ?",
+        `SELECT * FROM records WHERE kind=? AND (?='' OR json_extract(data, '$.companyId')=?) AND updated_at>=? AND (?='' OR id=? OR json_extract(data, '$.clusterId')=?)${ids ? ` AND id IN (${ids.map(() => "?").join(",")})` : ""} ORDER BY CASE WHEN kind='event' THEN json_extract(data, '$.discoveredAt') ELSE updated_at END DESC,id LIMIT ?`,
       )
       .all(
         kind,
         options?.companyId || "",
         options?.companyId || "",
         options?.updatedSince || "",
+        options?.cluster || "",
+        options?.cluster || "",
+        options?.cluster || "",
+        ...(ids || []),
         options?.limit || 100000,
-      )
-      .map((r) => this.decode<T>(r));
+      );
+    if (options?.fields) return rows.map((r) => this.project<T>(r, options.fields!));
+    const docs = rows.map((r) => this.decode<T>(r));
     if (options?.summary)
       for (const doc of docs) {
         const data = doc.data as any;
@@ -65,11 +66,24 @@ export class LocalStore implements Store {
       }
     return docs;
   }
-  async get<T>(kind: string, id: string) {
+  async get<T>(kind: string, id: string, options?: { fields?: string[] }) {
     const r = this.db
       .prepare("SELECT * FROM records WHERE kind=? AND id=?")
       .get(kind, id);
-    return r ? this.decode<T>(r) : null;
+    if (!r) return null;
+    return options?.fields
+      ? this.project<T>(r, options.fields)
+      : this.decode<T>(r);
+  }
+  // Projected records are partial by design: never schema-fill or write them back.
+  project<T>(r: any, fields: string[]): Doc<T> {
+    return {
+      kind: r.kind,
+      id: r.id,
+      data: pickFields(JSON.parse(r.data), fields) as T,
+      version: r.version,
+      updatedAt: r.updated_at,
+    };
   }
   async changes(since: string) {
     return this.db

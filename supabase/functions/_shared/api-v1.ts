@@ -23,7 +23,12 @@ import {
   type Integration,
   type Scope,
 } from "./integrations.ts";
-import { eventGroupKey, inEventFolder, isExpired } from "./event-inbox.ts";
+import {
+  developmentKey,
+  eventGroupKey,
+  inEventFolder,
+  isExpired,
+} from "./event-inbox.ts";
 import { groupNews } from "./screening-policy.ts";
 import { newsBucket } from "./news.ts";
 import {
@@ -548,6 +553,7 @@ export function createV1Api(
       await store.list<DeskEvent>("event", {
         summary: true,
         companyId: lead.data.companyId,
+        cluster: developmentKey(lead),
       })
     ).filter((d) => eventGroupKey(d.data) === eventGroupKey(lead.data));
     return c.json({
@@ -577,7 +583,10 @@ export function createV1Api(
     const lead = await store.get<DeskEvent>("event", c.req.param("id"));
     if (!lead) throw new ApiError(404, "not_found", "Development not found.");
     const members = (
-      await store.list<DeskEvent>("event", { companyId: lead.data.companyId })
+      await store.list<DeskEvent>("event", {
+        companyId: lead.data.companyId,
+        cluster: developmentKey(lead),
+      })
     ).filter((d) =>
       input.scope === "article"
         ? d.id === lead.id

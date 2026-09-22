@@ -14,12 +14,13 @@ do $block$ begin
   perform vault.update_secret((select id from vault.secrets where name='research_desk_cron'), '${setup.cronSecret}');
  end if;
 end $block$;
-select cron.schedule('research-desk-monitor','*/5 * * * *',$job$
+-- Every minute: idle minutes read one small record; see scheduler.ts.
+select cron.schedule('research-desk-monitor','* * * * *',$job$
  select net.http_post(
   url := 'https://tcfricxifanwwzgxgexj.supabase.co/functions/v1/desk/scheduled',
   headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name='research_desk_cron')),
   body := '{}'::jsonb,
-  timeout_milliseconds := 120000
+  timeout_milliseconds := 70000
  );
 $job$);
 commit;`,

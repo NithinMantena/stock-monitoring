@@ -1,6 +1,7 @@
 import {
   ConflictError,
   defaultSettings,
+  pickFields,
   type Company,
   type DeskEvent,
   type Doc,
@@ -39,29 +40,66 @@ import {
   currentAssessment,
   type NewsAssessment,
 } from "./screening-policy.ts";
+import { ThrottledError } from "./fetch-policy.ts";
 
+// An insert-only write already refuses an existing record; no separate read needed.
 export async function addEvent(store: Store, event: DeskEvent) {
-  if (await store.get("event", event.id)) return;
   try {
     await store.put("event", event.id, event, 0);
   } catch (error) {
-    if (!(await store.get("event", event.id))) throw error;
+    if (error instanceof ConflictError) return;
+    if (!(await store.get("event", event.id, { fields: [] }))) throw error;
   }
+}
+// The duplicate/coverage comparison reads only these fields of recent company news.
+const HISTORY_FIELDS = [
+  "id",
+  "kind",
+  "title",
+  "evidence",
+  "body",
+  "url",
+  "publishedAt",
+  "discoveredAt",
+  "clusterId",
+  "screening.version",
+  "screening.documentHash",
+  "screening.primary",
+  "screening.disposition",
+  "screening.articleRole",
+];
+export async function companyHistory(store: Store, companyId: string) {
+  return (
+    await store.list<DeskEvent>("event", {
+      companyId,
+      fields: HISTORY_FIELDS,
+      limit: 200,
+    })
+  ).map((d) => d.data);
+}
+export interface ArticleOptions {
+  existingId?: string;
+  reprocess?: boolean;
+  preferredLookup?: boolean;
+  // Caller already confirmed the event does not exist (skips one read).
+  assumeNew?: boolean;
+  // Recent company news, shared across a run's articles and kept current here.
+  history?: DeskEvent[];
+  // Record a throttled read as unavailable instead of deferring the article.
+  throttleOk?: boolean;
 }
 export async function processArticle(
   c: Company,
   article: Article,
   store: Store,
   env: Env,
-  options: {
-    existingId?: string;
-    reprocess?: boolean;
-    preferredLookup?: boolean;
-  } = {},
+  options: ArticleOptions = {},
 ): Promise<DeskEvent> {
   const id = options.existingId || `news-${c.id}-${article.id}`;
-  const old = await store.get<DeskEvent>("event", id);
-  if (old && !options.reprocess) return old.data;
+  if (!options.assumeNew) {
+    const old = await store.get<DeskEvent>("event", id);
+    if (old && !options.reprocess) return old.data;
+  }
   // Automatic monitoring, manual searches and retries have different job locks.
   // Serialize their shared paid work for an article.
   const key = `article-${id}`,
@@ -79,11 +117,7 @@ async function processUnlockedArticle(
   article: Article,
   store: Store,
   env: Env,
-  options: {
-    existingId?: string;
-    reprocess?: boolean;
-    preferredLookup?: boolean;
-  },
+  options: ArticleOptions,
 ): Promise<DeskEvent> {
   const id = options.existingId || `news-${c.id}-${article.id}`;
   const existing = await store.get<DeskEvent>("event", id);
@@ -143,7 +177,9 @@ async function processUnlockedArticle(
       };
       event.priority = "suppressed";
     } else {
-      article = await enrichArticle(c, article, env, store);
+      article = await enrichArticle(c, article, env, store, {
+        throttleOk: options.throttleOk,
+      });
       event.url = article.url;
       event.publishedAt = article.publishedAt || event.publishedAt;
       event.rawText = article.text;
@@ -171,14 +207,8 @@ async function processUnlockedArticle(
           ]),
         );
         const history = (
-          await store.list<DeskEvent>("event", {
-            companyId: c.id,
-            summary: true,
-            limit: 200,
-          })
-        )
-          .map((d) => d.data)
-          .filter(
+          options.history || (await companyHistory(store, c.id))
+        ).filter(
             (e) =>
               e.kind === "news" &&
               e.id !== id &&
@@ -263,6 +293,8 @@ async function processUnlockedArticle(
             if (alternate) {
               const preferred = await processArticle(c, alternate, store, env, {
                 preferredLookup: true,
+                history: options.history,
+                throttleOk: options.throttleOk,
               });
               if (
                 preferred.rawText &&
@@ -347,6 +379,8 @@ async function processUnlockedArticle(
       }
     }
   } catch (error) {
+    // Nothing is saved: the caller retries the article after backing off.
+    if (error instanceof ThrottledError) throw error;
     const message =
       error instanceof Error ? error.message : "Classification unavailable";
     const budgetDeferred = /TypeSafe.*budget/i.test(message);
@@ -400,57 +434,97 @@ async function processUnlockedArticle(
       feedbackReason: fresh.data.feedbackReason,
     };
     await store.put("event", id, updated, fresh.version);
+    rememberHistory(options.history, updated);
     return updated;
   }
   await addEvent(store, event);
+  rememberHistory(options.history, event);
   return event;
 }
+function rememberHistory(history: DeskEvent[] | undefined, event: DeskEvent) {
+  if (!history) return;
+  const at = history.findIndex((e) => e.id === event.id);
+  if (at >= 0) history.splice(at, 1);
+  history.unshift(pickFields(event, HISTORY_FIELDS));
+  history.splice(200);
+}
 
+function needsRescreen(e: DeskEvent, newsRevision: number | undefined) {
+  return (
+    e.kind === "news" &&
+    e.feedback !== "noise" &&
+    newsRevision !== undefined &&
+    (e.screening?.version !== SCREENING_VERSION ||
+      e.screening.contextRevision !== newsRevision ||
+      (!!e.screening.retryAfter &&
+        e.screening.retryAfter <= new Date().toISOString() &&
+        (e.screening.attempts || 0) < 3))
+  );
+}
+// A projected scan (a few hundred bytes per article) instead of every stored article.
+export async function rescreenCandidates(store: Store, companyId?: string) {
+  const revisions = new Map(
+    (await store.list<Company>("company", { fields: ["newsRevision"] })).map(
+      (d) => [d.id, d.data.newsRevision ?? 1],
+    ),
+  );
+  return (
+    await store.list<DeskEvent>("event", {
+      companyId,
+      fields: [
+        "kind",
+        "companyId",
+        "feedback",
+        "discoveredAt",
+        "screening.version",
+        "screening.contextRevision",
+        "screening.retryAfter",
+        "screening.attempts",
+      ],
+    })
+  )
+    .filter((d) => needsRescreen(d.data, revisions.get(d.data.companyId)))
+    .sort((a, b) => b.data.discoveredAt.localeCompare(a.data.discoveredAt))
+    .map((d) => d.id);
+}
 export async function rescreenNews(
   store: Store,
   env: Env,
-  options: { companyId?: string; limit?: number; milliseconds?: number } = {},
+  options: {
+    companyId?: string;
+    limit?: number;
+    milliseconds?: number;
+    // A previously computed queue; ids no longer pending are skipped.
+    ids?: string[];
+  } = {},
 ) {
   const lease = await store.claim("news-rescreen", 150);
-  if (!lease) return { processed: 0, remaining: 0, busy: true };
+  if (!lease) return { processed: 0, remaining: 0, busy: true, consumed: 0 };
   const start = Date.now();
-  let processed = 0;
+  let processed = 0,
+    consumed = 0;
   try {
-    const companies = new Map(
-      (await store.list<Company>("company", { summary: true })).map((d) => [
-        d.id,
-        d.data,
-      ]),
-    );
-    const pending = (
-      await store.list<DeskEvent>("event", {
-        companyId: options.companyId,
-        summary: true,
-      })
-    ).filter(
-      ({ data: e }) =>
-        e.kind === "news" &&
-        e.feedback !== "noise" &&
-        companies.has(e.companyId) &&
-        (e.screening?.version !== SCREENING_VERSION ||
-          e.screening.contextRevision !==
-            companies.get(e.companyId)!.newsRevision ||
-          (!!e.screening.retryAfter &&
-            e.screening.retryAfter <= new Date().toISOString() &&
-            (e.screening.attempts || 0) < 3)),
-    );
-    pending.sort((a, b) =>
-      b.data.discoveredAt.localeCompare(a.data.discoveredAt),
-    );
-    for (const doc of pending) {
+    const pending =
+      options.ids || (await rescreenCandidates(store, options.companyId));
+    const companies = new Map<string, Company | null>();
+    for (const id of pending) {
       if (
         processed >= (options.limit || 10) ||
         Date.now() - start > (options.milliseconds || 30000)
       )
         break;
-      const e = (await store.get<DeskEvent>("event", doc.id))!.data;
+      consumed++;
+      const e = (await store.get<DeskEvent>("event", id))?.data;
+      if (!e) continue;
+      if (!companies.has(e.companyId))
+        companies.set(
+          e.companyId,
+          (await store.get<Company>("company", e.companyId))?.data || null,
+        );
+      const company = companies.get(e.companyId);
+      if (!company || !needsRescreen(e, company.newsRevision)) continue;
       await processArticle(
-        companies.get(e.companyId)!,
+        company,
         {
           id: e.id,
           title: e.title,
@@ -469,8 +543,9 @@ export async function rescreenNews(
     }
     return {
       processed,
-      remaining: Math.max(0, pending.length - processed),
+      remaining: Math.max(0, pending.length - consumed),
       busy: false,
+      consumed,
     };
   } finally {
     await store.release("news-rescreen", lease);
@@ -556,7 +631,7 @@ export async function saveQuoteObservations(
     doc.version,
   );
 }
-async function updateFreshCompany(
+export async function updateFreshCompany(
   store: Store,
   id: string,
   fn: (doc: Doc<Company>) => Promise<Doc<Company>>,
@@ -574,11 +649,19 @@ async function updateFreshCompany(
 export async function runMonitor(
   store: Store,
   env: Env,
-  options: { companyId?: string; force?: boolean } = {},
+  options: {
+    companyId?: string;
+    force?: boolean;
+    // Scheduled news comes from the nightly news runs; the scheduler checks quotes only.
+    news?: boolean;
+    maxCompanies?: number;
+    milliseconds?: number;
+  } = {},
 ) {
   const lease = await store.claim("monitor", 140);
   if (!lease) return { busy: true, processed: 0 };
   const started = Date.now();
+  const checkNews = options.news ?? true;
   const result = {
     busy: false,
     processed: 0,
@@ -589,7 +672,18 @@ export async function runMonitor(
     finishedAt: "",
   };
   try {
-    const companies = await store.list<Company>("company", { summary: true });
+    // Selection needs only schedule fields; each chosen company is read in full below.
+    const companies = (
+      await store.list<Company>("company", {
+        fields: [
+          "status",
+          "cadence",
+          "archived",
+          "lastQuoteCheck",
+          "lastNewsCheck",
+        ],
+      })
+    ).map((d) => ({ ...d, data: { ...d.data, id: d.id } as Company }));
     const candidates = companies
       .filter(
         ({ data: c }) =>
@@ -597,7 +691,7 @@ export async function runMonitor(
           cadenceOf(c) !== "paused" &&
           (options.force ||
             due(c, c.lastQuoteCheck) ||
-            due(c, c.lastNewsCheck)),
+            (checkNews && due(c, c.lastNewsCheck))),
       )
       .sort(
         (a, b) =>
@@ -611,7 +705,11 @@ export async function runMonitor(
           ),
       );
     for (const candidate of candidates) {
-      if (Date.now() - started > 70000 || result.processed >= 5) break;
+      if (
+        Date.now() - started > (options.milliseconds ?? 70000) ||
+        result.processed >= (options.maxCompanies ?? 5)
+      )
+        break;
       const attempt = await store.get<{ at: string }>("attempt", candidate.id);
       if (
         !options.force &&
@@ -670,7 +768,7 @@ export async function runMonitor(
           }
         }
         c = doc.data;
-        if (options.force || due(c, c.lastNewsCheck)) {
+        if (checkNews && (options.force || due(c, c.lastNewsCheck))) {
           const primary = await discoverPrimary(c, env);
           for (const message of primary.errors)
             await healthEvent(store, c, message);
@@ -802,7 +900,7 @@ const escapeHtml = (s: string) =>
   );
 export async function dailySnapshot(store: Store, now = new Date()) {
   const date = chicagoParts(now).date;
-  if (await store.get("backup", date)) return { created: false };
+  if (await store.get("backup", date, { fields: [] })) return { created: false };
   const records = (
     await Promise.all([
       store.list<Company>("company", { summary: true }),
@@ -825,7 +923,7 @@ export async function dailySnapshot(store: Store, now = new Date()) {
   const cutoff = new Date(now.getTime() - 29 * 86400000)
     .toISOString()
     .slice(0, 10);
-  for (const old of await store.list("backup", { summary: true }))
+  for (const old of await store.list("backup", { fields: [] }))
     if (old.id < cutoff) await store.remove("backup", old.id, old.version);
   return { created: true, records: records.length };
 }
@@ -833,17 +931,44 @@ export async function dailySnapshot(store: Store, now = new Date()) {
 // desk inbox rather than making the email unreadable.
 export const DIGEST_DEVELOPMENT_LIMIT = 20;
 
+// Only developments with a member discovered since `since` can appear in a digest.
+// Find them from a small index, then read those groups' members in full.
+async function recentDevelopments(store: Store, since: string, until: string) {
+  const index = await store.list<DeskEvent>("event", {
+    fields: ["kind", "companyId", "clusterId", "discoveredAt"],
+  });
+  const key = (d: Doc<DeskEvent>) =>
+    d.data.kind === "news"
+      ? `${d.data.companyId}:${d.data.clusterId || d.id}`
+      : d.id;
+  const recent = new Set(
+    index
+      .filter((d) => d.data.discoveredAt > since && d.data.discoveredAt <= until)
+      .map(key),
+  );
+  const ids = index.filter((d) => recent.has(key(d))).map((d) => d.id);
+  // Keep the store's order (newest first, then id) so ties group identically.
+  return (await store.list<DeskEvent>("event", { ids, summary: true })).sort(
+    (a, b) =>
+      b.data.discoveredAt.localeCompare(a.data.discoveredAt) ||
+      a.id.localeCompare(b.id),
+  );
+}
 export async function digestPreview(store: Store, now = new Date()) {
-  const companies = await store.list<Company>("company");
+  const companies = await store.list<Company>("company", { summary: true });
   const names = new Map(companies.map((c) => [c.id, c.data.name]));
-  const previous = (await store.list<{ deliveredAt?: string }>("digest"))
+  const previous = (
+    await store.list<{ deliveredAt?: string }>("digest", {
+      fields: ["deliveredAt"],
+    })
+  )
     .filter((d) => d.data.deliveredAt)
     .sort((a, b) => b.data.deliveredAt!.localeCompare(a.data.deliveredAt!))[0];
   const since =
     previous?.data.deliveredAt ||
     new Date(now.getTime() - 86400000).toISOString();
   const eligible = (
-    await store.list<DeskEvent>("event", { summary: true })
+    await recentDevelopments(store, since, now.toISOString())
   ).filter(
     ({ data: e }) =>
       e.discoveredAt <= now.toISOString() &&
