@@ -169,6 +169,36 @@ describe("nightly news schedule", () => {
     expect(c.lastNewsCheck).toBe("2026-01-01T00:00:00Z");
   });
 
+  it("pauses re-screens for 30 minutes when Google rate limits them", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { s, daily } = await desk();
+    const fetcher = vi.fn(async () => new Response("busy", { status: 503 }));
+    vi.stubGlobal("fetch", fetcher);
+    const e: DeskEvent = {
+      id: `news-${daily[0].id}-throttled`,
+      companyId: daily[0].id,
+      kind: "news",
+      title: "Old item",
+      body: "",
+      url: "https://news.google.com/rss/articles/CBMiXYZ",
+      publishedAt: "2026-09-20T00:00:00Z",
+      discoveredAt: "2026-09-20T00:00:00Z",
+      reviewed: false,
+      priority: "possible",
+      screening: { ...assessment(), version: "retired-version" },
+    };
+    await s.put("event", e.id, e, 0);
+    await tickAt(s, TUE_2PM);
+    const waiting = (await state(s)).rescreenBackoffUntil!;
+    expect(Date.parse(waiting) - Date.parse(TUE_2PM)).toBe(30 * 60000);
+    const calls = fetcher.mock.calls.length;
+    await tickAt(s, "2026-09-22T19:10:00Z");
+    expect(fetcher.mock.calls.length).toBe(calls);
+    // The unread item is retried later, not stored as unreadable.
+    expect((await s.get<DeskEvent>("event", e.id))!.data.screening?.version).toBe(
+      "retired-version",
+    );
+  });
   it("queues re-screens once per night and works through the queue", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { s, daily } = await desk();
@@ -190,7 +220,7 @@ describe("nightly news schedule", () => {
       await s.put("event", e.id, e, 0);
     }
     await tickAt(s, TUE_2PM);
-    expect((await state(s)).rescreenPending).toBe(2); // 12 re-screened this minute.
+    expect((await state(s)).rescreenPending).toBe(4); // 10 re-screened this minute.
     await tickAt(s, "2026-09-22T19:01:00Z");
     expect((await state(s)).rescreenPending).toBe(0);
     const events = await s.list<DeskEvent>("event", { companyId: daily[0].id });

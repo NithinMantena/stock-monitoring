@@ -3,6 +3,7 @@ import { cadenceOf, chicagoParts } from "./engine.ts";
 import { NEWS_SCHEDULE } from "./constants.ts";
 import type { Env } from "./providers.ts";
 import { advanceJob } from "./job-queue.ts";
+import { slowDown, ThrottledError } from "./fetch-policy.ts";
 import {
   dailySnapshot,
   rescreenCandidates,
@@ -31,6 +32,7 @@ export interface ScheduleState {
   digestDate?: string;
   rescreenDate?: string;
   rescreenPending?: number;
+  rescreenBackoffUntil?: string;
   history: {
     id: string;
     schedule: "daily" | "weekly";
@@ -132,7 +134,7 @@ export async function tick(
 
     // Retries and re-screens after the night's news run, bounded per night.
     if (!state.activeRunId && hour >= NEWS_SCHEDULE.dailyHour && left() > 15000)
-      await step("rescreen", () => rescreen(store, env, state, date, left));
+      await step("rescreen", () => rescreen(store, env, state, now, left));
   } finally {
     if (errors.length) result.errors = errors;
     if (JSON.stringify(state) !== before)
@@ -282,9 +284,10 @@ async function rescreen(
   store: Store,
   env: Env,
   state: ScheduleState,
-  date: string,
+  now: Date,
   left: () => number,
 ) {
+  const { date } = chicagoParts(now);
   if (state.rescreenDate !== date) {
     const ids = (await rescreenCandidates(store)).slice(
       0,
@@ -296,6 +299,8 @@ async function rescreen(
     state.rescreenPending = ids.length;
   }
   if (!state.rescreenPending) return null;
+  if (state.rescreenBackoffUntil && state.rescreenBackoffUntil > now.toISOString())
+    return { waiting: state.rescreenBackoffUntil };
   const queue = await store.get<{ date: string; ids: string[] }>(
     "run",
     "rescreen-queue",
@@ -304,11 +309,21 @@ async function rescreen(
     state.rescreenPending = 0;
     return null;
   }
-  const outcome = await rescreenNews(store, env, {
-    ids: queue.data.ids,
-    limit: 12,
-    milliseconds: Math.min(40000, left() - 10000),
-  });
+  let outcome;
+  try {
+    outcome = await rescreenNews(store, env, {
+      ids: queue.data.ids,
+      limit: 10,
+      milliseconds: Math.min(40000, left() - 10000),
+    });
+  } catch (error) {
+    if (!(error instanceof ThrottledError)) throw error;
+    slowDown();
+    // Re-screened items so far are saved; the rest wait for Google to recover.
+    state.rescreenBackoffUntil = new Date(now.getTime() + 30 * 60000).toISOString();
+    return { waiting: state.rescreenBackoffUntil };
+  }
+  state.rescreenBackoffUntil = undefined;
   if (outcome.busy) return outcome;
   const ids = queue.data.ids.slice(outcome.consumed);
   await store.put("run", "rescreen-queue", { ...queue.data, ids }, queue.version);
