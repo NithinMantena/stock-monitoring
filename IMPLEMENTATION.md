@@ -1,5 +1,17 @@
 # Implementation status — 2026-09-17 Chicago
 
+For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
+
+## Scheduled news runs, Google politeness and egress reduction — 2026-09-22
+
+- **Why:** a 10-company profile showed about 50 s per company, mostly network waits: publisher pages 60%, Google lookups 20%, TypeSafe only 10%. News depended on an open browser tab or 20-second slices every five minutes. The free plan's 5 GB egress was exhausted, mostly by the five-minute scheduler re-reading every stored article. In the cloud, about 9 in 10 recent article lookups had been refused by Google (HTTP 429/503) and saved as unreadable.
+- **Schedule:** a one-minute scheduler tick (`scheduler.ts`). A daily run at 1am Chicago covers daily-cadence companies over the last 26 hours. A weekly sweep on Friday at 6pm covers all non-paused companies over 7 days, daily companies first; Saturday's daily run is skipped. Quotes, the snapshot and up to 300 rescreens run nightly. Manual searches and API jobs continue without a browser. Run status and history appear on the News page.
+- **Google and publishers:** requests are paced (2 s / 0.6 s) with adaptive slow-down. 429/503 are retried after 1–30 minute back-offs rather than recorded as unreadable, and a step is given up only after 5 refusals. The Google article page is requested directly, cutting 3 Google requests per article to 2. Publisher timeout is 8 s. Publishers that block or time out twice are skipped for the rest of a run.
+- **Egress:** projected, id and cluster store reads; nightly chores; the per-slice history cache; fewer run saves; an IndexedDB article cache in the browser; changed-company-only reloads. An idle minute fell from roughly 19 MB per five minutes to about 370 bytes. The estimate is about 0.7–0.8 GB per month.
+- **CPU:** at most 10 articles per tick (~80 ms CPU each measured).
+- **Validation:** 223 tests (12 new) plus the production build pass. Supabase projection/id/cluster queries were verified read-only against live data. An end-to-end scheduler run on 10 real companies with real Google/TypeSafe: 307 checked, 144 new, no errors, median tick CPU 1.08 s at 15 articles, 15 store calls and ~28 KB read per new article. Deployed: live ticks return HTTP 200 every minute, and the first live rescreen throttle paused rescreens for 30 minutes as designed.
+- **Not yet observed in production:** the first scheduled daily run (1am, September 23) and weekly sweep (September 25). Throughput depends on how strongly Google throttles the shared cloud address.
+
 ## Filtered manual news searches and inbox — 2026-09-18
 
 - Search news uses the exact selected company IDs from status, research-group, text and individual-company filters. A persisted queue processes all selected companies across bounded requests, rather than the regular monitor's five-company slice. Existing events are deduplicated; no quotes are fetched.
