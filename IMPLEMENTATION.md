@@ -10,7 +10,9 @@ For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW
 - Verified: 238 tests, TypeScript and the production build pass. Live test on 90 real labelled articles ([validation/screening-v3-live.json](validation/screening-v3-live.json)):
   - with Google refusing every lookup: 21 of 23 developments surfaced (v2: 5), and 3–4 articles needed verification (v2: 73);
   - with text: all 23 surfaced, and each became one card.
-- Not yet deployed. Deploying queues about 6,400 stored articles for rescreen at 300 a night.
+- Also shipped: a scope for manual screens (companies matching filters, daily companies or all monitored; 1–30 days; 3–20 articles per day), an **Email today's latest screen** button (`POST /digest/latest-run`), and migration `202609230007_slim_event_reads.sql`. The migration makes browser reads omit TypeSafe raw answers, probabilities, comparisons and duplicate evidence. Opening the desk had grown to a 19 MB, 38-second download; after the changes below it is about 1 MB in 4 seconds.
+- Deployed 2026-09-24 04:00 UTC: the `desk` function, the migration (applied with `supabase db query --linked --file`) and the frontend. Commit `868c42f` is on branch `screening-v3-headline-first`.
+- Fresh start: `scripts/fresh-start-news.ts --apply` saved a full backup (`.local/fresh-start-backup-2026-09-24T04-03-44-247Z.json`, 7,659 records). It then removed all 6,476 stored news articles, 7,478 article-cache records and the rescreen queue. Companies, notes, settings, 931 monitoring alerts and digests were kept. Restore through Import & backup if ever needed.
 
 ## Scheduled news runs, Google politeness and egress reduction — 2026-09-22
 

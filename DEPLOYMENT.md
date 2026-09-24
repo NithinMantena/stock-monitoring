@@ -4,6 +4,8 @@ The Supabase database, private owner account, TypeSafe integration, and monitori
 
 ## Frontend hosting
 
+**Latest rollout (2026-09-24 UTC):** screening v3 (headline-first), manual screen scope, the email-latest-screen button and `supabase/migrations/202609230007_slim_event_reads.sql`. The migration only replaces the `desk_ui_records` view, so it is safe to re-run. Apply it with `npx supabase db query --linked --file supabase/migrations/202609230007_slim_event_reads.sql`, then deploy `desk` and the frontend as below. `scripts/fresh-start-news.ts` (dry run by default; `--apply` backs up, then deletes stored news articles) was used to start screening afresh.
+
 The permanent website is [Research Desk](https://research-desk-2p0.pages.dev), hosted in the Cloudflare Pages project `research-desk`. Open it on any device, enter `nithin@mantena.com`, and choose **Email me a sign-in link**. Open the emailed link on the device where you want to sign in; no password was assigned during setup.
 
 To publish subsequent frontend updates from this workspace:
