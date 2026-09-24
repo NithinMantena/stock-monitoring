@@ -351,7 +351,12 @@ describe("news and model boundaries", () => {
   it("validates typed model answers and stores selected evidence", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(JSON.stringify(modelResponse()))),
+      vi.fn(
+        async (_url, init) =>
+          new Response(
+            JSON.stringify(modelResponse({}, JSON.parse(init.body))),
+          ),
+      ),
     );
     const s = store();
     const judgment = await classifyArticle(
@@ -386,7 +391,9 @@ describe("news and model boundaries", () => {
     };
     const e = await processArticle(c, article, s, {});
     expect(e.priority).toBe("possible");
-    expect(e.screening?.reasonCode).toBe("missing_text");
+    // v3 judges a text-less article from its headline, so the visible failure is
+    // the unconfigured screener, queued for retry.
+    expect(e.screening?.reasonCode).toBe("processing_failed");
     await processArticle(c, article, s, {});
     expect(await s.list("event")).toHaveLength(1);
   });

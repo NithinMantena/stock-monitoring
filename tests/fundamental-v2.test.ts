@@ -10,7 +10,6 @@ import {
 } from "../supabase/functions/_shared/fundamental-policy.ts";
 import { screenArticle } from "../supabase/functions/_shared/news-screening.ts";
 import { processArticle } from "../supabase/functions/_shared/jobs.ts";
-import { newsBucket } from "../supabase/functions/_shared/news.ts";
 import { createV1Api } from "../supabase/functions/_shared/api-v1.ts";
 import { ownerActor } from "../supabase/functions/_shared/integrations.ts";
 import { modelResponse } from "./screening-fixtures.ts";
@@ -73,36 +72,12 @@ const mock = (overrides: Record<string, any> = {}) =>
       ),
   );
 
-describe("fundamental v2 gates", () => {
+// v2 rules still replay stored v2 decisions until the nightly rescreen replaces them.
+describe("fundamental v2 gates (legacy replay)", () => {
   it("admits stable core results without requiring a surprise or a mean above two", () => {
     expect(decide({ useful: 0.76, meaningful: 0 }).articleRole).toBe(
       "primary_reading",
     );
-  });
-  it("separates a useful development from a secondary recap in every category", async () => {
-    const s = store();
-    vi.stubGlobal(
-      "fetch",
-      mock({
-        contribution: {
-          type: "choice",
-          choice: "recap",
-          probabilities: { incremental: 0.01, recap: 0.98, unknown: 0.01 },
-        },
-      }),
-    );
-    const result = await processArticle(
-      newCompany("Acme"),
-      { ...article, official: false },
-      s,
-      { TYPESAFE_API_KEY: "test" },
-    );
-    expect(result.screening).toMatchObject({
-      development: { status: "relevant" },
-      articleRole: "coverage_only",
-      needsPreferredSource: true,
-    });
-    expect(newsBucket(result)).toBe("coverage");
   });
   it("requires both contribution and analytical quality", () => {
     expect(decide({}, false).articleRole).toBe("analytical_addition");
@@ -147,20 +122,6 @@ describe("fundamental v2 gates", () => {
     ).toBe("immaterial");
     expect(decide({ missingContext: 0.6 }).reasonCode).toBe("missing_context");
     expect(decide({ partial: true }).reasonCode).toBe("incomplete_document");
-  });
-  it("does not accept a primary results headline without the body or spend model tokens on it", async () => {
-    const fetcher = mock();
-    vi.stubGlobal("fetch", fetcher);
-    const result = await screenArticle(
-      newCompany("Acme"),
-      { ...article, text: "", contentDepth: "snippet" },
-      {},
-      store(),
-      [],
-      now,
-    );
-    expect(result.screening.reasonCode).toBe("missing_text");
-    expect(fetcher).not.toHaveBeenCalled();
   });
   it("does not hard-veto an options headline containing substantive business evidence", async () => {
     vi.stubGlobal("fetch", mock());
@@ -217,61 +178,6 @@ describe("v2 evidence, cache and failures", () => {
         now,
       ),
     ).rejects.toThrow("distribution");
-  });
-  it("reconciles a correction instead of retaining the most positive chunk", async () => {
-    const requests: any[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_u, init) => {
-        const r = JSON.parse(init.body);
-        requests.push(r);
-        return new Response(
-          JSON.stringify(
-            modelResponse(
-              r.questions.consistency
-                ? {
-                    significance: {
-                      type: "score",
-                      score: 1,
-                      probabilities: { 0: 0, 1: 1, 2: 0, 3: 0, 4: 0 },
-                      confidence: 1,
-                    },
-                    consistency: {
-                      type: "choice",
-                      choice: "corrected",
-                      probabilities: {
-                        coherent: 0,
-                        corrected: 1,
-                        conflicting: 0,
-                        unknown: 0,
-                      },
-                    },
-                  }
-                : {},
-              r,
-            ),
-          ),
-        );
-      }),
-    );
-    const text =
-      "Acme initially reported a shutdown. ".repeat(430) +
-      "\nCORRECTION: the shutdown was an exercise; production continues normally.";
-    const result = await screenArticle(
-      newCompany("Acme"),
-      { ...article, text },
-      { TYPESAFE_API_KEY: "test" },
-      store(),
-      [],
-      now,
-    );
-    expect(requests.at(-1).questions.consistency).toBeTruthy();
-    expect(result.screening).toMatchObject({
-      reasonCode: "immaterial",
-      signals: { consistency: "corrected" },
-      readingCoverage: { reconciled: true },
-    });
-    expect(result.screening.charactersRead).toBe(text.length);
   });
   it("retains unresolved contradictions for verification", () =>
     expect(

@@ -1,5 +1,7 @@
 # Fundamental screening v2
 
+> **Superseded on September 23, 2026 by [v3 (headline-first)](fundamental-screening-v3.md).** These rules only replay verdicts stored under v2 until the nightly rescreen replaces them.
+
 The application distinguishes useful business developments from articles worth reading. Primary documents require current, attributable business evidence. Secondary articles must also contribute useful original reporting or supported analysis. Recaps preserve the development in Coverage, without becoming reading recommendations.
 
 ## Processing flow

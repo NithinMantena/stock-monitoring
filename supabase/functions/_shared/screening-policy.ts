@@ -1,11 +1,18 @@
 import type { DeskEvent, Doc } from "./model.ts";
 import {
   decideFundamental,
+  decideScreening,
+  MAX_DEVELOPMENT_AGE_DAYS,
   type FundamentalDecision,
   type FundamentalSignals,
+  type ScreeningSignals,
 } from "./fundamental-policy.ts";
 
-export const SCREENING_VERSION = "fundamental-v2";
+// v3 is headline-first; v2 assessments stay readable (their rules replay) until
+// the nightly rescreen replaces them.
+export const SCREENING_VERSION = "fundamental-v3";
+export const LEGACY_SCREENING_VERSION = "fundamental-v2";
+export { MAX_DEVELOPMENT_AGE_DAYS };
 export const MAX_ARTICLE_CHARS = 120000;
 export type ContentDepth =
   "full" | "partial" | "snippet" | "supplied" | "unavailable";
@@ -13,6 +20,9 @@ export interface NewsAssessment extends Partial<
   Omit<FundamentalDecision, "disposition" | "reason">
 > {
   signals?: FundamentalSignals;
+  // v3 judgments (headline-first).
+  judgment?: ScreeningSignals;
+  headlineOnly?: boolean;
   promptVersion?: string;
   cacheKey?: string;
   documentHash?: string;
@@ -50,9 +60,6 @@ export interface NewsAssessment extends Partial<
   ageDays?: number | null;
 }
 
-// A daily desk reports current developments. An undated archive page or a
-// years-old press release is not news, however substantive it once was.
-export const MAX_DEVELOPMENT_AGE_DAYS = 45;
 
 export function articleAgeDays(
   publishedAt: string,
@@ -130,10 +137,12 @@ export function currentAssessment(
   now: Date | string = new Date(),
 ): NewsAssessment | undefined {
   const a = e.screening;
-  if (!a || a.version !== SCREENING_VERSION || e.classification?.error)
-    return a;
-  if (a.signals)
+  if (!a || e.classification?.error) return a;
+  if (a.version === SCREENING_VERSION && a.judgment)
+    return { ...a, ...decideScreening({ ...a, signals: a.judgment }) };
+  if (a.version === LEGACY_SCREENING_VERSION && a.signals)
     return { ...a, ...decideFundamental({ ...a, signals: a.signals }) };
+  if (a.version !== SCREENING_VERSION) return a;
   if (a.reasonCode) return a;
   if (
     a.retrievalNote.includes("Linked primary exhibit could not be read") &&
@@ -252,6 +261,7 @@ export function excludedSource(
 export function decideNews(
   a: Omit<NewsAssessment, "disposition" | "reason">,
 ): Pick<NewsAssessment, "disposition" | "reason"> {
+  if (a.judgment) return decideScreening({ ...a, signals: a.judgment });
   if (a.signals) return decideFundamental({ ...a, signals: a.signals });
   if (a.identity < 0.3)
     return {
@@ -336,8 +346,60 @@ export function decideNews(
   };
 }
 
+// Which article leads a development when several sources report it. Without
+// the text, a secondary source is judged by provenance: the company's own
+// release, then established newsrooms, then other reporting; aggregators and
+// investing templates rank last. Reading the text adds only a little.
+const ESTABLISHED_NEWSROOMS =
+  /(^|\.)(reuters|bloomberg|wsj|ft|apnews|cnbc|nytimes|economist|barrons|marketwatch|theglobeandmail|afr|nikkei|insurancejournal)\.(com|co\.uk|com\.au|co\.jp)$|^(reuters|bloomberg|the wall street journal|financial times|associated press|cnbc|the new york times|the economist|barron's|marketwatch|the globe and mail|australian financial review|nikkei asia)$/i;
+const TEMPLATE_PUBLISHERS =
+  /(simplywall\.st|simply wall st|marketbeat|zacks|fool\.com|motley fool|gurufocus|ad-hoc-news|stocktitan|stock titan|tipranks|247wallst|24\/7 wall st|insidermonkey|insider monkey|investorplace|stocktradersdaily|stock traders daily|kalkine|quiverquant|tradingview|benzinga)/i;
+export function sourceQuality(
+  e: Pick<DeskEvent, "url" | "title" | "classification" | "screening">,
+) {
+  let host = "";
+  try {
+    host = new URL(e.screening?.sourceUrl || e.url).hostname.replace(
+      /^www\./,
+      "",
+    );
+  } catch {
+    /* no URL */
+  }
+  const source = String(e.classification?.source || "");
+  // Google News headlines end with " - Publisher" when the link is unresolved.
+  const names = [
+    /^https?:/.test(source) ? "" : source.trim(),
+    e.title.lastIndexOf(" - ") > 0
+      ? e.title.slice(e.title.lastIndexOf(" - ") + 3).trim()
+      : "",
+  ].filter(Boolean);
+  const any = (re: RegExp) => re.test(host) || names.some((n) => re.test(n));
+  if (any(TEMPLATE_PUBLISHERS)) return -20;
+  if (any(ESTABLISHED_NEWSROOMS)) return 25;
+  return 0;
+}
 export function screeningRank(e: DeskEvent): number {
   const a = e.screening;
+  if (a?.judgment) {
+    const role = currentAssessment(e)?.articleRole;
+    return (
+      (e.feedback === "useful" ? 1000 : 0) +
+      (role === "primary_reading"
+        ? 300
+        : role === "news_report"
+          ? 150
+          : role === "analytical_addition"
+            ? 140
+            : role === "pending_verification"
+              ? 50
+              : role === "coverage_only"
+                ? 20
+                : 0) +
+      sourceQuality(e) +
+      (a.judgment.textRead ? 10 : 0)
+    );
+  }
   if (a?.signals)
     return (
       (e.feedback === "useful" ? 1000 : 0) +
@@ -370,7 +432,7 @@ export function digestImportance(
 ): number {
   const a = currentAssessment(e);
   const age = articleAgeDays(e.publishedAt, now);
-  if (a?.signals)
+  if (a?.signals || a?.judgment)
     return (
       (eventPriorityRank(e) === "major"
         ? 300
@@ -401,7 +463,8 @@ function eventPriorityRank(e: DeskEvent): DeskEvent["priority"] {
   if (e.kind !== "news" || !a) return e.priority;
   if (a.disposition === "suppressed") return "suppressed";
   if (a.disposition === "uncertain") return "possible";
-  return (a.signals ? a.signals.meaningful >= 0.7 : a.materiality >= 2.8)
+  const meaningful = meaningfulOf(a);
+  return (meaningful !== undefined ? meaningful >= 0.7 : a.materiality >= 2.8)
     ? "major"
     : "normal";
 }
@@ -448,4 +511,9 @@ export function groupNews(docs: Doc<DeskEvent>[]): NewsGroup[] {
     })
     .sort((a, b) => b.latest.localeCompare(a.latest))
     .map(({ lead, coverage, additions }) => ({ lead, coverage, additions }));
+}
+
+// P(significance level 3-4) for v3 or v2 judgments; undefined for older ones.
+export function meaningfulOf(a?: NewsAssessment): number | undefined {
+  return a?.judgment?.meaningful ?? a?.signals?.meaningful;
 }

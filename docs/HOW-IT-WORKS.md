@@ -1,6 +1,6 @@
 # How Research Desk works
 
-*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated September 22, 2026.*
+*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated September 23, 2026.*
 
 If you only read one section, read [The short version](#1-the-short-version). If you want to understand a specific behaviour, the [contents](#contents) will take you straight there. Technical detail for programmers lives in [ARCHITECTURE.md](../ARCHITECTURE.md); this guide links to it where useful but never depends on it.
 
@@ -33,7 +33,7 @@ If you only read one section, read [The short version](#1-the-short-version). If
 
 Research Desk is a private notebook for the companies you follow, paired with a tireless research assistant that reads the news for you overnight.
 
-You keep notes, a thesis and a status (Portfolio, Perpetual watch, Watchlist and so on) for each company. Every night at **1am Chicago time** the system searches Google News for the previous day's articles about your **most important companies** (those in your Portfolio or on Perpetual watch). Every **Friday at 6pm** it searches the **past seven days for every company** you have not paused. For each article it finds, it fetches the full text from the publisher's website, asks an AI model called **TypeSafe** a set of careful, structured questions about it, and then applies a fixed rulebook to decide whether the article is worth your time. The results land in your **News & alerts inbox**, grouped so that five articles about the same event appear as one development. At **7am** a digest email summarises what is new.
+You keep notes, a thesis and a status (Portfolio, Perpetual watch, Watchlist and so on) for each company. Every night at **1am Chicago time** the system searches Google News for the previous day's articles about your **most important companies** (those in your Portfolio or on Perpetual watch). Every **Friday at 6pm** it searches the **past seven days for every company** you have not paused. For each article it finds, it asks an AI model called **TypeSafe** a set of careful, structured questions about the headline, publisher and date, reads the article's text when it can (the text sharpens the answers but is never required), and then applies a fixed rulebook to decide whether the article is worth your time. The results land in your **News & alerts inbox**, grouped so that five articles about the same event appear as one development. At **7am** a digest email summarises what is new.
 
 All of this happens on rented servers in the cloud. **Your computer and browser can be off.** The website is simply a window onto work that has already been done.
 
@@ -142,21 +142,25 @@ gantt
 
 ## 4. The journey of a single news article
 
-This is the heart of the system. Follow one article from Google to your inbox.
+This is the heart of the system. Follow one article from Google to your inbox. Since September 23, 2026 (screening "v3") an article is judged from **what is known about every article**: the company, the headline, the publisher, any summary and the date. The article's text is read when it can be, and then used as extra evidence for the same questions, but it is never required. Missing text, missing company context or a missing ticker **never** sends an article to Needs verification.
 
 ```mermaid
 flowchart TD
     A[1. Discover<br/>Google News search<br/>+ primary sources] --> B{2. Seen it before?}
     B -- yes --> Z[Skip, free]
-    B -- no --> C[3. Find the real article<br/>2 requests to Google]
-    C --> D[4. Read it<br/>fetch the publisher's page or PDF]
-    D --> E{Got the text?}
-    E -- no --> V[Needs verification<br/>no AI cost; retried later]
-    E -- yes --> F[5. Gather context<br/>company background +<br/>related earlier articles]
-    F --> G[6. Ask TypeSafe<br/>structured questions]
-    G --> H[7. Apply the rulebook]
-    H --> I[8. Group with related coverage]
-    I --> J[9. Save and show<br/>inbox, digest]
+    B -- no --> L{Google link<br/>or direct link?}
+    L -- direct link<br/>company site, SEC, feed --> D[Read it now]
+    L -- Google link --> H[3. Judge the headline<br/>one TypeSafe request]
+    H --> W{Ruled out and<br/>nothing major?}
+    W -- yes --> S[Screened out<br/>article never opened]
+    W -- no --> G[4. One try to open it<br/>via Google]
+    G -- refused or failed --> K[Keep the headline verdict<br/>no retry]
+    G -- text read --> T[5. Same questions<br/>with the text]
+    D --> T
+    T --> R[6. Apply the rulebook]
+    K --> R
+    R --> I[7. Group with the same development]
+    I --> J[8. Save and show]
 ```
 
 ### Step 1: discovery
@@ -169,65 +173,67 @@ Each day gets its own search, and up to **10 articles per day** are kept, in Goo
 
 Every article gets a fingerprint made from its link, title and date. If an article with that fingerprint is already stored for that company, it is skipped at once. This check costs almost nothing. It is why a weekly sweep that overlaps a daily run does not pay twice, and why an interrupted run can be resumed safely.
 
-### Step 3: finding the real article
+### Step 3: judging the headline
 
-Google News does not give out the publisher's address directly. It gives a Google link that must be translated. The server makes **two small requests to Google** per article: one to load Google's article page, and one to ask Google which publisher page it points to. (Until September 22 this took three requests. Skipping an unnecessary redirect cut Google traffic by a third.)
+Google News gives a Google link, not the publisher's address. Translating it takes two requests to Google, which Google often refuses from cloud servers (see [section 11](#google-being-a-polite-visitor)). So for a Google link the server first asks TypeSafe the full set of questions using only the headline, publisher, summary and date. If that already rules the article out (another company, a law-firm advertisement, price chatter, trivia) **and** nothing major is suggested, the article is screened out without ever being opened. In testing, about half of all candidates ended here, which halves what the server asks of Google.
 
-### Step 4: reading the article
+A **direct link** (the company's own site, the SEC, a feed you configured) costs Google nothing, so it is read straight away and skips this step.
 
-The server fetches the publisher's page and extracts the main text, the way a "reader mode" button does in a browser. PDFs such as SEC exhibits are read page by page. Only the first **120,000 characters** are used, which is roughly a 50-page document. Before fetching, it checks that the address is a genuine public website and not something private, and it re-checks every redirect.
+### Step 4: one try to open it
 
-Reading can fail for ordinary reasons:
+If the headline does not rule the article out, or if it suggests something major, the server tries **once** to translate the Google link and read the publisher's page. If Google refuses, the page is paywalled or the site is slow, the headline verdict stands and **nothing is retried**. After two Google refusals in a run, the server stops asking Google for the rest of that run. Refusals that redirect to Google's "unusual traffic" page are recognised as refusals.
 
-- **Paywalls and "robot checks".** Some publishers block automated readers (HTTP 401/403) or show only a teaser.
-- **Slow sites.** The server waits up to **8 seconds** (10 for SEC, the major news sites on its built-in list, and sources you configured), then gives up.
-- **Script-only pages.** Some pages have nothing to read without running their code.
+Reading itself works as before: the main text is extracted in "reader mode" style, PDFs are read page by page, addresses are checked to be genuine public websites, publishers that block the server twice are skipped for the rest of the run, and the system never tries to get around a paywall or a robot check.
 
-Within a run, if a publisher blocks the server or times out **twice in a row**, the server stops trying that publisher for the rest of the run. This saves time without losing anything, because those attempts would have failed anyway.
+### Step 5: the same questions, with the text
 
-The system never tries to get around a paywall or a robot check. When text cannot be read, the article is kept and clearly labelled, and the link to the original is always there.
+When text was read, TypeSafe is asked the same questions again with the text as extra evidence: its opening 12,000 characters, cut into numbered passages. One further question picks the passage that states the development. The text refines the verdict; it is not a gate. In the September 23 test, reading the text changed where about one article in five went, almost always because the text showed something the headline undersold.
 
-### Step 5: when there is no text, there is no AI call
+The briefing always contains:
 
-If no real text could be read, the article goes straight to **Needs verification** with a note such as "The article body could not be verified. Open the source or retry retrieval." **No AI cost is spent** on it. The server will try reading it again the next day, up to three attempts in total, as part of the nightly re-screens.
+- the company's name, ticker, exchange, scale, business description and thesis, each shown as "not provided" when empty;
+- the headline, publisher, summary and date;
+- the number of days since publication, calculated in code because the AI is weak at comparing dates;
+- up to four of the company's recently shown articles, for grouping.
 
-### Step 6: gathering context and asking TypeSafe
-
-For readable articles, the server assembles a careful briefing:
-
-- **The company:** name, ticker, exchange, business scale, your written business context, your thesis, and the dates those were last updated.
-- **The article:** its title, source, publication date, whether it is a primary source, and its text, cut into short numbered passages (`[p0]`, `[p1]`, and so on) so the AI can point to the exact sentence that supports its answer.
-- **Related earlier coverage:** up to three of the company's recent stored articles that share at least two meaningful words with this headline, so the AI can tell whether this is new or a rehash.
-- **A primary reference** when one exists: the company's own announcement of the same event, so a secondary article can be judged against it.
-
-Long documents are split into sections of about 12,000 characters (up to 40 of them), read two at a time. A final "reconciliation" call then weighs the key passages from every section together, so a correction on page 30 is not ignored because page 1 looked exciting. The questions themselves are described in [section 5](#5-how-the-ai-judges-an-article).
-
-### Step 7: the rulebook
+### Step 6: the rulebook
 
 TypeSafe's answers are probabilities, not decisions. A fixed, written rulebook in the code turns them into a verdict. See [section 6](#6-the-rulebook-that-decides-where-an-article-goes).
 
-### Step 8: grouping related coverage
+### Step 7: grouping the same development
 
-Many articles describe the same event. For each earlier article it was shown, TypeSafe says whether the new one is a **duplicate**, **added analysis**, a **later update**, or **unrelated**. Only when it is at least **85% confident** does the system link them:
+Many articles describe the same event: an earnings release can produce ten stories. For each of up to four recently shown articles about the company, TypeSafe answers one yes/no question: **do these report the same development** (the same announcement, event or reporting period)? At **70%** or more the new article joins that development. All of its articles stay "relevant". The development appears as **one card led by its best source**, with the others listed underneath.
 
-- **Duplicates and added analysis** join the same development group. The group shows one lead article, preferring the company's own document, then valuable analysis, and hides the rest under "coverage".
-- **Updates** (a later outcome, correction or reversal) stay separate, but are linked to the history they update.
+The best source is chosen by provenance, not by how much text happened to be readable. In order:
+
+1. the company's own release;
+2. established newsrooms (Reuters, Bloomberg, the Wall Street Journal, the FT, CNBC and similar);
+3. other reporting;
+4. investing-template sites (Simply Wall St, MarketBeat, Zacks, GuruFocus, Motley Fool and similar).
+
+An article whose text was read gets a small bonus. Analysis pieces are listed as additions alongside the lead.
 
 Grouping never deletes anything. Every article remains inspectable.
 
-### Step 9: saved and shown
+### Step 8: saved and shown
 
-The article is saved with its verdict, the reason in plain English, the exact supporting passage, and a record of how much of the document was actually read. It appears in your inbox the next time the website refreshes, and in the next digest if it qualifies. Articles judged **important** are marked as such (see [section 6](#important-developments)).
+Each article is saved with:
+
+- its verdict and the reason in plain English;
+- a note on whether it was judged from the headline or the text, and why the text was unavailable;
+- the supporting passage, when there was text.
+
+It appears in your inbox the next time the website refreshes, and in the next digest if it qualifies.
 
 ### Re-screens: second looks at older articles
 
 Some articles deserve a second look later:
 
-- **Unreadable articles** are retried after 24 hours, up to three attempts.
 - **Your edits.** When you change a company's context, thesis, watch points or name, its stored articles are re-judged with the new context.
-- **A new screening version.** When the rulebook or questions are upgraded, older judgments are refreshed. When the current version ("fundamental-v2") arrived, about 6,000 older articles were queued. At 300 a night, that backlog clears in about three weeks.
+- **A new screening version.** When the rulebook or questions are upgraded, older judgments are refreshed. With v3, about 6,400 older articles are queued; at 300 a night that takes about three weeks.
+- **Processing failures** (TypeSafe unavailable) are retried after 24 hours, up to three attempts.
 
-Re-screens keep your own Review, Save, Useful and Noise choices intact. They are capped at 300 a night to control AI spending. If Google pushes back while they are running, re-screens pause for 30 minutes.
+Re-screens judge **what is already stored** and never contact Google again. Unreadable articles are not retried. Your own Review, Save, Useful and Noise choices are kept.
 
 ---
 
@@ -235,95 +241,92 @@ Re-screens keep your own Review, Save, Useful and Noise choices intact. They are
 
 ### Why structured questions, not a summary
 
-The system never asks TypeSafe "is this article good?". It asks narrow, well-defined questions with fixed answer choices, and TypeSafe returns **how confident it is in each possible answer**, as probabilities that add up to 100%. For example: "attributed 82%, unsupported 11%, absent 7%". This matters for three reasons:
+The system never asks TypeSafe "is this article good?". It asks narrow, well-defined questions with fixed answer choices, and TypeSafe returns **how confident it is in each possible answer**, as probabilities that add up to 100%. This matters for three reasons:
 
-1. **Borderline cases stay visible.** A 55% answer is treated differently from a 95% one, so uncertain articles go to Needs verification rather than being silently accepted or discarded.
+1. **Borderline cases are handled deliberately.** A 55% answer is treated differently from a 95% one.
 2. **The rulebook can be changed without paying again.** Because the raw answers are stored, a threshold can be adjusted and every stored article re-evaluated in code, at no AI cost.
-3. **Answers are checked.** The server verifies that every answer is a permitted choice, that the probabilities add up, and that any quoted evidence passage really exists in the article. A malformed answer is treated as a processing failure, never as a verdict.
+3. **Answers are checked.** The server verifies that every answer is a permitted choice and that the probabilities add up. A malformed answer is a processing failure, never a verdict. When two options tie within rounding, TypeSafe's own choice is accepted.
 
 ### The five core questions
 
+Every question can be answered from the headline alone. The text, when present, is extra evidence.
+
 | Question | What it asks, in plain words |
 | --- | --- |
-| **Identity** | Is this article really about this company, or about a business it is directly exposed to, such as a key customer, supplier or regulation? It judges the connection only, not whether the news matters. |
-| **Significance** | How useful is this information for understanding the company's long-term value, at its size? Answered on a five-level scale (below). |
-| **Support** | Is the business information attributed to something checkable (company filings, named sources, documents, data), is it unsupported opinion or rumour, or is the information simply absent from the text? |
-| **Contribution** | For articles from someone other than the company: does it add original reporting or real analysis, or is it a recap of the announcement? |
-| **Timeliness** | Is the information current, or an old story being recirculated? |
+| **Identity** | Is this about this company (or a business, brand or division it owns, or a named customer, supplier or regulator action tied to it), rather than something that merely shares its name? |
+| **Significance** | How much does the development matter for the company's long-term value? A five-level scale (below). When the company's size is unknown, the nature of the event is judged instead of demoting it. |
+| **Purpose** | What kind of article is it? The options: the company's own disclosure, a news report, real analysis, market commentary (price moves, ratings, targets, pundits), investment opinion (should-you-buy, comparisons, valuation templates), a law-firm solicitation, or something else. |
+| **Issuer** | Did the company itself issue it (its own press release or filing, even when carried by a newswire or Yahoo)? |
+| **Timeliness** | Is the development current, or old news recirculated? The days since publication are calculated in code and supplied. |
 
 The significance scale:
 
 | Level | Meaning |
 | --- | --- |
-| 0 | No useful business evidence: a calendar notice, share-price chatter, a name mix-up, promotion or boilerplate. |
-| 1 | A real but routine event, too small to matter at this company's size. |
-| 2 | Useful evidence about core financial or operating performance, including steady results and well-supported comparisons. |
-| 3 | Could meaningfully change earning power, competitive position, capital allocation, management integrity or financial risk. |
-| 4 | Could transform control, survival or the core business. |
+| 0 | No business development: price moves, ratings or targets alone, should-you-buy templates, calendar notices, name mix-ups, promotion. |
+| 1 | A real but routine or small event: minor contract, store opening, marketing, routine board appointment, rating affirmation. |
+| 2 | Useful evidence about core performance: results, monthly or quarterly figures, guidance, pricing, costs, market share, a meaningful partnership. |
+| 3 | Could meaningfully change earning power, competition, capital allocation, management or financial risk: a large deal or financing, a major customer or licence change, an activist campaign, material litigation or a regulatory decision. |
+| 4 | Could transform control, survival or the core business: a takeover, insolvency, loss of the core licence. |
 
 ### Extra questions, asked only when relevant
 
-- **Evidence:** "Which numbered passage best supports the business development?" The passage must exist word for word in the article, which prevents invented quotations.
-- **Analytical quality** (secondary articles): is the reporting or analysis adequate, weak or misleading?
-- **Missing context** (when your company context is missing or older than about 18 months): would that gap change the verdict?
-- **Title/body match** (when the page's own title differs from the headline): did the server read the right document?
-- **Qualification** (long documents): which passage most limits or corrects the main claim?
-- **Your watch points** (up to 20 per company): does this article bring real evidence about each one, and in which direction (more concerning, reassuring, mixed)?
-- **Relation to earlier coverage:** duplicate, added analysis, update, or unrelated? (Used for grouping; see [step 8](#step-8-grouping-related-coverage).)
+- **Evidence** (only when text was read): which numbered passage states the development, plus a separate yes/no "does any passage state it?", so "none of them" cannot crowd out a real passage.
+- **Same development** (for grouping): one yes/no per recently shown article.
+- **Your watch points** (up to 20 per company): does this article bring real evidence about each one, and in which direction?
 
-All of these are asked in **one request per article** (or per section, for long documents), so extra questions do not multiply the cost.
+All of these are asked in **one request**; extra questions do not add waiting time.
 
 ### What it costs
 
-TypeSafe charges only for the text sent to it: about **$0.042 per million "tokens"** (a token is roughly three-quarters of a word). A typical article with its briefing uses about 2,500 tokens, so about **$0.0001, a hundredth of a cent**. Before every request, the server reserves the worst possible cost against your monthly ceiling, then settles it at the real amount. If the ceiling would be exceeded, the request is not sent and the article waits, clearly labelled, until the next month. See [budgets](#the-typesafe-budget).
+TypeSafe charges only for the text sent to it: about **$0.042 per million "tokens"**. A headline judgment uses about 1,800 tokens and a judgment with text about 3,200, so an article costs roughly **a hundredth of a cent**. Before every request the server reserves the worst possible cost against your monthly ceiling, then settles it at the real amount. If the ceiling would be exceeded, the article waits, clearly labelled. See [budgets](#the-typesafe-budget).
 
 ---
 
 ## 6. The rulebook that decides where an article goes
 
-After TypeSafe answers, a fixed set of rules (the "fundamental-v2" policy) gives each article one of five **roles**. The rules are checked in order, and the first one that applies wins.
+After TypeSafe answers, a fixed set of rules (the "headline-first" policy of screening v3) gives each article a **role**. The rules are checked in order, and the first one that applies wins.
 
 ```mermaid
 flowchart TD
-    S[Article with AI answers] --> T1{Text readable,<br/>right document,<br/>complete?}
-    T1 -- no --> NV[Needs verification]
-    T1 -- yes --> T2{Clearly about<br/>another company,<br/>or old news?}
-    T2 -- yes --> R[Screened out]
-    T2 -- no --> T3{Company connection,<br/>context, evidence,<br/>currency and usefulness<br/>all confident?}
-    T3 -- no, but not clearly wrong --> NV
-    T3 -- immaterial or unsupported --> R
-    T3 -- yes --> T4{Company's own<br/>document?}
-    T4 -- yes --> P[Recommended reading:<br/>primary evidence]
-    T4 -- no --> T5{Adds real,<br/>well-supported<br/>analysis?}
-    T5 -- recap / duplicate --> C[Coverage only]
-    T5 -- unclear --> NV
-    T5 -- yes --> A[Recommended reading:<br/>valuable analysis]
+    S[Article with AI answers] --> A{Another company, a law-firm ad,<br/>or old news?}
+    A -- yes --> X[Screened out]
+    A -- no --> B{Unsure it is this company?}
+    B -- yes, possibly major --> V[Needs verification]
+    B -- yes, nothing major --> X
+    B -- no --> C{Price, rating or<br/>opinion piece?}
+    C -- about a real development --> CO[Coverage]
+    C -- nothing behind it --> X
+    C -- no --> D{Any development<br/>of consequence?}
+    D -- no --> X
+    D -- yes --> E{Company's own<br/>release?}
+    E -- yes --> P[Relevant: company source]
+    E -- no --> F{Analysis?}
+    F -- yes --> AN[Relevant: analysis,<br/>shown alongside]
+    F -- no --> N[Relevant: news report,<br/>grouped under best source]
 ```
 
-In words:
+In words, with the exact thresholds:
 
-1. **Could the article be read properly?** If the text is missing, belongs to a different document, contradicts itself without resolution, or was only partly read (for example a missing exhibit), it goes to **Needs verification**. A reading failure is never mistaken for "irrelevant".
-2. **Clear rejections.** Almost certainly about another company (identity below 20%), or confidently old news (historical at least 80%): **Screened out**.
-3. **Confidence checks.** The article must clear every one of these bars. Missing any one sends it to **Needs verification**, unless the answer is clearly negative, in which case it is **Screened out**:
+1. **Another company:** identity below 20% → **Screened out**.
+2. **Law-firm advertisement** (purpose at least 60%) → **Screened out**. A real lawsuit reaches the desk through news reports or filings.
+3. **Old news** → **Screened out**. That covers articles published more than **45 days** ago, articles confidently historical (at least 80%), and headlines naming a reporting period that ended long ago (for example "fiscal year 2021", checked in code). An undated page must show it is current. Otherwise it is screened out, or sent to verification if it may be major.
+4. **Unsure it is this company** (identity 20–80%): **Needs verification** only if the development may be major (levels 3–4 at least 50%). Otherwise **Screened out**.
+5. **Price, rating or opinion piece** (market commentary or investment opinion at least 60%): **Coverage** when at least 20% suggests a meaningful development behind it. Otherwise **Screened out**. It is never recommended reading.
+6. **Nothing of consequence:** levels 3–4 below 20% and levels 2–4 below 60% → **Screened out**.
+7. **Mostly old information** (historical 50–80%): **Needs verification** if possibly major. Otherwise **Screened out**.
+8. Everything that remains is a **relevant development**, and the article's role is one of:
+   - **Company source**, when it comes from the company's own site or filings, or the issuer question is at least 80% (a company press release on a newswire counts);
+   - **Analysis**, when the purpose is analysis (at least 60%), shown next to the development's lead;
+   - **News report** otherwise, grouped with other reports of the same development under the best source.
 
-   | Check | Bar to clear |
-   | --- | --- |
-   | Connection to the company | at least 80% |
-   | Missing company context matters | below 50% |
-   | Useful business evidence (significance level 2, 3 or 4) | at least 75% (below 20% is screened out as immaterial) |
-   | Unsupported claims | below 80% (at or above is screened out) |
-   | Attributed, checkable evidence, with a verified quoted passage | at least 75% |
-   | Current information | current at least 70% and historical below 20% |
+**Needs verification is now rare.** It holds only articles that might be major but might concern another company or be old, plus processing failures. On 90 real articles in the September 23 test it held 3–4 articles; the previous rulebook sent 73 of the same 90 there.
 
-4. **The company's own documents** (SEC filings, the company's investor-relations site, sources you configured as official) that pass become **Recommended reading: primary evidence**.
-5. **Other publishers** must also add something:
-   - If it duplicates a recommended article already on file, or at least 70% "recap", it becomes **Coverage only**. The development is relevant, but this article is not the one to read.
-   - If its analysis is judged misleading (at least 75%), it also becomes **Coverage only**.
-   - It needs at least 70% "incremental" contribution and at least 75% "adequate" quality to become **Recommended reading: valuable analysis**. Anything in between goes to Needs verification.
+**Possibly major is never silently dropped.** Anything with at least a 50% chance of a level 3–4 development is always opened once. It is never screened out, unless it is about another company, a law-firm advertisement or old news.
 
 ### Important developments
 
-A recommended development is marked **Important** when TypeSafe gives at least **70%** combined confidence to significance levels 3 and 4: news that could meaningfully change the business. Important items lead the digest.
+A relevant development is marked **Important** when TypeSafe gives at least **70%** combined confidence to significance levels 3 and 4. Important items lead the digest.
 
 ### Your own judgments always win
 
@@ -352,11 +355,17 @@ Your list of companies, searchable and filterable by status, research group and 
 The inbox of developments, newest first.
 
 - **Folders:** **Inbox** holds unreviewed, unsaved items for 30 days after discovery. **Saved** keeps items forever. **History** holds reviewed items and ones that aged out. "Return to inbox" gives an item a fresh 30 days.
-- **Views:** **Relevant developments** (recommended readings), **Needs verification**, **Coverage / preferred source needed**, **Screened out / noise**, and **All events**.
+- **Views:** **Relevant developments** (one card per development, led by its best source), **Needs verification** (rare: possibly major but unclear), **Coverage / commentary** (price and opinion pieces about a real development), **Screened out / noise**, and **All events**.
 - **Filters:** keyword, company, publisher, importance and publication date range.
 - **Actions** on each card: Review, Save, Useful, Noise, Undo, and **Read available text**, which fetches the article text for you without any AI cost or change to the verdict.
 - **The "Scheduled news runs" panel** shows the current or last nightly run (companies done, articles checked, new items, warnings), whether it is waiting because Google asked it to slow down, and a short history of recent runs.
-- **Search news** lets you start your own search over the companies matching your current filters, looking back seven days with up to 10 articles per day. You can pause, resume or cancel it. It keeps running on the server even if you close the browser.
+- **Search news** starts your own screen, separate from the scheduled daily and weekly runs. Three choices beside the button set its size, and are remembered on that device:
+  - **which companies:** those matching your current filters, your daily companies (Portfolio and Perpetual watch), or every monitored (non-paused) company;
+  - **how far back:** 1, 2, 3, 7, 14 or 30 days (one Google search per company per day);
+  - **articles kept per company per day:** 3, 5, 10 or 20.
+
+  Hovering over the button shows the number of searches and the maximum number of articles. You can pause, resume or cancel a screen. It keeps running on the server even if you close the browser.
+- **Email today's latest screen** sends an email of the developments found by the most recent screen that ran today, manual or scheduled, in the same format as the morning digest. It works while a screen is still running (the subject says so) and can be pressed again later for an updated copy.
 
 ### Monitoring health
 
@@ -398,7 +407,7 @@ Every day at 7am Chicago time (adjustable in Settings), if the digest is enabled
 - It shows the **top 20** developments, each with its company, headline, the reason it qualified, the supporting passage, a link, and how long ago it was published. It then says how many more are waiting in the inbox.
 - It lists up to 10 **monitoring alerts** (for example a feed that keeps failing) and a **coverage gaps** line naming companies with a missing or failing source.
 
-The email is sent through Resend with a unique "one per day" key, so a hiccup cannot produce two copies. You can preview the next digest at any time in Settings.
+The email is sent through Resend with a unique "one per day" key, so a hiccup cannot produce two copies. You can preview the next digest at any time in Settings. The **Email today's latest screen** button on the News page sends a separate email covering just the most recent screen; it does not affect the morning digest.
 
 ---
 
@@ -486,9 +495,10 @@ The system now behaves like a courteous visitor:
 - **It spaces requests out:** at least 2 seconds between searches and 0.6 seconds between article lookups.
 - **It backs off when refused.** It waits **1, then 3, 10, 20 and 30 minutes** before retrying the same step. The progress panel shows "Google News asked us to slow down; resuming around …".
 - **It learns.** Each refusal doubles the spacing (up to 20 seconds between searches and 10 between lookups). Each success eases it back by 5%. The learned pace is saved with the run, so the next minute does not start fast again.
-- **It does not throw work away.** A refused search or article is retried later rather than recorded as a failure. Only after **five refusals in a row** on the same step does the run move on: a search is reported as a warning and skipped, and an article is saved as unreadable, to be retried the next night. One stubborn step cannot stall the whole run.
+- **Searches are retried; article lookups are not.** A refused news search is retried later; only after **five refusals in a row** is it reported as a warning and skipped. An article lookup is tried **once**: if Google refuses, the article is judged from its headline and never looked up again. After **two refusals in a run**, the server stops asking Google for article links until the run ends.
+- **It asks less.** Articles the headline already rules out are never looked up, and re-screens never contact Google (see [step 3](#step-3-judging-the-headline)).
 
-If Google stays strict, runs are slower. The system prefers finishing late to hammering Google or filling your inbox with unread articles.
+If Google stays strict, the desk still works: articles are judged from their headlines, and the run finishes on time.
 
 ### Publishers
 
@@ -522,7 +532,7 @@ Several things can happen at once: the timer ringing, you editing a company, an 
 
 | What you notice | What it usually means | Where to look / what to do |
 | --- | --- | --- |
-| Most new articles are in **Needs verification** with "could not be verified" | The article text could not be read: paywall, robot check, slow site, or Google refusing the lookup. No AI money was spent on them. | Open a few. If the reason mentions HTTP 429/503, Google was pushing back; they will be retried the next night. "Read available text" retries one on demand. |
+| Many cards say "screened from the headline" | Google refused the article lookup, or the publisher blocks automated reads. This is expected and changes little about where articles go. | Nothing to do. "Read available text" tries one article on demand. Primary sources (SEC CIK, investor-relations feed) give direct, readable documents. |
 | The Scheduled news runs panel says **"resuming around …"** | Google asked the server to slow down; it is waiting as it should. | Nothing to do. It resumes automatically. |
 | A run shows **warnings** | A source failed after retries, for example an investor-relations page blocking automated reads (HTTP 403), or a search refused five times. | Expand the warnings in the panel. A permanently failing source can be removed or replaced in the company's Monitoring tab. |
 | **"Monitoring needs attention"** items in the inbox or digest | A company's source failed during a run, or it has no price source. | The message names the source. See the company's Monitoring tab. |
@@ -544,7 +554,7 @@ Several things can happen at once: the timer ringing, you editing a company, an 
 | Company status (Portfolio, Perpetual watch, Watchlist, …) | Research tab | Portfolio and Perpetual watch make a company **daily**; everything else is **weekly**. |
 | Monitoring frequency | Monitoring tab | Override automatic: daily, weekly or **paused**. Paused companies are left out of all runs. |
 | Company news search | Monitoring tab | Replace the automatic Google search wording. |
-| Business scale and context | Monitoring tab | Tells the AI how big the company is and what matters to it. **The biggest lever on screening quality.** |
+| Business scale and context | Monitoring tab | Tells the AI how big the company is and what matters to it, which sharpens significance judgments. Never required. |
 | Primary sources, SEC CIK, official feeds | Monitoring tab | Adds the company's own disclosures, which can become recommended primary readings. |
 | Enabled and excluded publishers | Monitoring tab | Allow additional publisher sites to be read; hide publishers you never want. |
 | Watch points | Watch points tab | Every article is checked against each one. |
@@ -558,10 +568,13 @@ Several things can happen at once: the timer ringing, you editing a company, an 
 | --- | --- | --- |
 | Daily run hour, weekly day and hour, overlap, articles per minute, re-screens per night | `supabase/functions/_shared/constants.ts` → `NEWS_SCHEDULE` | 1am; Friday 6pm; 2 hours; 10; 300 |
 | Articles kept per search per day | `news-batch.ts` → `articleLimit` | 10 |
-| Google spacing and back-off | `fetch-policy.ts`, `news-batch.ts` (`THROTTLE_DELAYS`) | 2 s / 0.6 s; 1, 3, 10, 20, 30 minutes |
+| Google spacing and search back-off | `fetch-policy.ts`, `news-batch.ts` (`THROTTLE_DELAYS`) | 2 s / 0.6 s; 1, 3, 10, 20, 30 minutes |
+| Google article lookups | `article-content.ts` (`enrichArticle`), `jobs.ts` (`processArticle`) | Once per article, never retried; paused for the run after 2 refusals |
 | Publisher timeout, host-skip rule | `article-content.ts`, `fetch-policy.ts` | 8 s (10 s configured/SEC); 2 failures |
 | Rulebook thresholds | `fundamental-policy.ts` | See [section 6](#6-the-rulebook-that-decides-where-an-article-goes) |
-| AI questions | `screening-prompts.ts`, `news-screening.ts` | Version `fundamental-core-2.0.0` |
+| AI questions | `screening-prompts.ts`, `news-screening.ts` | Version `headline-first-3.0.0` (screening `fundamental-v3`) |
+| Grouping | `jobs.ts` (same-development match) | 70%, up to 4 recent articles compared |
+| Lead-source preference | `screening-policy.ts` (`sourceQuality`, `screeningRank`) | Company release, established newsroom, other reporting, template sites |
 | Inbox age limit | `event-inbox.ts` → `INBOX_DAYS` | 30 days |
 | Digest size | `jobs.ts` → `DIGEST_DEVELOPMENT_LIMIT` | 20 |
 
@@ -587,10 +600,10 @@ A snapshot from September 22, 2026:
 
 What would make the biggest difference, roughly in order:
 
-1. **Write business context and scale for your daily companies.** Without it, the AI is asked whether the missing context matters, and when it says yes the article goes to Needs verification instead of being judged. A few sentences per company ("mid-size specialty insurer; E&S lines are ~80% of premium; key risk is catastrophe exposure in Florida") go a long way.
-2. **Add primary sources for important companies:** an SEC CIK number for US filers, or the investor-relations news page or RSS feed. The company's own documents are the most reliable path to Recommended reading, and they avoid Google entirely.
-3. **Add watch points** for the specific risks and catalysts you care about.
-4. **Check the news search wording** for companies that rarely produce news, and for one-word or ambiguous names.
+1. **Add tickers and fix search wording for generic names.** Only 4 of 247 companies have a ticker, and in testing 36% of sampled headlines were about a different entity ("Metro Bank" cricket, "Lewis" Hamilton). The screener discards those, but a better search avoids them and gives the identity question more to go on.
+2. **Write a line of business context for your daily companies.** It is never required, but it sharpens "does this matter at this company's size" ("mid-size specialty insurer; E&S lines are ~80% of premium; key risk is catastrophe exposure in Florida").
+3. **Add primary sources for important companies:** an SEC CIK number for US filers, or the investor-relations news page or RSS feed. The company's own documents are the most reliable path to Recommended reading, and they avoid Google entirely.
+4. **Add watch points** for the specific risks and catalysts you care about.
 5. **Connect prices** if you want automatic price alerts. Otherwise, "No quote source configured" notices will keep appearing.
 
 ---
@@ -611,9 +624,9 @@ What would make the biggest difference, roughly in order:
 | `supabase/functions/_shared/article-content.ts` | Finding and reading articles: Google link translation, publisher fetching, safety checks, text extraction, SEC and investor-relations discovery. |
 | `supabase/functions/_shared/fetch-policy.ts` | Politeness rules: Google spacing and slow-down, recognising "too many requests", skipping publishers that block. |
 | `supabase/functions/_shared/providers.ts` | Reading RSS news feeds and the price feed; configuration. |
-| `supabase/functions/_shared/news-screening.ts` | Preparing the briefing for TypeSafe, sending it, checking its answers, and handling long documents. |
+| `supabase/functions/_shared/news-screening.ts` | Preparing the briefing for TypeSafe (headline, plus text when it was read), sending it and checking its answers. |
 | `supabase/functions/_shared/screening-prompts.ts` | The exact wording of the five core questions. |
-| `supabase/functions/_shared/fundamental-policy.ts` | The rulebook (section 6). |
+| `supabase/functions/_shared/fundamental-policy.ts` | The rulebook (section 6): `decideScreening` for v3. The older v2 rules only replay stored v2 verdicts until those articles are re-screened. |
 | `supabase/functions/_shared/screening-policy.ts` | Grouping duplicates, choosing the lead article, digest ordering, and compatibility with older judgments. |
 | `supabase/functions/_shared/news.ts` | Google search wording, cleaning up article text, and which view an article belongs in. |
 | `supabase/functions/_shared/engine.ts` | Daily/weekly schedule arithmetic, Chicago time, price-rule arithmetic. |

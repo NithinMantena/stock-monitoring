@@ -2,6 +2,16 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Headline-first screening (v3) — 2026-09-23
+
+- Rebuilt article screening around what is known about every article: company, headline, publisher, snippet and code-computed age. Text is read when possible and refines the same answers, but is never required. Spec: [docs/fundamental-screening-v3.md](docs/fundamental-screening-v3.md). Research basis: `research/google-rate-limits-2026-09-22` and `research/typesafe-screening-2-2026-09-22`.
+- Google article links: a headline pass first. The link is opened once, only if the headline does not rule the article out or it may be major. Refusals, including the `google.com/sorry` redirect that was previously misread as an ordinary unreadable page, are never retried; lookups pause for the rest of a run after two refusals. Direct links are read first. Rescreens never contact Google. Only processing failures are retried.
+- Removed the missing-text, missing-context, evidence and contribution verification gates. Added purpose (7-way Choice) and issuer-release questions, the cookbook-style evidence split, a "same development?" Noul for grouping (≥ 0.7, up to 4 candidates), code-checked stale fiscal periods, and lead-source ranking by provenance. Secondary reports of a development now stay relevant under one card. Accept TypeSafe near-tie choices instead of failing the article (about 0.8% of v2 screenings).
+- Verified: 238 tests, TypeScript and the production build pass. Live test on 90 real labelled articles ([validation/screening-v3-live.json](validation/screening-v3-live.json)):
+  - with Google refusing every lookup: 21 of 23 developments surfaced (v2: 5), and 3–4 articles needed verification (v2: 73);
+  - with text: all 23 surfaced, and each became one card.
+- Not yet deployed. Deploying queues about 6,400 stored articles for rescreen at 300 a night.
+
 ## Scheduled news runs, Google politeness and egress reduction — 2026-09-22
 
 - **Why:** a 10-company profile showed about 50 s per company, mostly network waits: publisher pages 60%, Google lookups 20%, TypeSafe only 10%. News depended on an open browser tab or 20-second slices every five minutes. The free plan's 5 GB egress was exhausted, mostly by the five-minute scheduler re-reading every stored article. In the cloud, about 9 in 10 recent article lookups had been refused by Google (HTTP 429/503) and saved as unreadable.

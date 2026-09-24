@@ -23,7 +23,15 @@ import {
   runMonitor,
 } from "../supabase/functions/_shared/jobs.ts";
 import { groupNews } from "../supabase/functions/_shared/screening-policy.ts";
-import { assessment } from "./screening-fixtures.ts";
+import { assessment, modelResponse } from "./screening-fixtures.ts";
+// v3 judges every headline with TypeSafe; these tests are about news searches.
+const typesafe = (url: unknown, init?: any) =>
+  String(url).includes("api.typesafe.ai")
+    ? new Response(JSON.stringify(modelResponse({}, JSON.parse(init.body))))
+    : null;
+const searches = (fetcher: { mock: { calls: unknown[][] } }) =>
+  fetcher.mock.calls.filter((c) => !String(c[0]).includes("api.typesafe.ai"))
+    .length;
 
 const stores: LocalStore[] = [];
 const store = () => {
@@ -257,23 +265,27 @@ describe("manual news batches", () => {
         c = newCompany("Acme");
       await s.put("company", c.id, c, 0);
       let refusals = 1;
-      const fetcher = vi.fn(async () =>
-        refusals-- > 0
+      const fetcher = vi.fn(async (url: string, init?: any) =>
+        typesafe(url, init) ??
+        (refusals-- > 0
           ? new Response("Unavailable", { status: 503 })
           : new Response(
               `<rss><channel><item><guid>x</guid><title>Acme to announce financial results</title><pubDate>${new Date(now - 3600000).toUTCString()}</pubDate></item></channel></rss>`,
-            ),
+            )),
       );
       vi.stubGlobal("fetch", fetcher);
       const id = crypto.randomUUID();
-      const env = { ALLOW_PUBLIC_ARTICLE_HOSTS: "false" };
+      const env = {
+        ALLOW_PUBLIC_ARTICLE_HOSTS: "false",
+        TYPESAFE_API_KEY: "test",
+      };
       await startNewsBatch(s, { id, label: "Acme", companyIds: [c.id] });
       const first = await advanceNewsBatch(s, env, { id });
       expect(first.batch).toMatchObject({ status: "running", warningCount: 0 });
       expect(Date.parse(first.batch!.backoffUntil!)).toBeGreaterThan(Date.now());
       // Nothing is fetched again until the back-off has elapsed.
       await advanceNewsBatch(s, env, { id });
-      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(searches(fetcher)).toBe(1);
       vi.setSystemTime(Date.now() + 2 * 60000);
       const done = await advanceNewsBatch(s, env, { id });
       expect(done.batch).toMatchObject({
@@ -281,7 +293,7 @@ describe("manual news batches", () => {
         warningCount: 0,
         added: 1,
       });
-      expect(fetcher).toHaveBeenCalledTimes(8); // The refused day, retried, then the other six.
+      expect(searches(fetcher)).toBe(8); // The refused day, retried, then the other six.
     } finally {
       vi.useRealTimers();
     }
@@ -298,12 +310,13 @@ describe("manual news batches", () => {
         url: "https://news.google.com/rss/search?q=second",
       });
       await s.put("company", c.id, c, 0);
-      const fetcher = vi.fn(async (url: string) =>
-        url.includes("second")
+      const fetcher = vi.fn(async (url: string, init?: any) =>
+        typesafe(url, init) ??
+        (url.includes("second")
           ? new Response(
               `<rss><channel><item><guid>x</guid><title>Acme to announce financial results</title></item></channel></rss>`,
             )
-          : new Response("Unavailable", { status: 503 }),
+          : new Response("Unavailable", { status: 503 })),
       );
       vi.stubGlobal("fetch", fetcher);
       const run = async () => {
@@ -313,7 +326,7 @@ describe("manual news batches", () => {
         for (let slice = 0; slice < 100; slice++) {
           result = await advanceNewsBatch(
             s,
-            { ALLOW_PUBLIC_ARTICLE_HOSTS: "false" },
+            { ALLOW_PUBLIC_ARTICLE_HOSTS: "false", TYPESAFE_API_KEY: "test" },
             { id },
           );
           if (result.batch?.status !== "running") break;
@@ -327,7 +340,7 @@ describe("manual news batches", () => {
         added: 1,
       });
       // Five attempts for each of the seven daily searches, plus the second feed.
-      expect(fetcher).toHaveBeenCalledTimes(36);
+      expect(searches(fetcher)).toBe(36);
       expect((await s.get<NewsBatch>("news_batch", "latest"))?.data.warnings[0].message).toMatch(
         /skipped after 5 rate-limited attempts \(HTTP 503\)/,
       );

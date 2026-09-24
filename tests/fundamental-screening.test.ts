@@ -150,7 +150,7 @@ describe("evidence and ingestion", () => {
     ).rejects.toThrow();
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it("reads evidence beyond 16,000 characters and respects both model context limits", async () => {
+  it("judges a long document from its opening section in one request within the context limit", async () => {
     const s = new LocalStore(":memory:");
     try {
       const requests: any[] = [];
@@ -172,17 +172,19 @@ describe("evidence and ingestion", () => {
         { TYPESAFE_API_KEY: "test" },
         s,
       );
-      expect(requests.length).toBeGreaterThan(1);
-      expect(result.screening.charactersRead).toBe(long.trim().length);
-      expect(requests.map((r) => JSON.stringify(r.state)).join("")).toContain(
-        "financial context",
+      // v3: the decision does not depend on reading a whole filing.
+      expect(requests).toHaveLength(1);
+      expect(result.screening.charactersRead).toBeGreaterThan(5000);
+      expect(result.screening.charactersRead).toBeLessThan(long.length);
+      expect(requests[0].state.article.textStatus).toBe(
+        "opening section of a longer document",
       );
+      expect(JSON.stringify(requests[0].state)).toContain("financial context");
       for (const part of articleChunks("财务经营数据".repeat(15000))) {
-        const request = buildScreeningRequest(
-          newCompany("Netflix"),
-          article,
-          part,
-        );
+        const request = buildScreeningRequest(newCompany("Netflix"), {
+          ...article,
+          text: part,
+        });
         expect(
           new TextEncoder().encode(JSON.stringify(request.state)).length,
         ).toBeLessThan(31000);
@@ -270,20 +272,19 @@ describe("evidence and ingestion", () => {
 });
 
 describe("event grouping", () => {
-  it("persists semantic duplicate links without merging a later development", async () => {
+  it("persists same-development links without merging a different development", async () => {
     const s = new LocalStore(":memory:"),
       c = newCompany("Netflix");
     let call = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (_u, init) => {
+      vi.fn(async (u, init) => {
+        // Company-document discovery also fetches; only TypeSafe calls count.
+        if (!String(u).includes("api.typesafe.ai"))
+          return new Response("", { status: 404 });
         call++;
-        const relation = call === 3 ? "update" : "analysis";
-        const answer = {
-          type: "choice",
-          choice: relation,
-          probabilities: { [relation]: 0.95, unrelated: 0.05 },
-        };
+        // The third article reports a different development.
+        const answer = { type: "noul", noul: call === 3 ? 0.1 : 0.95 };
         return new Response(
           JSON.stringify(
             modelResponse(
@@ -312,7 +313,6 @@ describe("event grouping", () => {
         { TYPESAFE_API_KEY: "test" },
       );
       expect(third.clusterId).toBeUndefined();
-      expect(third.relatedEventId).toBe(first.id);
       expect(groupNews(await s.list<DeskEvent>("event"))).toHaveLength(2);
     } finally {
       s.db.close();

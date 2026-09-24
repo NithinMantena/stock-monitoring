@@ -152,6 +152,7 @@ export async function startNewsBatch(
     companyIds: string[];
     label: string;
     lookbackDays?: number;
+    articleLimit?: number;
   },
 ) {
   // One bounded article can contain up to 30 sequential 15-second model
@@ -186,7 +187,7 @@ export async function startNewsBatch(
       updatedAt: at,
       status: "running",
       lookbackDays: input.lookbackDays ?? 7,
-      articleLimit: 10,
+      articleLimit: input.articleLimit ?? 10,
       dailySearch: true,
       tokens: 0,
       completedCompanies: 0,
@@ -508,7 +509,6 @@ export async function advanceNewsBatch(
             const result = await processArticle(c, article, store, env, {
               assumeNew: true,
               history: histories.get(c.id),
-              throttleOk: (batch.throttles || 0) >= THROTTLE_RETRIES - 1,
             });
             articles++;
             batch.added++;

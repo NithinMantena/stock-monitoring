@@ -63,7 +63,20 @@ export function modelResponse(
       "unknown",
     ]),
     contextDependency: { type: "noul", noul: 0.05 },
-    evidence: choice("p0", ["p0", "none"]),
+    // v3 evidence questions list passage IDs only (no "none" option).
+    evidence: choice("p0", ["p0"]),
+    // v3 (headline-first) answers.
+    genre: choice("news_report", [
+      "company_disclosure",
+      "news_report",
+      "analysis",
+      "market_commentary",
+      "investment_opinion",
+      "legal_solicitation",
+      "other",
+    ]),
+    issuerRelease: { type: "noul", noul: 0.05 },
+    evidenceExists: { type: "noul", noul: 0.95 },
     ...overrides,
   };
   if (request)
@@ -71,6 +84,12 @@ export function modelResponse(
       string,
       any,
     ][]) {
+      // v3 compares with earlier coverage by a yes/no "same development?".
+      if (q.type === "noul" && !answers[id])
+        answers[id] = {
+          type: "noul",
+          noul: id.startsWith("relation") ? 0.05 : 0.5,
+        };
       if (q.type !== "choice") continue;
       const keys = Object.keys(q.criteria);
       const selected =

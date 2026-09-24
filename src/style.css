@@ -1103,3 +1103,16 @@ dd {
   border: 1px solid var(--line, #ddd);
   border-radius: 8px;
 }
+.screen-scope {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.screen-scope select {
+  padding: 7px;
+  max-width: 230px;
+}
+.page-heading .batch-toolbar {
+  margin: 0;
+  justify-content: flex-end;
+}

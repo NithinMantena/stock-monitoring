@@ -1,6 +1,6 @@
 # How Research Desk works
 
-Updated September 22, 2026. This is the technical reference for maintaining the app. **For a plain-language explanation of the whole system, start with [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).** Use [README.md](README.md) for setup, [API.md](docs/API.md) for the API contract, [INTEGRATIONS.md](docs/INTEGRATIONS.md) for MCP/OpenClaw, [fundamental-screening-v2.md](docs/fundamental-screening-v2.md) for screening thresholds, and [DEPLOYMENT.md](DEPLOYMENT.md) for deployment. This describes the implemented system, including its limits.
+Updated September 23, 2026. This is the technical reference for maintaining the app. **For a plain-language explanation of the whole system, start with [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).** Use [README.md](README.md) for setup, [API.md](docs/API.md) for the API contract, [INTEGRATIONS.md](docs/INTEGRATIONS.md) for MCP/OpenClaw, [fundamental-screening-v3.md](docs/fundamental-screening-v3.md) for screening thresholds, and [DEPLOYMENT.md](DEPLOYMENT.md) for deployment. This describes the implemented system, including its limits.
 
 ## The purpose
 
@@ -135,17 +135,17 @@ Text is cached and bounded to 120,000 characters. Content depth records whether 
 
 ## TypeSafe screening criteria
 
-The active version is **fundamental-v2**. [The detailed implementation guide](docs/fundamental-screening-v2.md) is the source of truth for its flow, thresholds, evidence requirements and validation limits.
+The active version is **fundamental-v3 (headline-first)**. [The detailed implementation guide](docs/fundamental-screening-v3.md) is the source of truth for its flow, thresholds and validation. Stored v2 verdicts replay under the v2 rules ([v2 guide](docs/fundamental-screening-v2.md)) until rescreened.
 
-Code handles exclusions, retrieval, provenance, source blocks, budgets, cache keys and grouping. TypeSafe answers five separate core questions about identity, significance, attribution, contribution and currentness. Exact evidence selection and applicable quality/context/extraction guards accompany them. The displayed significance mean ranges from 0 to 4; admission uses probability mass over useful levels rather than a mean-score cutoff.
+An article is judged from its company, headline, publisher, snippet and code-computed age. TypeSafe answers identity, significance (0–4), purpose (7-way Choice), issuer release and timeliness in one request. Text, when it could be read, is extra evidence for the same questions, plus evidence-passage selection; it is never a gate. Direct links are read before judging. A Google link is opened once, only when the headline pass has not rejected it or suggests a possibly major development. Google refusals are never retried, and lookups pause for the run after two refusals.
 
-Primary and secondary reading recommendations are distinct from relevant developments. Secondary recaps remain Coverage; weak or missing evidence goes to Needs verification. No headline-only acceptance or broad options/calendar headline veto runs in v2. Long documents require document-level reconciliation rather than selecting the most positive chunk. Article-quality feedback can apply to one source without dismissing the whole development.
+Missing text, company context or a ticker never cause verification. Verification is reserved for possibly major developments with uncertain identity or timing, plus processing failures. Secondary reports of one development stay relevant, share a cluster ("same development?" Noul ≥ 0.7) and are led by the best source by provenance. Commentary is Coverage only; law-firm solicitations are rejected. Article-quality feedback can apply to one source without dismissing the whole development.
 
-Prompts live in `screening-prompts.ts` and `news-screening.ts`. Code gates live in `fundamental-policy.ts`; compatibility, grouping and ranking remain in `screening-policy.ts`. Existing v1 records await bounded rescreening and preserve reader feedback.
+Prompts live in `screening-prompts.ts` and `news-screening.ts`. Code gates live in `fundamental-policy.ts` (`decideScreening`; `decideFundamental` only replays v2). Compatibility, grouping and lead-source ranking remain in `screening-policy.ts`. Existing v1/v2 records await bounded rescreening, which never contacts Google, and preserve reader feedback.
 
 ## TypeSafe and token use
 
-Long text is split into sections of at most 12,000 bytes, preferring paragraph or sentence boundaries, up to 40 within the article character limit. Two sections are screened concurrently, one request each (15-second timeout). If the collected evidence, qualification and section-context passages fit in 19,000 bytes, one more request reconciles them; otherwise the item goes to verification. This avoids relying only on the beginning of a long filing, but long articles can require multiple model requests. Invalid responses, timeouts, unavailable credentials, and exhausted budgets remain explicit screening/retry states. Measured on 2026-09-22: about 2,450 input tokens per new article on average, or about $0.0001.
+A Google link costs one headline request (about 1,800 input tokens) and, if opened and read, one text request (about 3,200) using the opening 12,000 bytes of the document. A direct link costs one text request. There is no multi-section reconciliation in v3. Invalid responses, timeouts, unavailable credentials and exhausted budgets remain explicit screening/retry states. Measured on 2026-09-23: under 1¢ per 100 articles.
 
 Before each request, the server atomically reserves a worst-case cost. It settles the reservation against returned input-token usage. Failed requests can leave a conservative reservation in the ledger. The configured default ceiling is $5/month, capped at $10; the code's current estimate is $0.042 per million input tokens. Provider invoices remain authoritative.
 
@@ -157,7 +157,7 @@ Retries reuse an unchanged classification when article content, provenance, scre
 
 ## Relevant developments, duplicates, and folders
 
-The admission policy combines the model's judgments with source/content depth and user feedback; exact thresholds are in [TypeSafe screening criteria](#typesafe-screening-criteria). Supported primary evidence and substantive secondary reporting can enter Relevant developments. An explicit financial-results headline can qualify through a narrow fallback when the document is unavailable; the UI labels the evidence limitation. Uncertain identity or insufficient evidence generally remains in Needs verification. Noise remains inspectable.
+The admission policy combines the model's judgments with source/content depth and user feedback; exact thresholds are in [TypeSafe screening criteria](#typesafe-screening-criteria). Company releases, news reports and analysis of a current development enter Relevant developments, whether or not their text could be read. The UI labels headline-only judgments. Only a possibly major development with uncertain identity or timing goes to Needs verification. Noise remains inspectable.
 
 Duplicates are grouped by company and development cluster. The best eligible source leads the card according to `screeningRank`. Additional coverage remains expandable. Grouping does not delete articles. Later updates with new information can remain distinct. Useful overrides screening; Noise suppresses the reader's development until undone.
 

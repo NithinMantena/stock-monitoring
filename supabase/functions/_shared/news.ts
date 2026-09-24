@@ -1,5 +1,10 @@
 import type { Company, DeskEvent } from "./model.ts";
-import { SCREENING_VERSION, currentAssessment } from "./screening-policy.ts";
+import {
+  LEGACY_SCREENING_VERSION,
+  SCREENING_VERSION,
+  currentAssessment,
+  meaningfulOf,
+} from "./screening-policy.ts";
 
 export function cleanNewsText(value: string): string {
   // RSS commonly embeds escaped HTML. Decode only bounded, standard entities;
@@ -58,12 +63,12 @@ export function newsBucket(e: DeskEvent): Exclude<NewsView, "all"> {
   if (e.feedback === "noise") return "suppressed";
   if (e.feedback === "useful" || e.kind === "price") return "relevant";
   if (
-    e.screening?.version === SCREENING_VERSION &&
-    e.screening.articleRole === "coverage_only"
-  )
-    return "coverage";
-  if (e.screening?.version === SCREENING_VERSION)
-    return currentAssessment(e)!.disposition;
+    e.screening?.version === SCREENING_VERSION ||
+    e.screening?.version === LEGACY_SCREENING_VERSION
+  ) {
+    const a = currentAssessment(e)!;
+    return a.articleRole === "coverage_only" ? "coverage" : a.disposition;
+  }
   if (e.kind === "health" || e.classification?.error) return "uncertain";
   const identity = e.classification?.identity;
   if (typeof identity !== "number" || !Number.isFinite(identity))
@@ -82,9 +87,10 @@ export function newsPriority(result: {
   if (result.screening) {
     if (result.screening.disposition === "suppressed") return "suppressed";
     if (result.screening.disposition === "uncertain") return "possible";
+    const meaningful = meaningfulOf(result.screening);
     return (
-      result.screening.signals
-        ? result.screening.signals.meaningful >= 0.7
+      meaningful !== undefined
+        ? meaningful >= 0.7
         : result.screening.materiality >= 2.8
     )
       ? "major"
@@ -105,8 +111,8 @@ export function eventPriority(e: DeskEvent): DeskEvent["priority"] {
     : bucket === "uncertain"
       ? "possible"
       : (
-            e.screening.signals
-              ? e.screening.signals.meaningful >= 0.7
+            meaningfulOf(e.screening) !== undefined
+              ? meaningfulOf(e.screening)! >= 0.7
               : e.screening.materiality >= 2.8
           )
         ? "major"

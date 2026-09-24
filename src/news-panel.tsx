@@ -462,7 +462,7 @@ export function EventList({
                 relevant: "Relevant developments",
                 uncertain: "Needs verification",
                 suppressed: "Screened out / noise",
-                coverage: "Coverage / preferred source needed",
+                coverage: "Coverage / commentary",
                 all: "All events",
               }[s]
             }{" "}
@@ -549,8 +549,9 @@ export function EventList({
       </details>
       <p className="muted" role="status">
         {groups.length} developments from {filtered.length} source items.
-        Primary evidence and supported additional analysis are recommended.
-        Recaps remain in Coverage. Repeated coverage is grouped. Marking Useful
+        Articles are judged from the headline, publisher and date; text is used
+        when it could be read. Reports of the same development are grouped under
+        the best source. Price and opinion pieces stay in Coverage. Marking Useful
         overrides screening.
       </p>
       {!filtered.length && (

@@ -41,6 +41,31 @@ import {
 } from "../supabase/functions/_shared/engine";
 import type { ImportPreview } from "../supabase/functions/_shared/importer";
 import "./style.css";
+
+type ScreenScope = {
+  companies: "filtered" | "daily" | "all";
+  days: number;
+  perDay: number;
+};
+function readScreenScope(): ScreenScope {
+  const fallback: ScreenScope = { companies: "filtered", days: 7, perDay: 10 };
+  try {
+    const saved = JSON.parse(localStorage.getItem("screen-scope") || "null");
+    return {
+      companies: ["filtered", "daily", "all"].includes(saved?.companies)
+        ? saved.companies
+        : fallback.companies,
+      days: [1, 2, 3, 7, 14, 30].includes(saved?.days)
+        ? saved.days
+        : fallback.days,
+      perDay: [3, 5, 10, 20].includes(saved?.perDay)
+        ? saved.perDay
+        : fallback.perDay,
+    };
+  } catch {
+    return fallback;
+  }
+}
 import { loadDrafts, saveDraft, type Draft } from "./drafts";
 import {
   eventGroupKey,
@@ -219,6 +244,21 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const [group, setGroup] = useState("");
   const [query, setQuery] = useState("");
   const [newsCompany, setNewsCompany] = useState("");
+  // Scope of a manual news screen, remembered on this device.
+  const [batchScope, setBatchScope] = useState<ScreenScope>(() =>
+    readScreenScope(),
+  );
+  const updateBatchScope = (patch: Partial<ScreenScope>) =>
+    setBatchScope((old) => {
+      const next = { ...old, ...patch };
+      try {
+        localStorage.setItem("screen-scope", JSON.stringify(next));
+      } catch {
+        /* storage unavailable; the choice lasts for this visit */
+      }
+      return next;
+    });
+  const [emailingRun, setEmailingRun] = useState(false);
   const search = useDeferredValue(query.toLowerCase());
   const [selected, setSelected] = useState(
     () => new URLSearchParams(location.hash.slice(1)).get("company") || "",
@@ -292,59 +332,62 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     return newsRefresh.current;
   }, [owner]);
   // `companiesSince` (a server cursor) fetches only companies changed since then.
-  const reload = useCallback(async (companiesSince?: string) => {
-    setLoadError("");
-    try {
-      const partial = !!companiesSince && !!state.current;
-      // With this device's copy of the articles, only changes are downloaded.
-      const next = await api<Bootstrap>(
-        partial
-          ? `/bootstrap?events=none&companiesSince=${encodeURIComponent(companiesSince!)}`
-          : state.current || cachedNews.current
-            ? "/bootstrap?events=none"
-            : "/bootstrap",
-      );
-      if (!partial) lastFullReload.current = Date.now();
-      const first = !state.current && cachedNews.current;
-      setData((old) => {
-        const known = new Map(old?.companies.map((d) => [d.id, d]) || []);
-        const incomingCompanies = partial
-          ? [
-              ...(old?.companies || []).filter(
-                (d) => !next.companies.some((x) => x.id === d.id),
-              ),
-              ...next.companies,
-            ]
-          : next.companies;
-        return {
-          ...next,
-          companies: incomingCompanies.map((incoming) => {
-            const current = known.get(incoming.id);
-            const latest =
-              current && current.version > incoming.version
-                ? current
-                : incoming;
-            const draft = pending.current.get(latest.id);
-            return draft ? { ...latest, data: draft.data } : latest;
-          }),
-          events: mergeDocuments(
-            old?.events || cachedNews.current || [],
-            next.events,
-            eventWrites.current,
-          ),
-          newsBatch: latestBatch(old?.newsBatch, next.newsBatch),
-          newsRun: latestRun(old?.newsRun, next.newsRun),
-          ...(old && old.settingsVersion > next.settingsVersion
-            ? { settings: old.settings, settingsVersion: old.settingsVersion }
-            : {}),
-        };
-      });
-      // Catch the device copy up with changes since the last visit.
-      if (first) void reloadNews();
-    } catch (e) {
-      setLoadError((e as Error).message);
-    }
-  }, [reloadNews]);
+  const reload = useCallback(
+    async (companiesSince?: string) => {
+      setLoadError("");
+      try {
+        const partial = !!companiesSince && !!state.current;
+        // With this device's copy of the articles, only changes are downloaded.
+        const next = await api<Bootstrap>(
+          partial
+            ? `/bootstrap?events=none&companiesSince=${encodeURIComponent(companiesSince!)}`
+            : state.current || cachedNews.current
+              ? "/bootstrap?events=none"
+              : "/bootstrap",
+        );
+        if (!partial) lastFullReload.current = Date.now();
+        const first = !state.current && cachedNews.current;
+        setData((old) => {
+          const known = new Map(old?.companies.map((d) => [d.id, d]) || []);
+          const incomingCompanies = partial
+            ? [
+                ...(old?.companies || []).filter(
+                  (d) => !next.companies.some((x) => x.id === d.id),
+                ),
+                ...next.companies,
+              ]
+            : next.companies;
+          return {
+            ...next,
+            companies: incomingCompanies.map((incoming) => {
+              const current = known.get(incoming.id);
+              const latest =
+                current && current.version > incoming.version
+                  ? current
+                  : incoming;
+              const draft = pending.current.get(latest.id);
+              return draft ? { ...latest, data: draft.data } : latest;
+            }),
+            events: mergeDocuments(
+              old?.events || cachedNews.current || [],
+              next.events,
+              eventWrites.current,
+            ),
+            newsBatch: latestBatch(old?.newsBatch, next.newsBatch),
+            newsRun: latestRun(old?.newsRun, next.newsRun),
+            ...(old && old.settingsVersion > next.settingsVersion
+              ? { settings: old.settings, settingsVersion: old.settingsVersion }
+              : {}),
+          };
+        });
+        // Catch the device copy up with changes since the last visit.
+        if (first) void reloadNews();
+      } catch (e) {
+        setLoadError((e as Error).message);
+      }
+    },
+    [reloadNews],
+  );
   useEffect(() => {
     // News changes are fetched incrementally each minute. The company list is
     // re-read only when /changes reports an edit, or on return after 10 minutes.
@@ -643,9 +686,13 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     ? newsCompany
     : "";
   const batchCompanies =
-    section === "news" && activeNewsCompany
-      ? filtered.filter((d) => d.id === activeNewsCompany)
-      : filtered;
+    batchScope.companies === "daily"
+      ? docs.filter((d) => !d.data.archived && cadenceOf(d.data) === "daily")
+      : batchScope.companies === "all"
+        ? docs.filter((d) => !d.data.archived && cadenceOf(d.data) !== "paused")
+        : section === "news" && activeNewsCompany
+          ? filtered.filter((d) => d.id === activeNewsCompany)
+          : filtered;
   const startBatch = async () => {
     if (
       batchStarting ||
@@ -657,14 +704,24 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     setBatchStarting(true);
     setError("");
     const label = [
-      filter === "all"
-        ? "All companies"
-        : filter === "archived"
-          ? "Archived"
-          : statusLabels[filter],
-      group,
-      query && `Search: ${query}`,
-      section === "news" && activeNewsCompany && batchCompanies[0]?.data.name,
+      ...(batchScope.companies === "daily"
+        ? ["Daily companies"]
+        : batchScope.companies === "all"
+          ? ["All monitored companies"]
+          : [
+              filter === "all"
+                ? "All companies"
+                : filter === "archived"
+                  ? "Archived"
+                  : statusLabels[filter],
+              group,
+              query && `Search: ${query}`,
+              section === "news" &&
+                activeNewsCompany &&
+                batchCompanies[0]?.data.name,
+            ]),
+      `last ${batchScope.days} day${batchScope.days === 1 ? "" : "s"}`,
+      `${batchScope.perDay}/day`,
     ]
       .filter(Boolean)
       .join(" · ")
@@ -674,6 +731,8 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         id: crypto.randomUUID(),
         label,
         companyIds: batchCompanies.map((d) => d.id),
+        lookbackDays: batchScope.days,
+        articleLimit: batchScope.perDay,
       });
       setData((old) => old && { ...old, newsBatch: batch });
       setNotice("");
@@ -699,6 +758,73 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       setBatchControlBusy(false);
     }
   };
+  const emailLatestRun = async () => {
+    if (emailingRun) return;
+    setEmailingRun(true);
+    setError("");
+    try {
+      const sent = await api<{ subject: string; developments: number }>(
+        "/digest/latest-run",
+        {},
+      );
+      setNotice(
+        `Emailed "${sent.subject}" (${sent.developments} development${sent.developments === 1 ? "" : "s"}).`,
+      );
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setEmailingRun(false);
+    }
+  };
+  const emailRunButton = (
+    <button
+      type="button"
+      disabled={emailingRun}
+      onClick={emailLatestRun}
+      title="Email the developments found by the most recent news screen that ran today (manual or scheduled)."
+    >
+      {emailingRun ? "Sending…" : "Email today's latest screen"}
+    </button>
+  );
+  const scopeControls = (
+    <span className="screen-scope">
+      <select
+        aria-label="Companies to screen"
+        value={batchScope.companies}
+        onChange={(e) =>
+          updateBatchScope({
+            companies: e.target.value as ScreenScope["companies"],
+          })
+        }
+      >
+        <option value="filtered">Companies matching filters</option>
+        <option value="daily">Daily companies</option>
+        <option value="all">All monitored companies</option>
+      </select>
+      <select
+        aria-label="Days to search back"
+        value={batchScope.days}
+        onChange={(e) => updateBatchScope({ days: Number(e.target.value) })}
+      >
+        {[1, 2, 3, 7, 14, 30].map((d) => (
+          <option key={d} value={d}>
+            Last {d} day{d === 1 ? "" : "s"}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Articles kept per company per day"
+        value={batchScope.perDay}
+        onChange={(e) => updateBatchScope({ perDay: Number(e.target.value) })}
+      >
+        {[3, 5, 10, 20].map((n) => (
+          <option key={n} value={n}>
+            {n} articles/day
+          </option>
+        ))}
+      </select>
+    </span>
+  );
   const batchButton = (
     <button
       className="primary"
@@ -709,7 +835,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         !batchCompanies.length
       }
       onClick={startBatch}
-      title={`Up to 10 articles per day for each of the last 7 UTC calendar days, including today; up to ${(batchCompanies.length * 70).toLocaleString()} Google News articles across this selection, plus configured primary sources.`}
+      title={`Up to ${batchScope.perDay} articles per day for each of the last ${batchScope.days} UTC calendar day${batchScope.days === 1 ? "" : "s"}, including today: ${(batchCompanies.length * batchScope.days).toLocaleString()} Google News searches and up to ${(batchCompanies.length * batchScope.days * batchScope.perDay).toLocaleString()} articles across this selection, plus configured primary sources.`}
     >
       {batchStarting
         ? "Starting…"
@@ -906,9 +1032,16 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
               </div>
               {companyFilters}
               <div className="batch-toolbar">
+                {scopeControls}
                 {batchButton}
                 <span className="muted">
-                  News only, for companies matching these filters.
+                  News only. Up to{" "}
+                  {(
+                    batchCompanies.length *
+                    batchScope.days *
+                    batchScope.perDay
+                  ).toLocaleString()}{" "}
+                  articles.
                 </span>
               </div>
               <NewsBatchStatus
@@ -1003,7 +1136,11 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   <p className="eyebrow">DEVELOPMENTS TO REVIEW</p>
                   <h1>News & alerts</h1>
                 </div>
-                {batchButton}
+                <div className="batch-toolbar">
+                  {scopeControls}
+                  {batchButton}
+                  {emailRunButton}
+                </div>
               </div>
               <p className="muted">
                 New items appear at the top. Review to clear your inbox, or save

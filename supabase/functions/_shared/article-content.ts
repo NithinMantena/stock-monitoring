@@ -214,9 +214,17 @@ export async function fetchDocument(
   const signal = AbortSignal.timeout(
     hosts.has(first) || first.endsWith("sec.gov") ? 10000 : 8000,
   );
+  // A Google News lookup that is refused often redirects to www.google.com/sorry
+  // (a CAPTCHA page) instead of answering 429 itself. Any Google host in the
+  // chain counts as Google, so that refusal is recognised as throttling.
+  const googleChain = first === "news.google.com";
   for (let redirects = 0; redirects <= 4; redirects++) {
     const host = new URL(current).hostname;
-    const google = host === "news.google.com";
+    const google =
+      host === "news.google.com" ||
+      (googleChain && /(^|\.)google\.com$/.test(host));
+    if (googleChain && google && new URL(current).pathname.startsWith("/sorry"))
+      throw new ThrottledError(host, 429);
     if (!google && hostSkipped(host))
       throw new Error(
         `Skipped: ${host} blocked or timed out repeatedly earlier in this run.`,
@@ -250,6 +258,14 @@ export async function fetchDocument(
       const target = response.headers.get("location");
       await response.body?.cancel();
       if (!target) throw new Error("Source redirect has no destination.");
+      // A lookup sent to another Google page (CAPTCHA or consent) is a refusal.
+      const next = new URL(target, current).hostname;
+      if (
+        googleChain &&
+        next !== "news.google.com" &&
+        /(^|\.)google\.com$/.test(next)
+      )
+        throw new ThrottledError(next, response.status);
       current = await authorizeDocumentUrl(
         new URL(target, current).href,
         hosts,
@@ -457,12 +473,15 @@ async function resolveGoogle(
   throw new Error("Publisher link resolution failed.");
 }
 
+const GOOGLE = "news.google.com";
+// Screening is headline-first, so a Google link Google will not translate is
+// simply left untranslated: one attempt per article, no retry, and after two
+// refusals in a run no further Google lookups until the run ends.
 export async function enrichArticle(
   c: Company,
   input: Article,
   env: Env,
   store: Store,
-  options: { throttleOk?: boolean } = {},
 ): Promise<Article> {
   if (input.contentDepth === "supplied") return input;
   const hosts = contentHosts(c, env);
@@ -490,12 +509,19 @@ export async function enrichArticle(
     contentDepth: input.contentDepth || "snippet",
     availableCharacters: input.text.length,
   };
+  let paused = false;
   try {
     if (!input.url) return article;
-    const url =
-      new URL(input.url).hostname === "news.google.com"
-        ? await resolveGoogle(input.url, hosts, env)
-        : input.url;
+    const viaGoogle = new URL(input.url).hostname === GOOGLE;
+    if (viaGoogle && hostSkipped(GOOGLE)) {
+      paused = true;
+      article.retrievalNote =
+        "Google lookups are paused for the rest of this run after repeated refusals; screened from the headline.";
+      return article;
+    }
+    const url = viaGoogle
+      ? await resolveGoogle(input.url, hosts, env)
+      : input.url;
     article.url = canonicalUrl(url);
     article.source = new URL(url).hostname;
     const doc = await fetchDocument(url, hosts, env);
@@ -558,7 +584,6 @@ export async function enrichArticle(
             },
             env,
             store,
-            options,
           );
           if (
             additional.contentDepth === "full" ||
@@ -594,13 +619,15 @@ export async function enrichArticle(
     };
     article.official = verifiedPrimary(c, doc.url);
   } catch (e) {
-    // Throttling says nothing about the article; retry it later rather than
-    // caching (and screening) it as unreadable.
-    if (e instanceof ThrottledError && !options.throttleOk) throw e;
-    article.retrievalNote =
-      e instanceof Error ? e.message : "Full text unavailable.";
+    if (e instanceof ThrottledError) {
+      noteHostResult(GOOGLE, false);
+      article.retrievalNote = `Google did not provide the article link (HTTP ${e.status}); screened from the headline.`;
+    } else
+      article.retrievalNote =
+        e instanceof Error ? e.message : "Full text unavailable.";
   }
-  if (input.url)
+  // The cached outcome also stops re-trying a refused lookup for a day.
+  if (input.url && !paused)
     await store
       .put(
         "article_cache",

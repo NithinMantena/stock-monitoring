@@ -1,0 +1,5702 @@
+{
+ "at": "2026-09-24T03:41:49.541Z",
+ "scope": "Small live evaluation: 90 real articles (all 40 labelled useful, 35 noise, 15 ambiguous) from the research corpora; companies as they are today (no context, no tickers). Labels are provisional research labels, not the owner's.",
+ "model": "jev-1.13.0",
+ "v2ProductionOnSameArticlesWithText": {
+  "routes": {
+   "U": {
+    "R": 1,
+    "C": 7,
+    "V": 32,
+    "S": 0
+   },
+   "A": {
+    "R": 0,
+    "C": 0,
+    "V": 14,
+    "S": 0
+   },
+   "N": {
+    "R": 0,
+    "C": 0,
+    "V": 27,
+    "S": 7
+   }
+  },
+  "verify": 73
+ },
+ "headlineOnly": {
+  "articles": 90,
+  "errors": 0,
+  "routes": {
+   "useful": {
+    "R": 30,
+    "C": 1,
+    "V": 1,
+    "S": 8
+   },
+   "ambiguous": {
+    "R": 4,
+    "C": 0,
+    "V": 1,
+    "S": 10
+   },
+   "noise": {
+    "R": 1,
+    "C": 0,
+    "V": 2,
+    "S": 32
+   }
+  },
+  "developments": {
+   "total": 23,
+   "surfaced": 20,
+   "verifyOnly": 1,
+   "lost": [
+    "dev:D9",
+    "holdout:H4"
+   ],
+   "cardsPerSurfacedDevelopment": [
+    "dev:D1:3",
+    "dev:D7:1",
+    "dev:D6:1",
+    "dev:D5:1",
+    "dev:D10:3",
+    "dev:D8:1",
+    "dev:D12:1",
+    "dev:D3:1",
+    "dev:D15:1",
+    "dev:D14:1",
+    "dev:D13:1",
+    "holdout:H1:1",
+    "holdout:H2:1",
+    "holdout:H3:1",
+    "holdout:H5:1",
+    "holdout:H6:1",
+    "holdout:H8:1",
+    "holdout:H7:1",
+    "holdout:H9:1"
+   ]
+  },
+  "usefulArticlesScreenedOut": [
+   "dev#130 immaterial :: Optasia expands growth as MFS gains momentum - Business Day",
+   "dev#145 immaterial :: Progressive: 8-K filing (2026-09-18)",
+   "dev#174 immaterial :: Vail Resorts Provides Update Following Close of Nominations Window, Re",
+   "dev#6 commentary :: Will Adobe’s AI-Driven, Record-Setting Revenue Ease Wall Street’s Worr",
+   "holdout#54 wrong_entity :: MBK Partners Joins ¥267.6 Billion Tender Offer for Japan's Leopalace21"
+  ],
+  "noiseInInbox": [
+   "holdout#19 news_report :: Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune"
+  ],
+  "verify": {
+   "total": 4,
+   "reasons": {
+    "uncertain_identity": 4
+   }
+  },
+  "screenedOutReasons": {
+   "commentary": 12,
+   "unclear_identity": 5,
+   "immaterial": 16,
+   "legal_solicitation": 4,
+   "wrong_entity": 12,
+   "historical_only": 1
+  },
+  "relevantArticles": 35,
+  "relevantCards": 28,
+  "tokens": 161902,
+  "medianMs": 166
+ },
+ "googleRefusesEveryLookup": {
+  "articles": 90,
+  "errors": 0,
+  "routes": {
+   "useful": {
+    "R": 31,
+    "C": 1,
+    "V": 1,
+    "S": 7
+   },
+   "ambiguous": {
+    "R": 4,
+    "C": 0,
+    "V": 1,
+    "S": 10
+   },
+   "noise": {
+    "R": 1,
+    "C": 0,
+    "V": 2,
+    "S": 32
+   }
+  },
+  "developments": {
+   "total": 23,
+   "surfaced": 21,
+   "verifyOnly": 1,
+   "lost": [
+    "holdout:H4"
+   ],
+   "cardsPerSurfacedDevelopment": [
+    "dev:D6:1",
+    "dev:D5:1",
+    "dev:D1:3",
+    "dev:D7:1",
+    "dev:D8:1",
+    "dev:D10:3",
+    "dev:D12:1",
+    "dev:D3:1",
+    "dev:D9:1",
+    "dev:D15:1",
+    "dev:D14:1",
+    "dev:D13:1",
+    "holdout:H1:1",
+    "holdout:H2:1",
+    "holdout:H3:1",
+    "holdout:H5:1",
+    "holdout:H6:1",
+    "holdout:H7:1",
+    "holdout:H8:1",
+    "holdout:H9:1"
+   ]
+  },
+  "usefulArticlesScreenedOut": [
+   "dev#130 immaterial :: Optasia expands growth as MFS gains momentum - Business Day",
+   "dev#174 immaterial :: Vail Resorts Provides Update Following Close of Nominations Window, Re",
+   "dev#6 commentary :: Will Adobe’s AI-Driven, Record-Setting Revenue Ease Wall Street’s Worr",
+   "holdout#54 wrong_entity :: MBK Partners Joins ¥267.6 Billion Tender Offer for Japan's Leopalace21"
+  ],
+  "noiseInInbox": [
+   "holdout#19 news_report :: Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune"
+  ],
+  "verify": {
+   "total": 4,
+   "reasons": {
+    "uncertain_identity": 4
+   }
+  },
+  "screenedOutReasons": {
+   "commentary": 12,
+   "immaterial": 16,
+   "legal_solicitation": 4,
+   "unclear_identity": 4,
+   "wrong_entity": 12,
+   "historical_only": 1
+  },
+  "relevantArticles": 36,
+  "relevantCards": 29,
+  "tokens": 169375,
+  "medianMs": 161
+ },
+ "withText": {
+  "articles": 90,
+  "errors": 0,
+  "routes": {
+   "useful": {
+    "R": 35,
+    "C": 4,
+    "V": 0,
+    "S": 1
+   },
+   "ambiguous": {
+    "R": 8,
+    "C": 0,
+    "V": 0,
+    "S": 7
+   },
+   "noise": {
+    "R": 3,
+    "C": 1,
+    "V": 1,
+    "S": 30
+   }
+  },
+  "developments": {
+   "total": 23,
+   "surfaced": 23,
+   "verifyOnly": 0,
+   "lost": [],
+   "cardsPerSurfacedDevelopment": [
+    "dev:D2:1",
+    "dev:D5:1",
+    "dev:D7:1",
+    "dev:D1:1",
+    "dev:D6:1",
+    "dev:D8:1",
+    "dev:D10:1",
+    "dev:D12:1",
+    "dev:D9:1",
+    "dev:D3:1",
+    "dev:D15:1",
+    "dev:D14:1",
+    "dev:D13:1",
+    "holdout:H3:1",
+    "holdout:H4:1",
+    "holdout:H5:1",
+    "holdout:H6:1",
+    "holdout:H8:1",
+    "holdout:H7:1",
+    "holdout:H9:1"
+   ]
+  },
+  "usefulArticlesScreenedOut": [],
+  "noiseInInbox": [
+   "dev#0 news_report :: Kestelman’s Brand Collective snaps up Glue, Running Bare and The DOM -",
+   "dev#78 primary_evidence :: Dolby Laboratories, Inc. Grants Inducement Equity Awards Under Its 202",
+   "holdout#19 news_report :: Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune"
+  ],
+  "verify": {
+   "total": 1,
+   "reasons": {
+    "uncertain_identity": 1
+   }
+  },
+  "screenedOutReasons": {
+   "immaterial": 9,
+   "commentary": 11,
+   "legal_solicitation": 4,
+   "unclear_identity": 7,
+   "wrong_entity": 6,
+   "historical_only": 1
+  },
+  "relevantArticles": 46,
+  "relevantCards": 31,
+  "tokens": 290679,
+  "medianMs": 174
+ },
+ "headlineVsTextRouteAgreement": "72/90",
+ "routeChangesWhenTextIsRead": [
+  "dev#20 U V->R :: €1.76bn investment planned for Barcelona airport expansion -",
+  "dev#130 U S->R :: Optasia expands growth as MFS gains momentum - Business Day",
+  "dev#145 U S->R :: Progressive: 8-K filing (2026-09-18)",
+  "dev#162 N S->C :: Alibaba vs. Uber Technologies: Which Consumer Stock Is a Bet",
+  "dev#174 U S->R :: Vail Resorts Provides Update Following Close of Nominations ",
+  "dev#0 N V->R :: Kestelman’s Brand Collective snaps up Glue, Running Bare and",
+  "dev#175 U R->C :: How Investors May Respond To Vail Resorts (MTN) Board Challe",
+  "dev#6 U S->R :: Will Adobe’s AI-Driven, Record-Setting Revenue Ease Wall Str",
+  "dev#152 U S->R :: Shoe Station Shares Fall as Promotions and Late Back-to-scho",
+  "dev#68 A V->R :: Yes, China’s State-Owned Shipping Giant Is Spying on the Uni",
+  "dev#78 N S->R :: Dolby Laboratories, Inc. Grants Inducement Equity Awards Und",
+  "dev#155 U S->R :: Shoe Station Group (SHOE) Bets On Localized Stores To Revers",
+  "dev#109 A S->R :: Why Is Netflix Growing Fastest And Falling Furthest? - Yahoo",
+  "dev#93 A S->R :: K Car's new name 'KG Mobility Platform', used car prices for",
+  "holdout#3 U R->C :: Aena stock gains as Spain approves higher airport fees and t",
+  "holdout#22 U R->C :: What Chemed (CHE)'s California Franchise Acquisition Means F",
+  "holdout#54 U S->R :: MBK Partners Joins ¥267.6 Billion Tender Offer for Japan's L",
+  "holdout#57 A S->R :: Seltos up 3%, Grandeur down 4% as used car prices split by m"
+ ],
+ "headlineOnlyCards": [
+  {
+   "lead": "Ferrovial extends its share buyback program until March 2027 - Demócrata",
+   "coverage": 0
+  },
+  {
+   "lead": "Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune",
+   "coverage": 0
+  },
+  {
+   "lead": "Vail Resorts faces shareholder antitrust suit amid proxy fight - KPCW",
+   "coverage": 0
+  },
+  {
+   "lead": "Optasia Limited Reports Earnings Results for the Half Year Ended June 30, 2026 -",
+   "coverage": 1
+  },
+  {
+   "lead": "Vail Resorts (MTN) Faces Board Battle That Could Shift Investment Outlook - lond",
+   "coverage": 0
+  },
+  {
+   "lead": "PesoRama Reports 2027 Q2 Financial Results - TMX Newsfile",
+   "coverage": 0
+  },
+  {
+   "lead": "Profit slumps as Lennar (NYSE: LEN) cuts 2026 home delivery target - Stock Titan",
+   "coverage": 0
+  },
+  {
+   "lead": "Fraport sees August cargo growth at Frankfurt Airport - STAT Times",
+   "coverage": 0
+  },
+  {
+   "lead": "What Chemed (CHE)'s California Franchise Acquisition Means For Shareholders - si",
+   "coverage": 0
+  },
+  {
+   "lead": "Aena stock gains as Spain approves higher airport fees and traffic hits record -",
+   "coverage": 0
+  },
+  {
+   "lead": "Judge Allows Copyright Suit Against Pandora to Move Forward - jckonline.com",
+   "coverage": 0
+  },
+  {
+   "lead": "Shoe Station Group Q2 2026 Earnings: Promotions Drive a 690-Basis-Point Gross Ma",
+   "coverage": 2
+  },
+  {
+   "lead": "Uber (UBER)’s $15 Billion Delivery Hero Buyout Clears a Key Hurdle - Yahoo Finan",
+   "coverage": 0
+  },
+  {
+   "lead": "Adobe’s (ADBE) AI Bet Is Finally Showing Up In Revenue - Yahoo Finance",
+   "coverage": 0
+  },
+  {
+   "lead": "How Investors May Respond To Vail Resorts (MTN) Board Challenge From Activist Oa",
+   "coverage": 1
+  },
+  {
+   "lead": "Uber completes €4.5B multi-tranche euro debt offering - The Globe and Mail",
+   "coverage": 0
+  },
+  {
+   "lead": "Uber Expands Costco Delivery To 47 States, Nearly 600 Locations In Major Grocery",
+   "coverage": 0
+  },
+  {
+   "lead": "SHOE STATION GROUP ($SHOE) Releases Q2 2027 Earnings - Quiver Quantitative",
+   "coverage": 0
+  },
+  {
+   "lead": "Amazon raises minimum starting pay for full-time core operations employees to $2",
+   "coverage": 1
+  },
+  {
+   "lead": "Adobe posts record quarter, lifts guidance as AI push pays off - Yahoo Finance",
+   "coverage": 2
+  },
+  {
+   "lead": "Shoe Station Group Shares Fall 13% as FY26 Guidance Trails Estimates - Yahoo Fin",
+   "coverage": 0
+  },
+  {
+   "lead": "Adobe Forecast Misses Estimates, Renewing Fears About AI Impact - Yahoo Finance",
+   "coverage": 0
+  },
+  {
+   "lead": "Uber Cuts 10% of its Workforce to Fund a $10 Billion Robotaxi Bet - Yahoo Financ",
+   "coverage": 0
+  },
+  {
+   "lead": "14% to 4%: How Nigerian Regulation Took a Bite Out of Optasia’s Growth - Launch ",
+   "coverage": 0
+  },
+  {
+   "lead": "NCA awards 700MHz spectrum to MTN Ghana for US$109.9m - MyJoyOnline",
+   "coverage": 0
+  },
+  {
+   "lead": "Lennar Misses Q3 EPS; Faces Pricing Pressure Despite Lower Incentives, Analysts ",
+   "coverage": 0
+  },
+  {
+   "lead": "Elis announces the early redemption of its 2029 OCEANEs - GlobeNewswire",
+   "coverage": 0
+  },
+  {
+   "lead": "Amazon gives OpenAI's ad business a boost, letting its advertisers into ChatGPT ",
+   "coverage": 0
+  }
+ ],
+ "rows": {
+  "headline": [
+   {
+    "set": "dev",
+    "index": 2,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe posts record quarter, lifts guidance as AI push pays off - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "tokens": 1662,
+    "ms": 400
+   },
+   {
+    "set": "dev",
+    "index": 22,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Amazon gives OpenAI's ad business a boost, letting its advertisers into ChatGPT - CNBC",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-22",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-22",
+    "tokens": 1668,
+    "ms": 406
+   },
+   {
+    "set": "dev",
+    "index": 104,
+    "dev": "U",
+    "cluster": "D7",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "NCA awards 700MHz spectrum to MTN Ghana for US$109.9m - MyJoyOnline",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-355-dev-104",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-355-dev-104",
+    "tokens": 1679,
+    "ms": 413
+   },
+   {
+    "set": "dev",
+    "index": 97,
+    "dev": "U",
+    "cluster": "D6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Lennar Misses Q3 EPS; Faces Pricing Pressure Despite Lower Incentives, Analysts Say - Benzinga",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-473-dev-97",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-473-dev-97",
+    "tokens": 1675,
+    "ms": 425
+   },
+   {
+    "set": "dev",
+    "index": 20,
+    "dev": "U",
+    "cluster": "D2",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "€1.76bn investment planned for Barcelona airport expansion - Catalan News",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-662-dev-20",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-662-dev-20",
+    "tokens": 1667,
+    "ms": 435
+   },
+   {
+    "set": "dev",
+    "index": 80,
+    "dev": "U",
+    "cluster": "D5",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Elis announces the early redemption of its 2029 OCEANEs - GlobeNewswire",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-663-dev-80",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-663-dev-80",
+    "tokens": 1674,
+    "ms": 449
+   },
+   {
+    "set": "dev",
+    "index": 3,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe Q3 Earnings Call Highlights - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-3",
+    "tokens": 1846,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 24,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Amazon Price Prediction: The Stock’s Path Toward $300 Looks Clearer - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-24",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-24",
+    "tokens": 1861,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 148,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Shoe Station Group Q2 2026 Earnings: Promotions Drive a 690-Basis-Point Gross Margin Decline - TradingKey",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "tokens": 1688,
+    "ms": 142
+   },
+   {
+    "set": "dev",
+    "index": 129,
+    "dev": "U",
+    "cluster": "D8",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "14% to 4%: How Nigerian Regulation Took a Bite Out of Optasia’s Growth - Launch Base Africa",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "tokens": 1675,
+    "ms": 164
+   },
+   {
+    "set": "dev",
+    "index": 161,
+    "dev": "U",
+    "cluster": "D12",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber Cuts 10% of its Workforce to Fund a $10 Billion Robotaxi Bet - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-161",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-161",
+    "tokens": 1672,
+    "ms": 139
+   },
+   {
+    "set": "dev",
+    "index": 143,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "U.S. Army Veteran to Receive 2024 Freightliner Cascadia Through Progressive's Keys to Progress® Program - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-143",
+    "id": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-143",
+    "tokens": 1680,
+    "ms": 170
+   },
+   {
+    "set": "dev",
+    "index": 4,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe Forecast Misses Estimates, Renewing Fears About AI Impact - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-4",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-4",
+    "tokens": 2037,
+    "ms": 140
+   },
+   {
+    "set": "dev",
+    "index": 130,
+    "dev": "U",
+    "cluster": "D8",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia expands growth as MFS gains momentum - Business Day",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-712-dev-130",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-712-dev-130",
+    "tokens": 1863,
+    "ms": 146
+   },
+   {
+    "set": "dev",
+    "index": 26,
+    "dev": "U",
+    "cluster": "D3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Amazon raises minimum starting pay for full-time core operations employees to $20/hour, with average pay reaching nearly $24/hour, and launches grocery discount and access to new lifetime banking benefits to make everyday life more affordable for our tea - aboutamazon.com",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "tokens": 1897,
+    "ms": 172
+   },
+   {
+    "set": "dev",
+    "index": 149,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group Shares Fall 13% as FY26 Guidance Trails Estimates - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-149",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-149",
+    "tokens": 1881,
+    "ms": 161
+   },
+   {
+    "set": "dev",
+    "index": 145,
+    "dev": "U",
+    "cluster": "D9",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Progressive: 8-K filing (2026-09-18)",
+    "v2": "R",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-145",
+    "id": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-145",
+    "tokens": 1661,
+    "ms": 153
+   },
+   {
+    "set": "dev",
+    "index": 162,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Alibaba vs. Uber Technologies: Which Consumer Stock Is a Better Buy in 2026? - The Motley Fool",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-162",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-162",
+    "tokens": 1874,
+    "ms": 194
+   },
+   {
+    "set": "dev",
+    "index": 174,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts Provides Update Following Close of Nominations Window, Reiterates Active Search Underway in its Ongoing Commitment to Board Refreshment - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "tokens": 1689,
+    "ms": 124
+   },
+   {
+    "set": "dev",
+    "index": 5,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Adobe Q3 ‘Uneventful’ Even As AI ARR Tops $650M, Jefferies Says — Citi Flags Slowing Growth - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-5",
+    "tokens": 2244,
+    "ms": 200
+   },
+   {
+    "set": "dev",
+    "index": 0,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Kestelman’s Brand Collective snaps up Glue, Running Bare and The DOM - AFR",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-43-dev-0",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-43-dev-0",
+    "tokens": 1667,
+    "ms": 160
+   },
+   {
+    "set": "dev",
+    "index": 150,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "SHOE STATION GROUP ($SHOE) Releases Q2 2027 Earnings - Quiver Quantitative",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-150",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-150",
+    "tokens": 2086,
+    "ms": 183
+   },
+   {
+    "set": "dev",
+    "index": 29,
+    "dev": "U",
+    "cluster": "D3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Amazon raises minimum pay for warehouse workers to $20 an hour - MyNorthwest.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-29",
+    "tokens": 2090,
+    "ms": 215
+   },
+   {
+    "set": "dev",
+    "index": 165,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Uber Expands Costco Delivery To 47 States, Nearly 600 Locations In Major Grocery Push - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-165",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-165",
+    "tokens": 1870,
+    "ms": 200
+   },
+   {
+    "set": "dev",
+    "index": 175,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "How Investors May Respond To Vail Resorts (MTN) Board Challenge From Activist Oasis Management - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "tokens": 1671,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 37,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "AppLovin vs. Meta Platforms: Which Technology Stock Is a Better Buy in 2026? - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-32-dev-37",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-32-dev-37",
+    "tokens": 1674,
+    "ms": 126
+   },
+   {
+    "set": "dev",
+    "index": 6,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Will Adobe’s AI-Driven, Record-Setting Revenue Ease Wall Street’s Worry? - PetaPixel",
+    "v2": "C",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-6",
+    "tokens": 2444,
+    "ms": 163
+   },
+   {
+    "set": "dev",
+    "index": 151,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group (SHOE) Q2 Earnings and Revenues Lag Estimates - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-151",
+    "tokens": 2282,
+    "ms": 165
+   },
+   {
+    "set": "dev",
+    "index": 169,
+    "dev": "U",
+    "cluster": "D14",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber completes €4.5B multi-tranche euro debt offering - The Globe and Mail",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-169",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-169",
+    "tokens": 2069,
+    "ms": 168
+   },
+   {
+    "set": "dev",
+    "index": 178,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Oasis Management Provides Information to Shareholders of Vail Resorts - marketscreener.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-178",
+    "tokens": 1868,
+    "ms": 166
+   },
+   {
+    "set": "dev",
+    "index": 51,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "CCOI UPCOMING DEADLINE: Levi & Korsinsky Alerts COGENT COMMUNICATIONS HOLDINGS, INC. Stockholders of Securities Class Action - Contact the Firm - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-51",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-51",
+    "tokens": 1695,
+    "ms": 231
+   },
+   {
+    "set": "dev",
+    "index": 43,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "APPLOVIN CORPORATION (APP) INVESTOR ALERT Investors With - GlobeNewswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-32-dev-43",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-32-dev-43",
+    "tokens": 1673,
+    "ms": 157
+   },
+   {
+    "set": "dev",
+    "index": 8,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Adobe’s (ADBE) AI Bet Is Finally Showing Up In Revenue - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-8",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-8",
+    "tokens": 2435,
+    "ms": 167
+   },
+   {
+    "set": "dev",
+    "index": 152,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Shares Fall as Promotions and Late Back-to-school Continue to Hit Industry Players - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-152",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-152",
+    "tokens": 2480,
+    "ms": 192
+   },
+   {
+    "set": "dev",
+    "index": 57,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Robbins LLP Reminds Cogent Communications Holdings, Inc. Stockholders of the Pending September 21, 2026, Lead Plaintiff Deadline in the Class Action Against CCOI Following a Significant Stock Decline - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-57",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-57",
+    "tokens": 1702,
+    "ms": 145
+   },
+   {
+    "set": "dev",
+    "index": 173,
+    "dev": "U",
+    "cluster": "D13",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber (UBER)’s $15 Billion Delivery Hero Buyout Clears a Key Hurdle - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-173",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-173",
+    "tokens": 2264,
+    "ms": 181
+   },
+   {
+    "set": "dev",
+    "index": 68,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Yes, China’s State-Owned Shipping Giant Is Spying on the United States - Foundation for Defense of Democracies",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-912-dev-68",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-912-dev-68",
+    "tokens": 1672,
+    "ms": 185
+   },
+   {
+    "set": "dev",
+    "index": 9,
+    "dev": "A",
+    "cluster": "D1",
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Why It May Finally Be Time to Buy Adobe Stock - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-9",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-9",
+    "tokens": 2433,
+    "ms": 156
+   },
+   {
+    "set": "dev",
+    "index": 78,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Dolby Laboratories, Inc. Grants Inducement Equity Awards Under Its 2026 Inducement Stock Plan - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-574-dev-78",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-574-dev-78",
+    "tokens": 1678,
+    "ms": 195
+   },
+   {
+    "set": "dev",
+    "index": 153,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group Inc (SHOE) (Q2 2026) Earnings Call Highlights: Sales Slip, Margins ... - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-153",
+    "tokens": 2491,
+    "ms": 138
+   },
+   {
+    "set": "dev",
+    "index": 86,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Global Yatirim Holding Expands Share Buy-Back to 1.9% of Capital - The Globe and Mail",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-700-dev-86",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-700-dev-86",
+    "tokens": 1677,
+    "ms": 124
+   },
+   {
+    "set": "dev",
+    "index": 63,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Bronstein, Gewirtz & Grossman LLC Urges Cogent - GlobeNewswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-63",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-63",
+    "tokens": 1673,
+    "ms": 140
+   },
+   {
+    "set": "dev",
+    "index": 70,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "COSCO SHIPPING Ports Ltd's Dividend Analysis - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-912-dev-70",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-912-dev-70",
+    "tokens": 1857,
+    "ms": 133
+   },
+   {
+    "set": "dev",
+    "index": 15,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Adobe, DocuSign, Intuit, Workiva, and Appian Stocks Trade Up, What You Need To Know - Yahoo Finance",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-15",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-15",
+    "tokens": 2447,
+    "ms": 136
+   },
+   {
+    "set": "dev",
+    "index": 155,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group (SHOE) Bets On Localized Stores To Reverse A Slide - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-155",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-155",
+    "tokens": 2476,
+    "ms": 141
+   },
+   {
+    "set": "dev",
+    "index": 109,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Why Is Netflix Growing Fastest And Falling Furthest? - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-109",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-109",
+    "tokens": 1662,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 100,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Cogent Communications Holdings Securities Fraud Class Action Result of Undisclosed Demand and Backlog Issues and approximately 29% Stock Decline - Investors may Contact Lewis Kahn, Esq, at Kahn Swick & Foti, LLC - PR Newswire",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-1156-dev-100",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-1156-dev-100",
+    "tokens": 1719,
+    "ms": 156
+   },
+   {
+    "set": "dev",
+    "index": 92,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "JIN:ASX Announcement - Becoming a substantial holder - 09 Sep 2026 - Market Index",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-27-dev-92",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-27-dev-92",
+    "tokens": 1678,
+    "ms": 231
+   },
+   {
+    "set": "dev",
+    "index": 134,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "SiriusXM's SXM-11 Satellite Successfully Completes In-Orbit Testing and Enters Operational Service - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-471-dev-134",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-471-dev-134",
+    "tokens": 1677,
+    "ms": 188
+   },
+   {
+    "set": "dev",
+    "index": 181,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Zoom: Zoom Reports First Quarter Results for Fiscal Year 2021",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "historical_only",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-982-dev-181",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-982-dev-181",
+    "tokens": 1643,
+    "ms": 177
+   },
+   {
+    "set": "dev",
+    "index": 35,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "AM Best Affirms Credit Ratings of AMERISAFE, Inc. and Its Operating Subsidiaries - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-358-dev-35",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-358-dev-35",
+    "tokens": 1673,
+    "ms": 161
+   },
+   {
+    "set": "dev",
+    "index": 111,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "15 Years, 15 Stories: Netflix Celebrates Its Anniversary in Mexico With New Mexican Productions - About Netflix",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-111",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-111",
+    "tokens": 1671,
+    "ms": 128
+   },
+   {
+    "set": "dev",
+    "index": 156,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "STRATTEC SECURITY CORP SEC Filing (Sep 16, 2026) - Stock Titan",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-26-dev-156",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-26-dev-156",
+    "tokens": 1675,
+    "ms": 143
+   },
+   {
+    "set": "dev",
+    "index": 135,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Judge Allows Copyright Suit Against Pandora to Move Forward - jckonline.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-471-dev-135",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-471-dev-135",
+    "tokens": 1665,
+    "ms": 127
+   },
+   {
+    "set": "dev",
+    "index": 93,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "K Car's new name 'KG Mobility Platform', used car prices for August announced... average prices decline - starnewskorea.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-404-dev-93",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-404-dev-93",
+    "tokens": 1678,
+    "ms": 215
+   },
+   {
+    "set": "holdout",
+    "index": 3,
+    "dev": "U",
+    "cluster": "H1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Aena stock gains as Spain approves higher airport fees and traffic hits record - ad-hoc-news.de",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-662-holdout-3",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-662-holdout-3",
+    "tokens": 1670,
+    "ms": 171
+   },
+   {
+    "set": "dev",
+    "index": 118,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Netflix’s Australia Game Ties YouTube’s NFL Numbers From Brazil - Yahoo Sports",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-118",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-118",
+    "tokens": 1663,
+    "ms": 127
+   },
+   {
+    "set": "holdout",
+    "index": 22,
+    "dev": "U",
+    "cluster": "H2",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "What Chemed (CHE)'s California Franchise Acquisition Means For Shareholders - simplywall.st",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-575-holdout-22",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-575-holdout-22",
+    "tokens": 1670,
+    "ms": 172
+   },
+   {
+    "set": "holdout",
+    "index": 35,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Evolution stock holds near a record as compliance risk stays - ad-hoc-news.de",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-35",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-35",
+    "tokens": 1671,
+    "ms": 180
+   },
+   {
+    "set": "holdout",
+    "index": 42,
+    "dev": "U",
+    "cluster": "H3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Fraport sees August cargo growth at Frankfurt Airport - STAT Times",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-664-holdout-42",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-664-holdout-42",
+    "tokens": 1664,
+    "ms": 181
+   },
+   {
+    "set": "dev",
+    "index": 124,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Netflix (NFLX) Suffers a Larger Drop Than the General Market: Key Insights - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-124",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-124",
+    "tokens": 1667,
+    "ms": 153
+   },
+   {
+    "set": "holdout",
+    "index": 54,
+    "dev": "U",
+    "cluster": "H4",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "MBK Partners Joins ¥267.6 Billion Tender Offer for Japan's Leopalace21 - finance.biggo.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-953-holdout-54",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-953-holdout-54",
+    "tokens": 1679,
+    "ms": 199
+   },
+   {
+    "set": "holdout",
+    "index": 61,
+    "dev": "U",
+    "cluster": "H5",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Profit slumps as Lennar (NYSE: LEN) cuts 2026 home delivery target - Stock Titan",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "tokens": 1675,
+    "ms": 198
+   },
+   {
+    "set": "holdout",
+    "index": 81,
+    "dev": "U",
+    "cluster": "H6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia Limited Reports Earnings Results for the Half Year Ended June 30, 2026 - marketscreener.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "tokens": 1681,
+    "ms": 183
+   },
+   {
+    "set": "holdout",
+    "index": 36,
+    "dev": "U",
+    "cluster": "H10",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Evolution stock gains after bid rejection as share price nears SEK 900 - ad-hoc-news.de",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-36",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-36",
+    "tokens": 1676,
+    "ms": 174
+   },
+   {
+    "set": "holdout",
+    "index": 98,
+    "dev": "U",
+    "cluster": "H8",
+    "ok": [
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts (MTN) Faces Board Battle That Could Shift Investment Outlook - londoninsider.co.uk",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-98",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-98",
+    "tokens": 1674,
+    "ms": 149
+   },
+   {
+    "set": "holdout",
+    "index": 86,
+    "dev": "U",
+    "cluster": "H7",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "PesoRama Reports 2027 Q2 Financial Results - TMX Newsfile",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-926-holdout-86",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-926-holdout-86",
+    "tokens": 1668,
+    "ms": 186
+   },
+   {
+    "set": "holdout",
+    "index": 0,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Analysts Offer Insights on Financial Companies: Aon (AON), F&G Annuities & Life Inc (FG) and StepStone Group (STEP) - The Globe and Mail",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1030-holdout-0",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1030-holdout-0",
+    "tokens": 1691,
+    "ms": 170
+   },
+   {
+    "set": "holdout",
+    "index": 62,
+    "dev": "U",
+    "cluster": "H5",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Is Lennar Corp (LEN) Undervalued After Q3 Earnings Miss? EPS at $1.19, Revenues at $8.0B -- GF Score: 68/100 - GuruFocus",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-62",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-62",
+    "tokens": 1905,
+    "ms": 174
+   },
+   {
+    "set": "holdout",
+    "index": 82,
+    "dev": "U",
+    "cluster": "H6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia H1 revenue rises 58% to $185.3m - itweb.co.za",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-82",
+    "tokens": 1881,
+    "ms": 163
+   },
+   {
+    "set": "holdout",
+    "index": 9,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Finalists tout benefits of bringing the whole team to the 2026 HR Awards - hcamag.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-392-holdout-9",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-392-holdout-9",
+    "tokens": 1674,
+    "ms": 154
+   },
+   {
+    "set": "holdout",
+    "index": 99,
+    "dev": "U",
+    "cluster": "H9",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts faces shareholder antitrust suit amid proxy fight - KPCW",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-99",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-99",
+    "tokens": 1866,
+    "ms": 151
+   },
+   {
+    "set": "holdout",
+    "index": 14,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Best Consumer Digital Banks 2026 - Global Finance Magazine",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-654-holdout-14",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-654-holdout-14",
+    "tokens": 1661,
+    "ms": 166
+   },
+   {
+    "set": "holdout",
+    "index": 19,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-31-holdout-19",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-31-holdout-19",
+    "tokens": 1675,
+    "ms": 158
+   },
+   {
+    "set": "holdout",
+    "index": 26,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Yes, China’s State-Owned Shipping Giant Is Spying on the United States - Foundation for Defense of Democracies",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-571-holdout-26",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-571-holdout-26",
+    "tokens": 1677,
+    "ms": 144
+   },
+   {
+    "set": "holdout",
+    "index": 31,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Elis stock heads into the open after a modest recent rebound - ad-hoc-news.de",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-663-holdout-31",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-663-holdout-31",
+    "tokens": 1668,
+    "ms": 160
+   },
+   {
+    "set": "holdout",
+    "index": 40,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "'Shut down all the noise': Aryna Sabalenka survives Noskova scare to keep US Open three-peat dream alive - The Times of India",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-430-holdout-40",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-430-holdout-40",
+    "tokens": 1685,
+    "ms": 169
+   },
+   {
+    "set": "holdout",
+    "index": 52,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Oceaneering International And 2 Quality Small Cap Stocks To Watch - simplywall.st",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-568-holdout-52",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-568-holdout-52",
+    "tokens": 1670,
+    "ms": 154
+   },
+   {
+    "set": "holdout",
+    "index": 46,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Dabble Pays A$1.07m Penalty For Self-Exclusion Failures - Gambling.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-585-holdout-46",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-585-holdout-46",
+    "tokens": 1677,
+    "ms": 176
+   },
+   {
+    "set": "holdout",
+    "index": 66,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Avoiding Lag: Real-Time Signals in (LMB) Movement - Stock Traders Daily",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-360-holdout-66",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-360-holdout-66",
+    "tokens": 1674,
+    "ms": 136
+   },
+   {
+    "set": "holdout",
+    "index": 59,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Gainsborough Trinity 0 Avro 2 - Gainsborough Trinity Football Club",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-685-holdout-59",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-685-holdout-59",
+    "tokens": 1673,
+    "ms": 177
+   },
+   {
+    "set": "holdout",
+    "index": 71,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "K9 Club's beautiful rescue mum Kiara is still waiting for her forever home - Murcia Today - News",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-932-holdout-71",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-932-holdout-71",
+    "tokens": 1671,
+    "ms": 164
+   },
+   {
+    "set": "holdout",
+    "index": 76,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "MTN Ghana Launches DigiFest 2026 With Three-Day Tech Fair - TechAfrica News",
+    "v2": "ERROR",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-355-holdout-76",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-355-holdout-76",
+    "tokens": 1676,
+    "ms": 199
+   },
+   {
+    "set": "holdout",
+    "index": 5,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "AppLovin’s Growth Hinges on a Video Its AI Can’t Build Yet. Here’s Why That Matters for the Stock - TIKR.com",
+    "v2": "ERROR",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-32-holdout-5",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-32-holdout-5",
+    "tokens": 1680,
+    "ms": 144
+   },
+   {
+    "set": "holdout",
+    "index": 83,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "REVIEW: The San Francisco Ballet company visit London with Mere Mortals - North West Londoner",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-471-holdout-83",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-471-holdout-83",
+    "tokens": 1672,
+    "ms": 180
+   },
+   {
+    "set": "holdout",
+    "index": 39,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Ferrovial extends its share buyback program until March 2027 - Demócrata",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-661-holdout-39",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-661-holdout-39",
+    "tokens": 1671,
+    "ms": 132
+   },
+   {
+    "set": "holdout",
+    "index": 8,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "V",
+     "S"
+    ],
+    "title": "ARD sees gold below old Trunkey workings - The Australian",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-136-holdout-8",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-136-holdout-8",
+    "tokens": 1663,
+    "ms": 162
+   },
+   {
+    "set": "holdout",
+    "index": 89,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "In North Carolina, Industry Giants Are Shaping Forever Chemicals Policy - The Progressive",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-723fb3f9-3f46-4e98-89c1-969549cb20f1-holdout-89",
+    "id": "news-holdout-723fb3f9-3f46-4e98-89c1-969549cb20f1-holdout-89",
+    "tokens": 1667,
+    "ms": 271
+   },
+   {
+    "set": "holdout",
+    "index": 57,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Seltos up 3%, Grandeur down 4% as used car prices split by model - 헤럴드경제",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-404-holdout-57",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-404-holdout-57",
+    "tokens": 1677,
+    "ms": 187
+   },
+   {
+    "set": "holdout",
+    "index": 94,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "tinyBuild Unveils Two New Games at tinyBuild Connect: The Crab is Walking and Road to Jukai - Capsule Computers",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-655-holdout-94",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-655-holdout-94",
+    "tokens": 1682,
+    "ms": 215
+   }
+  ],
+  "googleRefused": [
+   {
+    "set": "dev",
+    "index": 97,
+    "dev": "U",
+    "cluster": "D6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Lennar Misses Q3 EPS; Faces Pricing Pressure Despite Lower Incentives, Analysts Say - Benzinga",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-473-dev-97",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-473-dev-97",
+    "tokens": 1675,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 20,
+    "dev": "U",
+    "cluster": "D2",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "€1.76bn investment planned for Barcelona airport expansion - Catalan News",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-662-dev-20",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-662-dev-20",
+    "tokens": 1667,
+    "ms": 173
+   },
+   {
+    "set": "dev",
+    "index": 22,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Amazon gives OpenAI's ad business a boost, letting its advertisers into ChatGPT - CNBC",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-22",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-22",
+    "tokens": 1668,
+    "ms": 173
+   },
+   {
+    "set": "dev",
+    "index": 80,
+    "dev": "U",
+    "cluster": "D5",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Elis announces the early redemption of its 2029 OCEANEs - GlobeNewswire",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-663-dev-80",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-663-dev-80",
+    "tokens": 1674,
+    "ms": 174
+   },
+   {
+    "set": "dev",
+    "index": 2,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe posts record quarter, lifts guidance as AI push pays off - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "tokens": 1662,
+    "ms": 188
+   },
+   {
+    "set": "dev",
+    "index": 104,
+    "dev": "U",
+    "cluster": "D7",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "NCA awards 700MHz spectrum to MTN Ghana for US$109.9m - MyJoyOnline",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-355-dev-104",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-355-dev-104",
+    "tokens": 1679,
+    "ms": 208
+   },
+   {
+    "set": "dev",
+    "index": 129,
+    "dev": "U",
+    "cluster": "D8",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "14% to 4%: How Nigerian Regulation Took a Bite Out of Optasia’s Growth - Launch Base Africa",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "tokens": 1675,
+    "ms": 138
+   },
+   {
+    "set": "dev",
+    "index": 24,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Amazon Price Prediction: The Stock’s Path Toward $300 Looks Clearer - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-24",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-24",
+    "tokens": 1861,
+    "ms": 141
+   },
+   {
+    "set": "dev",
+    "index": 143,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "U.S. Army Veteran to Receive 2024 Freightliner Cascadia Through Progressive's Keys to Progress® Program - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-143",
+    "id": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-143",
+    "tokens": 1680,
+    "ms": 146
+   },
+   {
+    "set": "dev",
+    "index": 3,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe Q3 Earnings Call Highlights - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-3",
+    "tokens": 1846,
+    "ms": 133
+   },
+   {
+    "set": "dev",
+    "index": 148,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Shoe Station Group Q2 2026 Earnings: Promotions Drive a 690-Basis-Point Gross Margin Decline - TradingKey",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "tokens": 1688,
+    "ms": 160
+   },
+   {
+    "set": "dev",
+    "index": 161,
+    "dev": "U",
+    "cluster": "D12",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber Cuts 10% of its Workforce to Fund a $10 Billion Robotaxi Bet - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-161",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-161",
+    "tokens": 1672,
+    "ms": 129
+   },
+   {
+    "set": "dev",
+    "index": 130,
+    "dev": "U",
+    "cluster": "D8",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia expands growth as MFS gains momentum - Business Day",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-712-dev-130",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-712-dev-130",
+    "tokens": 1863,
+    "ms": 142
+   },
+   {
+    "set": "dev",
+    "index": 26,
+    "dev": "U",
+    "cluster": "D3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Amazon raises minimum starting pay for full-time core operations employees to $20/hour, with average pay reaching nearly $24/hour, and launches grocery discount and access to new lifetime banking benefits to make everyday life more affordable for our tea - aboutamazon.com",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "tokens": 1897,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 162,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Alibaba vs. Uber Technologies: Which Consumer Stock Is a Better Buy in 2026? - The Motley Fool",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-162",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-162",
+    "tokens": 1874,
+    "ms": 150
+   },
+   {
+    "set": "dev",
+    "index": 145,
+    "dev": "U",
+    "cluster": "D9",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Progressive: 8-K filing (2026-09-18)",
+    "v2": "R",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-145",
+    "id": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-145",
+    "tokens": 6185,
+    "ms": 169
+   },
+   {
+    "set": "dev",
+    "index": 4,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe Forecast Misses Estimates, Renewing Fears About AI Impact - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-4",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-4",
+    "tokens": 2037,
+    "ms": 179
+   },
+   {
+    "set": "dev",
+    "index": 174,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts Provides Update Following Close of Nominations Window, Reiterates Active Search Underway in its Ongoing Commitment to Board Refreshment - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "tokens": 1689,
+    "ms": 135
+   },
+   {
+    "set": "dev",
+    "index": 149,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group Shares Fall 13% as FY26 Guidance Trails Estimates - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-149",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-149",
+    "tokens": 1881,
+    "ms": 280
+   },
+   {
+    "set": "dev",
+    "index": 29,
+    "dev": "U",
+    "cluster": "D3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Amazon raises minimum pay for warehouse workers to $20 an hour - MyNorthwest.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-29",
+    "tokens": 2090,
+    "ms": 178
+   },
+   {
+    "set": "dev",
+    "index": 165,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Uber Expands Costco Delivery To 47 States, Nearly 600 Locations In Major Grocery Push - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-165",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-165",
+    "tokens": 1870,
+    "ms": 169
+   },
+   {
+    "set": "dev",
+    "index": 0,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Kestelman’s Brand Collective snaps up Glue, Running Bare and The DOM - AFR",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-43-dev-0",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-43-dev-0",
+    "tokens": 1667,
+    "ms": 181
+   },
+   {
+    "set": "dev",
+    "index": 5,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Adobe Q3 ‘Uneventful’ Even As AI ARR Tops $650M, Jefferies Says — Citi Flags Slowing Growth - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-5",
+    "tokens": 2244,
+    "ms": 202
+   },
+   {
+    "set": "dev",
+    "index": 175,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "How Investors May Respond To Vail Resorts (MTN) Board Challenge From Activist Oasis Management - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "tokens": 1671,
+    "ms": 140
+   },
+   {
+    "set": "dev",
+    "index": 150,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "SHOE STATION GROUP ($SHOE) Releases Q2 2027 Earnings - Quiver Quantitative",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-150",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-150",
+    "tokens": 2086,
+    "ms": 167
+   },
+   {
+    "set": "dev",
+    "index": 37,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "AppLovin vs. Meta Platforms: Which Technology Stock Is a Better Buy in 2026? - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-32-dev-37",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-32-dev-37",
+    "tokens": 1674,
+    "ms": 151
+   },
+   {
+    "set": "dev",
+    "index": 6,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Will Adobe’s AI-Driven, Record-Setting Revenue Ease Wall Street’s Worry? - PetaPixel",
+    "v2": "C",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-6",
+    "tokens": 2444,
+    "ms": 126
+   },
+   {
+    "set": "dev",
+    "index": 169,
+    "dev": "U",
+    "cluster": "D14",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber completes €4.5B multi-tranche euro debt offering - The Globe and Mail",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-169",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-169",
+    "tokens": 2069,
+    "ms": 190
+   },
+   {
+    "set": "dev",
+    "index": 178,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Oasis Management Provides Information to Shareholders of Vail Resorts - marketscreener.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-178",
+    "tokens": 1868,
+    "ms": 139
+   },
+   {
+    "set": "dev",
+    "index": 51,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "CCOI UPCOMING DEADLINE: Levi & Korsinsky Alerts COGENT COMMUNICATIONS HOLDINGS, INC. Stockholders of Securities Class Action - Contact the Firm - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-51",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-51",
+    "tokens": 1695,
+    "ms": 197
+   },
+   {
+    "set": "dev",
+    "index": 8,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Adobe’s (ADBE) AI Bet Is Finally Showing Up In Revenue - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-8",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-8",
+    "tokens": 2435,
+    "ms": 153
+   },
+   {
+    "set": "dev",
+    "index": 43,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "APPLOVIN CORPORATION (APP) INVESTOR ALERT Investors With - GlobeNewswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-32-dev-43",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-32-dev-43",
+    "tokens": 1673,
+    "ms": 195
+   },
+   {
+    "set": "dev",
+    "index": 68,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Yes, China’s State-Owned Shipping Giant Is Spying on the United States - Foundation for Defense of Democracies",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-912-dev-68",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-912-dev-68",
+    "tokens": 1672,
+    "ms": 163
+   },
+   {
+    "set": "dev",
+    "index": 151,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group (SHOE) Q2 Earnings and Revenues Lag Estimates - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-151",
+    "tokens": 2282,
+    "ms": 240
+   },
+   {
+    "set": "dev",
+    "index": 57,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Robbins LLP Reminds Cogent Communications Holdings, Inc. Stockholders of the Pending September 21, 2026, Lead Plaintiff Deadline in the Class Action Against CCOI Following a Significant Stock Decline - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-57",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-57",
+    "tokens": 1702,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 173,
+    "dev": "U",
+    "cluster": "D13",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber (UBER)’s $15 Billion Delivery Hero Buyout Clears a Key Hurdle - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-173",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-173",
+    "tokens": 2264,
+    "ms": 228
+   },
+   {
+    "set": "dev",
+    "index": 152,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Shares Fall as Promotions and Late Back-to-school Continue to Hit Industry Players - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-152",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-152",
+    "tokens": 2480,
+    "ms": 124
+   },
+   {
+    "set": "dev",
+    "index": 78,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Dolby Laboratories, Inc. Grants Inducement Equity Awards Under Its 2026 Inducement Stock Plan - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-574-dev-78",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-574-dev-78",
+    "tokens": 1678,
+    "ms": 175
+   },
+   {
+    "set": "dev",
+    "index": 63,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Bronstein, Gewirtz & Grossman LLC Urges Cogent - GlobeNewswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-63",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-63",
+    "tokens": 1673,
+    "ms": 155
+   },
+   {
+    "set": "dev",
+    "index": 9,
+    "dev": "A",
+    "cluster": "D1",
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Why It May Finally Be Time to Buy Adobe Stock - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-9",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-9",
+    "tokens": 2433,
+    "ms": 201
+   },
+   {
+    "set": "dev",
+    "index": 70,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "COSCO SHIPPING Ports Ltd's Dividend Analysis - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-912-dev-70",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-912-dev-70",
+    "tokens": 1857,
+    "ms": 181
+   },
+   {
+    "set": "dev",
+    "index": 86,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Global Yatirim Holding Expands Share Buy-Back to 1.9% of Capital - The Globe and Mail",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-700-dev-86",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-700-dev-86",
+    "tokens": 1677,
+    "ms": 145
+   },
+   {
+    "set": "dev",
+    "index": 92,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "JIN:ASX Announcement - Becoming a substantial holder - 09 Sep 2026 - Market Index",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-27-dev-92",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-27-dev-92",
+    "tokens": 1678,
+    "ms": 141
+   },
+   {
+    "set": "dev",
+    "index": 153,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group Inc (SHOE) (Q2 2026) Earnings Call Highlights: Sales Slip, Margins ... - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-153",
+    "tokens": 2491,
+    "ms": 161
+   },
+   {
+    "set": "dev",
+    "index": 15,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Adobe, DocuSign, Intuit, Workiva, and Appian Stocks Trade Up, What You Need To Know - Yahoo Finance",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-15",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-15",
+    "tokens": 2447,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 100,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Cogent Communications Holdings Securities Fraud Class Action Result of Undisclosed Demand and Backlog Issues and approximately 29% Stock Decline - Investors may Contact Lewis Kahn, Esq, at Kahn Swick & Foti, LLC - PR Newswire",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-1156-dev-100",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-1156-dev-100",
+    "tokens": 1719,
+    "ms": 162
+   },
+   {
+    "set": "dev",
+    "index": 134,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "SiriusXM's SXM-11 Satellite Successfully Completes In-Orbit Testing and Enters Operational Service - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-471-dev-134",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-471-dev-134",
+    "tokens": 1677,
+    "ms": 163
+   },
+   {
+    "set": "dev",
+    "index": 109,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Why Is Netflix Growing Fastest And Falling Furthest? - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-109",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-109",
+    "tokens": 1662,
+    "ms": 197
+   },
+   {
+    "set": "dev",
+    "index": 155,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group (SHOE) Bets On Localized Stores To Reverse A Slide - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-155",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-155",
+    "tokens": 2476,
+    "ms": 144
+   },
+   {
+    "set": "dev",
+    "index": 93,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "K Car's new name 'KG Mobility Platform', used car prices for August announced... average prices decline - starnewskorea.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-404-dev-93",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-404-dev-93",
+    "tokens": 1678,
+    "ms": 140
+   },
+   {
+    "set": "dev",
+    "index": 181,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Zoom: Zoom Reports First Quarter Results for Fiscal Year 2021",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "historical_only",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-982-dev-181",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-982-dev-181",
+    "tokens": 4592,
+    "ms": 180
+   },
+   {
+    "set": "dev",
+    "index": 35,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "AM Best Affirms Credit Ratings of AMERISAFE, Inc. and Its Operating Subsidiaries - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-358-dev-35",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-358-dev-35",
+    "tokens": 1673,
+    "ms": 166
+   },
+   {
+    "set": "dev",
+    "index": 111,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "15 Years, 15 Stories: Netflix Celebrates Its Anniversary in Mexico With New Mexican Productions - About Netflix",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-111",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-111",
+    "tokens": 1671,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 135,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Judge Allows Copyright Suit Against Pandora to Move Forward - jckonline.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-471-dev-135",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-471-dev-135",
+    "tokens": 1665,
+    "ms": 174
+   },
+   {
+    "set": "dev",
+    "index": 156,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "STRATTEC SECURITY CORP SEC Filing (Sep 16, 2026) - Stock Titan",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-26-dev-156",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-26-dev-156",
+    "tokens": 1675,
+    "ms": 148
+   },
+   {
+    "set": "holdout",
+    "index": 3,
+    "dev": "U",
+    "cluster": "H1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Aena stock gains as Spain approves higher airport fees and traffic hits record - ad-hoc-news.de",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-662-holdout-3",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-662-holdout-3",
+    "tokens": 1670,
+    "ms": 151
+   },
+   {
+    "set": "holdout",
+    "index": 22,
+    "dev": "U",
+    "cluster": "H2",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "What Chemed (CHE)'s California Franchise Acquisition Means For Shareholders - simplywall.st",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-575-holdout-22",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-575-holdout-22",
+    "tokens": 1670,
+    "ms": 154
+   },
+   {
+    "set": "holdout",
+    "index": 35,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Evolution stock holds near a record as compliance risk stays - ad-hoc-news.de",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-35",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-35",
+    "tokens": 1671,
+    "ms": 195
+   },
+   {
+    "set": "dev",
+    "index": 118,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Netflix’s Australia Game Ties YouTube’s NFL Numbers From Brazil - Yahoo Sports",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-118",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-118",
+    "tokens": 1663,
+    "ms": 155
+   },
+   {
+    "set": "holdout",
+    "index": 42,
+    "dev": "U",
+    "cluster": "H3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Fraport sees August cargo growth at Frankfurt Airport - STAT Times",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-664-holdout-42",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-664-holdout-42",
+    "tokens": 1664,
+    "ms": 178
+   },
+   {
+    "set": "holdout",
+    "index": 54,
+    "dev": "U",
+    "cluster": "H4",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "MBK Partners Joins ¥267.6 Billion Tender Offer for Japan's Leopalace21 - finance.biggo.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-953-holdout-54",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-953-holdout-54",
+    "tokens": 1679,
+    "ms": 155
+   },
+   {
+    "set": "holdout",
+    "index": 61,
+    "dev": "U",
+    "cluster": "H5",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Profit slumps as Lennar (NYSE: LEN) cuts 2026 home delivery target - Stock Titan",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "tokens": 1675,
+    "ms": 160
+   },
+   {
+    "set": "holdout",
+    "index": 81,
+    "dev": "U",
+    "cluster": "H6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia Limited Reports Earnings Results for the Half Year Ended June 30, 2026 - marketscreener.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "tokens": 1681,
+    "ms": 174
+   },
+   {
+    "set": "holdout",
+    "index": 36,
+    "dev": "U",
+    "cluster": "H10",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Evolution stock gains after bid rejection as share price nears SEK 900 - ad-hoc-news.de",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-36",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-36",
+    "tokens": 1676,
+    "ms": 152
+   },
+   {
+    "set": "dev",
+    "index": 124,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Netflix (NFLX) Suffers a Larger Drop Than the General Market: Key Insights - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-124",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-124",
+    "tokens": 1667,
+    "ms": 178
+   },
+   {
+    "set": "holdout",
+    "index": 86,
+    "dev": "U",
+    "cluster": "H7",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "PesoRama Reports 2027 Q2 Financial Results - TMX Newsfile",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-926-holdout-86",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-926-holdout-86",
+    "tokens": 1668,
+    "ms": 146
+   },
+   {
+    "set": "holdout",
+    "index": 98,
+    "dev": "U",
+    "cluster": "H8",
+    "ok": [
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts (MTN) Faces Board Battle That Could Shift Investment Outlook - londoninsider.co.uk",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-98",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-98",
+    "tokens": 1674,
+    "ms": 189
+   },
+   {
+    "set": "holdout",
+    "index": 62,
+    "dev": "U",
+    "cluster": "H5",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Is Lennar Corp (LEN) Undervalued After Q3 Earnings Miss? EPS at $1.19, Revenues at $8.0B -- GF Score: 68/100 - GuruFocus",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-62",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-62",
+    "tokens": 1905,
+    "ms": 155
+   },
+   {
+    "set": "holdout",
+    "index": 82,
+    "dev": "U",
+    "cluster": "H6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia H1 revenue rises 58% to $185.3m - itweb.co.za",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-82",
+    "tokens": 1881,
+    "ms": 168
+   },
+   {
+    "set": "holdout",
+    "index": 0,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Analysts Offer Insights on Financial Companies: Aon (AON), F&G Annuities & Life Inc (FG) and StepStone Group (STEP) - The Globe and Mail",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1030-holdout-0",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1030-holdout-0",
+    "tokens": 1691,
+    "ms": 143
+   },
+   {
+    "set": "holdout",
+    "index": 9,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Finalists tout benefits of bringing the whole team to the 2026 HR Awards - hcamag.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-392-holdout-9",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-392-holdout-9",
+    "tokens": 1674,
+    "ms": 135
+   },
+   {
+    "set": "holdout",
+    "index": 14,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Best Consumer Digital Banks 2026 - Global Finance Magazine",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-654-holdout-14",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-654-holdout-14",
+    "tokens": 1661,
+    "ms": 194
+   },
+   {
+    "set": "holdout",
+    "index": 99,
+    "dev": "U",
+    "cluster": "H9",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts faces shareholder antitrust suit amid proxy fight - KPCW",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-99",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-99",
+    "tokens": 1866,
+    "ms": 173
+   },
+   {
+    "set": "holdout",
+    "index": 26,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Yes, China’s State-Owned Shipping Giant Is Spying on the United States - Foundation for Defense of Democracies",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-571-holdout-26",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-571-holdout-26",
+    "tokens": 1677,
+    "ms": 140
+   },
+   {
+    "set": "holdout",
+    "index": 19,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-31-holdout-19",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-31-holdout-19",
+    "tokens": 1675,
+    "ms": 176
+   },
+   {
+    "set": "holdout",
+    "index": 40,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "'Shut down all the noise': Aryna Sabalenka survives Noskova scare to keep US Open three-peat dream alive - The Times of India",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-430-holdout-40",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-430-holdout-40",
+    "tokens": 1685,
+    "ms": 179
+   },
+   {
+    "set": "holdout",
+    "index": 31,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Elis stock heads into the open after a modest recent rebound - ad-hoc-news.de",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-663-holdout-31",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-663-holdout-31",
+    "tokens": 1668,
+    "ms": 236
+   },
+   {
+    "set": "holdout",
+    "index": 46,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Dabble Pays A$1.07m Penalty For Self-Exclusion Failures - Gambling.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-585-holdout-46",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-585-holdout-46",
+    "tokens": 1677,
+    "ms": 164
+   },
+   {
+    "set": "holdout",
+    "index": 52,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Oceaneering International And 2 Quality Small Cap Stocks To Watch - simplywall.st",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-568-holdout-52",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-568-holdout-52",
+    "tokens": 1670,
+    "ms": 140
+   },
+   {
+    "set": "holdout",
+    "index": 59,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Gainsborough Trinity 0 Avro 2 - Gainsborough Trinity Football Club",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-685-holdout-59",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-685-holdout-59",
+    "tokens": 1673,
+    "ms": 161
+   },
+   {
+    "set": "holdout",
+    "index": 66,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Avoiding Lag: Real-Time Signals in (LMB) Movement - Stock Traders Daily",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-360-holdout-66",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-360-holdout-66",
+    "tokens": 1674,
+    "ms": 195
+   },
+   {
+    "set": "holdout",
+    "index": 76,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "MTN Ghana Launches DigiFest 2026 With Three-Day Tech Fair - TechAfrica News",
+    "v2": "ERROR",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-355-holdout-76",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-355-holdout-76",
+    "tokens": 1676,
+    "ms": 133
+   },
+   {
+    "set": "holdout",
+    "index": 71,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "K9 Club's beautiful rescue mum Kiara is still waiting for her forever home - Murcia Today - News",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-932-holdout-71",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-932-holdout-71",
+    "tokens": 1671,
+    "ms": 194
+   },
+   {
+    "set": "holdout",
+    "index": 89,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "In North Carolina, Industry Giants Are Shaping Forever Chemicals Policy - The Progressive",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-723fb3f9-3f46-4e98-89c1-969549cb20f1-holdout-89",
+    "id": "news-holdout-723fb3f9-3f46-4e98-89c1-969549cb20f1-holdout-89",
+    "tokens": 1667,
+    "ms": 147
+   },
+   {
+    "set": "holdout",
+    "index": 83,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "REVIEW: The San Francisco Ballet company visit London with Mere Mortals - North West Londoner",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-471-holdout-83",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-471-holdout-83",
+    "tokens": 1672,
+    "ms": 173
+   },
+   {
+    "set": "holdout",
+    "index": 5,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "AppLovin’s Growth Hinges on a Video Its AI Can’t Build Yet. Here’s Why That Matters for the Stock - TIKR.com",
+    "v2": "ERROR",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-32-holdout-5",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-32-holdout-5",
+    "tokens": 1680,
+    "ms": 155
+   },
+   {
+    "set": "holdout",
+    "index": 8,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "V",
+     "S"
+    ],
+    "title": "ARD sees gold below old Trunkey workings - The Australian",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-136-holdout-8",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-136-holdout-8",
+    "tokens": 1663,
+    "ms": 144
+   },
+   {
+    "set": "holdout",
+    "index": 39,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Ferrovial extends its share buyback program until March 2027 - Demócrata",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-661-holdout-39",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-661-holdout-39",
+    "tokens": 1671,
+    "ms": 159
+   },
+   {
+    "set": "holdout",
+    "index": 94,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "tinyBuild Unveils Two New Games at tinyBuild Connect: The Crab is Walking and Road to Jukai - Capsule Computers",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-655-holdout-94",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-655-holdout-94",
+    "tokens": 1682,
+    "ms": 161
+   },
+   {
+    "set": "holdout",
+    "index": 57,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Seltos up 3%, Grandeur down 4% as used car prices split by model - 헤럴드경제",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-404-holdout-57",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-404-holdout-57",
+    "tokens": 1677,
+    "ms": 186
+   }
+  ],
+  "text": [
+   {
+    "set": "dev",
+    "index": 20,
+    "dev": "U",
+    "cluster": "D2",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "€1.76bn investment planned for Barcelona airport expansion - Catalan News",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-662-dev-20",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-662-dev-20",
+    "tokens": 2628,
+    "ms": 153
+   },
+   {
+    "set": "dev",
+    "index": 80,
+    "dev": "U",
+    "cluster": "D5",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Elis announces the early redemption of its 2029 OCEANEs - GlobeNewswire",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-663-dev-80",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-663-dev-80",
+    "tokens": 3357,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 104,
+    "dev": "U",
+    "cluster": "D7",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "NCA awards 700MHz spectrum to MTN Ghana for US$109.9m - MyJoyOnline",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-355-dev-104",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-355-dev-104",
+    "tokens": 2437,
+    "ms": 177
+   },
+   {
+    "set": "dev",
+    "index": 2,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe posts record quarter, lifts guidance as AI push pays off - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "tokens": 2529,
+    "ms": 189
+   },
+   {
+    "set": "dev",
+    "index": 22,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Amazon gives OpenAI's ad business a boost, letting its advertisers into ChatGPT - CNBC",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-22",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-22",
+    "tokens": 2600,
+    "ms": 200
+   },
+   {
+    "set": "dev",
+    "index": 97,
+    "dev": "U",
+    "cluster": "D6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Lennar Misses Q3 EPS; Faces Pricing Pressure Despite Lower Incentives, Analysts Say - Benzinga",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-473-dev-97",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-473-dev-97",
+    "tokens": 2810,
+    "ms": 204
+   },
+   {
+    "set": "dev",
+    "index": 129,
+    "dev": "U",
+    "cluster": "D8",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "14% to 4%: How Nigerian Regulation Took a Bite Out of Optasia’s Growth - Launch Base Africa",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "tokens": 4701,
+    "ms": 166
+   },
+   {
+    "set": "dev",
+    "index": 143,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "U.S. Army Veteran to Receive 2024 Freightliner Cascadia Through Progressive's Keys to Progress® Program - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-143",
+    "id": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-143",
+    "tokens": 2887,
+    "ms": 165
+   },
+   {
+    "set": "dev",
+    "index": 148,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Shoe Station Group Q2 2026 Earnings: Promotions Drive a 690-Basis-Point Gross Margin Decline - TradingKey",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "tokens": 3889,
+    "ms": 146
+   },
+   {
+    "set": "dev",
+    "index": 24,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Amazon Price Prediction: The Stock’s Path Toward $300 Looks Clearer - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-24",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-24",
+    "tokens": 3152,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 161,
+    "dev": "U",
+    "cluster": "D12",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber Cuts 10% of its Workforce to Fund a $10 Billion Robotaxi Bet - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-161",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-161",
+    "tokens": 2635,
+    "ms": 156
+   },
+   {
+    "set": "dev",
+    "index": 3,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe Q3 Earnings Call Highlights - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-3",
+    "tokens": 2994,
+    "ms": 181
+   },
+   {
+    "set": "dev",
+    "index": 130,
+    "dev": "U",
+    "cluster": "D8",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia expands growth as MFS gains momentum - Business Day",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-712-dev-129",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-712-dev-130",
+    "tokens": 3132,
+    "ms": 138
+   },
+   {
+    "set": "dev",
+    "index": 149,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group Shares Fall 13% as FY26 Guidance Trails Estimates - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-149",
+    "tokens": 2832,
+    "ms": 151
+   },
+   {
+    "set": "dev",
+    "index": 145,
+    "dev": "U",
+    "cluster": "D9",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Progressive: 8-K filing (2026-09-18)",
+    "v2": "R",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-145",
+    "id": "news-dev-723fb3f9-3f46-4e98-89c1-969549cb20f1-dev-145",
+    "tokens": 6185,
+    "ms": 166
+   },
+   {
+    "set": "dev",
+    "index": 162,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Alibaba vs. Uber Technologies: Which Consumer Stock Is a Better Buy in 2026? - The Motley Fool",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-162",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-162",
+    "tokens": 3680,
+    "ms": 186
+   },
+   {
+    "set": "dev",
+    "index": 26,
+    "dev": "U",
+    "cluster": "D3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Amazon raises minimum starting pay for full-time core operations employees to $20/hour, with average pay reaching nearly $24/hour, and launches grocery discount and access to new lifetime banking benefits to make everyday life more affordable for our tea - aboutamazon.com",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "tokens": 4210,
+    "ms": 219
+   },
+   {
+    "set": "dev",
+    "index": 174,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts Provides Update Following Close of Nominations Window, Reiterates Active Search Underway in its Ongoing Commitment to Board Refreshment - PR Newswire",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "tokens": 3637,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 150,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "SHOE STATION GROUP ($SHOE) Releases Q2 2027 Earnings - Quiver Quantitative",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-150",
+    "tokens": 3471,
+    "ms": 154
+   },
+   {
+    "set": "dev",
+    "index": 0,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Kestelman’s Brand Collective snaps up Glue, Running Bare and The DOM - AFR",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-43-dev-0",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-43-dev-0",
+    "tokens": 2087,
+    "ms": 192
+   },
+   {
+    "set": "dev",
+    "index": 4,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Adobe Forecast Misses Estimates, Renewing Fears About AI Impact - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-4",
+    "tokens": 3188,
+    "ms": 318
+   },
+   {
+    "set": "dev",
+    "index": 165,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Uber Expands Costco Delivery To 47 States, Nearly 600 Locations In Major Grocery Push - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-165",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-165",
+    "tokens": 3147,
+    "ms": 145
+   },
+   {
+    "set": "dev",
+    "index": 29,
+    "dev": "U",
+    "cluster": "D3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Amazon raises minimum pay for warehouse workers to $20 an hour - MyNorthwest.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-666-dev-26",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-666-dev-29",
+    "tokens": 3164,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 175,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "How Investors May Respond To Vail Resorts (MTN) Board Challenge From Activist Oasis Management - Yahoo Finance",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-175",
+    "tokens": 2892,
+    "ms": 163
+   },
+   {
+    "set": "dev",
+    "index": 151,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group (SHOE) Q2 Earnings and Revenues Lag Estimates - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-151",
+    "tokens": 3733,
+    "ms": 163
+   },
+   {
+    "set": "dev",
+    "index": 5,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Adobe Q3 ‘Uneventful’ Even As AI ARR Tops $650M, Jefferies Says — Citi Flags Slowing Growth - Yahoo Finance",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-5",
+    "tokens": 3681,
+    "ms": 148
+   },
+   {
+    "set": "dev",
+    "index": 37,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "AppLovin vs. Meta Platforms: Which Technology Stock Is a Better Buy in 2026? - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-32-dev-37",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-32-dev-37",
+    "tokens": 2599,
+    "ms": 174
+   },
+   {
+    "set": "dev",
+    "index": 169,
+    "dev": "U",
+    "cluster": "D14",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber completes €4.5B multi-tranche euro debt offering - The Globe and Mail",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-169",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-169",
+    "tokens": 3385,
+    "ms": 166
+   },
+   {
+    "set": "dev",
+    "index": 51,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "CCOI UPCOMING DEADLINE: Levi & Korsinsky Alerts COGENT COMMUNICATIONS HOLDINGS, INC. Stockholders of Securities Class Action - Contact the Firm - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-51",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-51",
+    "tokens": 3339,
+    "ms": 166
+   },
+   {
+    "set": "dev",
+    "index": 152,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Shares Fall as Promotions and Late Back-to-school Continue to Hit Industry Players - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-152",
+    "tokens": 4047,
+    "ms": 150
+   },
+   {
+    "set": "dev",
+    "index": 178,
+    "dev": "U",
+    "cluster": "D15",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Oasis Management Provides Information to Shareholders of Vail Resorts - marketscreener.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-577-dev-174",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-577-dev-178",
+    "tokens": 2876,
+    "ms": 177
+   },
+   {
+    "set": "dev",
+    "index": 173,
+    "dev": "U",
+    "cluster": "D13",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Uber (UBER)’s $15 Billion Delivery Hero Buyout Clears a Key Hurdle - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-465-dev-173",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-465-dev-173",
+    "tokens": 3744,
+    "ms": 153
+   },
+   {
+    "set": "dev",
+    "index": 6,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Will Adobe’s AI-Driven, Record-Setting Revenue Ease Wall Street’s Worry? - PetaPixel",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-6",
+    "tokens": 4177,
+    "ms": 175
+   },
+   {
+    "set": "dev",
+    "index": 43,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "APPLOVIN CORPORATION (APP) INVESTOR ALERT Investors With - GlobeNewswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-32-dev-43",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-32-dev-43",
+    "tokens": 2593,
+    "ms": 161
+   },
+   {
+    "set": "dev",
+    "index": 57,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Robbins LLP Reminds Cogent Communications Holdings, Inc. Stockholders of the Pending September 21, 2026, Lead Plaintiff Deadline in the Class Action Against CCOI Following a Significant Stock Decline - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-57",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-57",
+    "tokens": 3262,
+    "ms": 141
+   },
+   {
+    "set": "dev",
+    "index": 68,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Yes, China’s State-Owned Shipping Giant Is Spying on the United States - Foundation for Defense of Democracies",
+    "v2": "V",
+    "route": "R",
+    "role": "analytical_addition",
+    "reason": "analysis",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-912-dev-68",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-912-dev-68",
+    "tokens": 3120,
+    "ms": 151
+   },
+   {
+    "set": "dev",
+    "index": 153,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group Inc (SHOE) (Q2 2026) Earnings Call Highlights: Sales Slip, Margins ... - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-153",
+    "tokens": 4292,
+    "ms": 191
+   },
+   {
+    "set": "dev",
+    "index": 78,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Dolby Laboratories, Inc. Grants Inducement Equity Awards Under Its 2026 Inducement Stock Plan - PR Newswire",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-574-dev-78",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-574-dev-78",
+    "tokens": 2789,
+    "ms": 137
+   },
+   {
+    "set": "dev",
+    "index": 86,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Global Yatirim Holding Expands Share Buy-Back to 1.9% of Capital - The Globe and Mail",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-700-dev-86",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-700-dev-86",
+    "tokens": 2334,
+    "ms": 158
+   },
+   {
+    "set": "dev",
+    "index": 8,
+    "dev": "U",
+    "cluster": "D1",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Adobe’s (ADBE) AI Bet Is Finally Showing Up In Revenue - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-8",
+    "tokens": 4101,
+    "ms": 169
+   },
+   {
+    "set": "dev",
+    "index": 63,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Bronstein, Gewirtz & Grossman LLC Urges Cogent - GlobeNewswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "legal_solicitation",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-673-dev-63",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-673-dev-63",
+    "tokens": 2981,
+    "ms": 167
+   },
+   {
+    "set": "dev",
+    "index": 70,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "COSCO SHIPPING Ports Ltd's Dividend Analysis - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-912-dev-70",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-912-dev-70",
+    "tokens": 2895,
+    "ms": 132
+   },
+   {
+    "set": "dev",
+    "index": 92,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "JIN:ASX Announcement - Becoming a substantial holder - 09 Sep 2026 - Market Index",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-27-dev-92",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-27-dev-92",
+    "tokens": 1964,
+    "ms": 133
+   },
+   {
+    "set": "dev",
+    "index": 109,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Why Is Netflix Growing Fastest And Falling Furthest? - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "analytical_addition",
+    "reason": "analysis",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-109",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-109",
+    "tokens": 2673,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 155,
+    "dev": "U",
+    "cluster": "D10",
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Shoe Station Group (SHOE) Bets On Localized Stores To Reverse A Slide - Yahoo Finance",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-344-dev-148",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-344-dev-155",
+    "tokens": 4110,
+    "ms": 235
+   },
+   {
+    "set": "dev",
+    "index": 9,
+    "dev": "A",
+    "cluster": "D1",
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Why It May Finally Be Time to Buy Adobe Stock - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-2",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-9",
+    "tokens": 3995,
+    "ms": 200
+   },
+   {
+    "set": "dev",
+    "index": 134,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "SiriusXM's SXM-11 Satellite Successfully Completes In-Orbit Testing and Enters Operational Service - PR Newswire",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-471-dev-134",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-471-dev-134",
+    "tokens": 4279,
+    "ms": 183
+   },
+   {
+    "set": "dev",
+    "index": 100,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Cogent Communications Holdings Securities Fraud Class Action Result of Undisclosed Demand and Backlog Issues and approximately 29% Stock Decline - Investors may Contact Lewis Kahn, Esq, at Kahn Swick & Foti, LLC - PR Newswire",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-1156-dev-100",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-1156-dev-100",
+    "tokens": 3018,
+    "ms": 254
+   },
+   {
+    "set": "dev",
+    "index": 181,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Zoom: Zoom Reports First Quarter Results for Fiscal Year 2021",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "historical_only",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-982-dev-181",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-982-dev-181",
+    "tokens": 4592,
+    "ms": 207
+   },
+   {
+    "set": "dev",
+    "index": 35,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "R",
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "AM Best Affirms Credit Ratings of AMERISAFE, Inc. and Its Operating Subsidiaries - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-358-dev-35",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-358-dev-35",
+    "tokens": 2629,
+    "ms": 131
+   },
+   {
+    "set": "dev",
+    "index": 111,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "15 Years, 15 Stories: Netflix Celebrates Its Anniversary in Mexico With New Mexican Productions - About Netflix",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-111",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-111",
+    "tokens": 4772,
+    "ms": 190
+   },
+   {
+    "set": "dev",
+    "index": 15,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Adobe, DocuSign, Intuit, Workiva, and Appian Stocks Trade Up, What You Need To Know - Yahoo Finance",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-966-dev-15",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-966-dev-15",
+    "tokens": 3952,
+    "ms": 162
+   },
+   {
+    "set": "dev",
+    "index": 135,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Judge Allows Copyright Suit Against Pandora to Move Forward - jckonline.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-471-dev-135",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-471-dev-135",
+    "tokens": 2559,
+    "ms": 147
+   },
+   {
+    "set": "dev",
+    "index": 93,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "K Car's new name 'KG Mobility Platform', used car prices for August announced... average prices decline - starnewskorea.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-404-dev-93",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-404-dev-93",
+    "tokens": 2626,
+    "ms": 186
+   },
+   {
+    "set": "dev",
+    "index": 156,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "STRATTEC SECURITY CORP SEC Filing (Sep 16, 2026) - Stock Titan",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-26-dev-156",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-26-dev-156",
+    "tokens": 2191,
+    "ms": 170
+   },
+   {
+    "set": "holdout",
+    "index": 3,
+    "dev": "U",
+    "cluster": "H1",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Aena stock gains as Spain approves higher airport fees and traffic hits record - ad-hoc-news.de",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-662-holdout-3",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-662-holdout-3",
+    "tokens": 4402,
+    "ms": 227
+   },
+   {
+    "set": "dev",
+    "index": 118,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Netflix’s Australia Game Ties YouTube’s NFL Numbers From Brazil - Yahoo Sports",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-118",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-118",
+    "tokens": 3761,
+    "ms": 218
+   },
+   {
+    "set": "holdout",
+    "index": 35,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Evolution stock holds near a record as compliance risk stays - ad-hoc-news.de",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-35",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-35",
+    "tokens": 3110,
+    "ms": 192
+   },
+   {
+    "set": "holdout",
+    "index": 22,
+    "dev": "U",
+    "cluster": "H2",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "What Chemed (CHE)'s California Franchise Acquisition Means For Shareholders - simplywall.st",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-575-holdout-22",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-575-holdout-22",
+    "tokens": 3206,
+    "ms": 251
+   },
+   {
+    "set": "holdout",
+    "index": 42,
+    "dev": "U",
+    "cluster": "H3",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Fraport sees August cargo growth at Frankfurt Airport - STAT Times",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-664-holdout-42",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-664-holdout-42",
+    "tokens": 2183,
+    "ms": 231
+   },
+   {
+    "set": "holdout",
+    "index": 54,
+    "dev": "U",
+    "cluster": "H4",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "MBK Partners Joins ¥267.6 Billion Tender Offer for Japan's Leopalace21 - finance.biggo.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-953-holdout-54",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-953-holdout-54",
+    "tokens": 3014,
+    "ms": 199
+   },
+   {
+    "set": "holdout",
+    "index": 61,
+    "dev": "U",
+    "cluster": "H5",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Profit slumps as Lennar (NYSE: LEN) cuts 2026 home delivery target - Stock Titan",
+    "v2": "C",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "tokens": 5140,
+    "ms": 177
+   },
+   {
+    "set": "holdout",
+    "index": 36,
+    "dev": "U",
+    "cluster": "H10",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Evolution stock gains after bid rejection as share price nears SEK 900 - ad-hoc-news.de",
+    "v2": "V",
+    "route": "C",
+    "role": "coverage_only",
+    "reason": "commentary_on_development",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-36",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1233-holdout-36",
+    "tokens": 2720,
+    "ms": 201
+   },
+   {
+    "set": "holdout",
+    "index": 81,
+    "dev": "U",
+    "cluster": "H6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia Limited Reports Earnings Results for the Half Year Ended June 30, 2026 - marketscreener.com",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "tokens": 2077,
+    "ms": 161
+   },
+   {
+    "set": "dev",
+    "index": 124,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Netflix (NFLX) Suffers a Larger Drop Than the General Market: Key Insights - Yahoo Finance",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-dev-seed-f1a9bf75117e0483-line-25-dev-124",
+    "id": "news-dev-seed-f1a9bf75117e0483-line-25-dev-124",
+    "tokens": 2989,
+    "ms": 208
+   },
+   {
+    "set": "holdout",
+    "index": 98,
+    "dev": "U",
+    "cluster": "H8",
+    "ok": [
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts (MTN) Faces Board Battle That Could Shift Investment Outlook - londoninsider.co.uk",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-98",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-98",
+    "tokens": 2309,
+    "ms": 147
+   },
+   {
+    "set": "holdout",
+    "index": 86,
+    "dev": "U",
+    "cluster": "H7",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "PesoRama Reports 2027 Q2 Financial Results - TMX Newsfile",
+    "v2": "V",
+    "route": "R",
+    "role": "primary_reading",
+    "reason": "primary_evidence",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-926-holdout-86",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-926-holdout-86",
+    "tokens": 5119,
+    "ms": 210
+   },
+   {
+    "set": "holdout",
+    "index": 62,
+    "dev": "U",
+    "cluster": "H5",
+    "ok": [
+     "C",
+     "S",
+     "V"
+    ],
+    "title": "Is Lennar Corp (LEN) Undervalued After Q3 Earnings Miss? EPS at $1.19, Revenues at $8.0B -- GF Score: 68/100 - GuruFocus",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-61",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-473-holdout-62",
+    "tokens": 3699,
+    "ms": 195
+   },
+   {
+    "set": "holdout",
+    "index": 82,
+    "dev": "U",
+    "cluster": "H6",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Optasia H1 revenue rises 58% to $185.3m - itweb.co.za",
+    "v2": "C",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-81",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-712-holdout-82",
+    "tokens": 3737,
+    "ms": 154
+   },
+   {
+    "set": "holdout",
+    "index": 0,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Analysts Offer Insights on Financial Companies: Aon (AON), F&G Annuities & Life Inc (FG) and StepStone Group (STEP) - The Globe and Mail",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-1030-holdout-0",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-1030-holdout-0",
+    "tokens": 2796,
+    "ms": 174
+   },
+   {
+    "set": "holdout",
+    "index": 9,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Finalists tout benefits of bringing the whole team to the 2026 HR Awards - hcamag.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-392-holdout-9",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-392-holdout-9",
+    "tokens": 2693,
+    "ms": 201
+   },
+   {
+    "set": "holdout",
+    "index": 99,
+    "dev": "U",
+    "cluster": "H9",
+    "ok": [
+     "R",
+     "C",
+     "V"
+    ],
+    "title": "Vail Resorts faces shareholder antitrust suit amid proxy fight - KPCW",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-99",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-577-holdout-99",
+    "tokens": 2883,
+    "ms": 207
+   },
+   {
+    "set": "holdout",
+    "index": 14,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Best Consumer Digital Banks 2026 - Global Finance Magazine",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-654-holdout-14",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-654-holdout-14",
+    "tokens": 4201,
+    "ms": 186
+   },
+   {
+    "set": "holdout",
+    "index": 26,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Yes, China’s State-Owned Shipping Giant Is Spying on the United States - Foundation for Defense of Democracies",
+    "v2": "V",
+    "route": "V",
+    "role": "pending_verification",
+    "reason": "uncertain_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-571-holdout-26",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-571-holdout-26",
+    "tokens": 3126,
+    "ms": 175
+   },
+   {
+    "set": "holdout",
+    "index": 19,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Builders FirstSource (BLDR) Q1 2026 Earnings Call Transcript - Fortune",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-31-holdout-19",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-31-holdout-19",
+    "tokens": 2066,
+    "ms": 193
+   },
+   {
+    "set": "holdout",
+    "index": 31,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Elis stock heads into the open after a modest recent rebound - ad-hoc-news.de",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-663-holdout-31",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-663-holdout-31",
+    "tokens": 3047,
+    "ms": 179
+   },
+   {
+    "set": "holdout",
+    "index": 40,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "'Shut down all the noise': Aryna Sabalenka survives Noskova scare to keep US Open three-peat dream alive - The Times of India",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-430-holdout-40",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-430-holdout-40",
+    "tokens": 2609,
+    "ms": 168
+   },
+   {
+    "set": "holdout",
+    "index": 52,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Oceaneering International And 2 Quality Small Cap Stocks To Watch - simplywall.st",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-568-holdout-52",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-568-holdout-52",
+    "tokens": 3469,
+    "ms": 159
+   },
+   {
+    "set": "holdout",
+    "index": 46,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Dabble Pays A$1.07m Penalty For Self-Exclusion Failures - Gambling.com",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-585-holdout-46",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-585-holdout-46",
+    "tokens": 2519,
+    "ms": 253
+   },
+   {
+    "set": "holdout",
+    "index": 66,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Avoiding Lag: Real-Time Signals in (LMB) Movement - Stock Traders Daily",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-360-holdout-66",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-360-holdout-66",
+    "tokens": 2454,
+    "ms": 178
+   },
+   {
+    "set": "holdout",
+    "index": 71,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "K9 Club's beautiful rescue mum Kiara is still waiting for her forever home - Murcia Today - News",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-932-holdout-71",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-932-holdout-71",
+    "tokens": 2487,
+    "ms": 174
+   },
+   {
+    "set": "holdout",
+    "index": 76,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "MTN Ghana Launches DigiFest 2026 With Three-Day Tech Fair - TechAfrica News",
+    "v2": "ERROR",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-355-holdout-76",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-355-holdout-76",
+    "tokens": 2186,
+    "ms": 154
+   },
+   {
+    "set": "holdout",
+    "index": 59,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "Gainsborough Trinity 0 Avro 2 - Gainsborough Trinity Football Club",
+    "v2": "S",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-685-holdout-59",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-685-holdout-59",
+    "tokens": 3630,
+    "ms": 229
+   },
+   {
+    "set": "holdout",
+    "index": 83,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "REVIEW: The San Francisco Ballet company visit London with Mere Mortals - North West Londoner",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-471-holdout-83",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-471-holdout-83",
+    "tokens": 3245,
+    "ms": 218
+   },
+   {
+    "set": "holdout",
+    "index": 8,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "V",
+     "S"
+    ],
+    "title": "ARD sees gold below old Trunkey workings - The Australian",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "unclear_identity",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-136-holdout-8",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-136-holdout-8",
+    "tokens": 2374,
+    "ms": 171
+   },
+   {
+    "set": "holdout",
+    "index": 5,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "AppLovin’s Growth Hinges on a Video Its AI Can’t Build Yet. Here’s Why That Matters for the Stock - TIKR.com",
+    "v2": "ERROR",
+    "route": "S",
+    "role": "rejected",
+    "reason": "commentary",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-32-holdout-5",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-32-holdout-5",
+    "tokens": 3879,
+    "ms": 185
+   },
+   {
+    "set": "holdout",
+    "index": 57,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Seltos up 3%, Grandeur down 4% as used car prices split by model - 헤럴드경제",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-404-holdout-57",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-404-holdout-57",
+    "tokens": 3075,
+    "ms": 152
+   },
+   {
+    "set": "holdout",
+    "index": 39,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "Ferrovial extends its share buyback program until March 2027 - Demócrata",
+    "v2": "V",
+    "route": "R",
+    "role": "news_report",
+    "reason": "news_report",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-661-holdout-39",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-661-holdout-39",
+    "tokens": 2256,
+    "ms": 233
+   },
+   {
+    "set": "holdout",
+    "index": 89,
+    "dev": "N",
+    "cluster": null,
+    "ok": [
+     "S",
+     "V"
+    ],
+    "title": "In North Carolina, Industry Giants Are Shaping Forever Chemicals Policy - The Progressive",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "wrong_entity",
+    "clusterId": "news-holdout-723fb3f9-3f46-4e98-89c1-969549cb20f1-holdout-89",
+    "id": "news-holdout-723fb3f9-3f46-4e98-89c1-969549cb20f1-holdout-89",
+    "tokens": 3878,
+    "ms": 247
+   },
+   {
+    "set": "holdout",
+    "index": 94,
+    "dev": "A",
+    "cluster": null,
+    "ok": [
+     "S",
+     "C",
+     "V"
+    ],
+    "title": "tinyBuild Unveils Two New Games at tinyBuild Connect: The Crab is Walking and Road to Jukai - Capsule Computers",
+    "v2": "V",
+    "route": "S",
+    "role": "rejected",
+    "reason": "immaterial",
+    "clusterId": "news-holdout-seed-f1a9bf75117e0483-line-655-holdout-94",
+    "id": "news-holdout-seed-f1a9bf75117e0483-line-655-holdout-94",
+    "tokens": 2788,
+    "ms": 173
+   }
+  ]
+ }
+}

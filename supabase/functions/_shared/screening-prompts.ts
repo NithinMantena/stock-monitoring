@@ -1,59 +1,100 @@
-// Frozen five-core rubric from the September 22 screening research.
-export const PROMPT_VERSION = "fundamental-core-2.0.0";
+// Screening v3 (headline-first). Every question must be answerable from the
+// company, headline, publisher, snippet and date alone; article text, when it
+// was read, is extra evidence for the same questions. Tested in
+// research/typesafe-screening-2-2026-09-22 (identity criteria, purpose Choice,
+// issuer Noul and the cookbook-style evidence split).
+export const PROMPT_VERSION = "headline-first-3.0.0";
 export const CORE_QUESTIONS = {
   identity: {
     type: "noul",
     instructions:
-      "Is the company discussed in `article` the same business as `company`, or is that business explicitly exposed through the described supplier/customer/regulation? Judge entity connection only, not importance.",
+      "Is `article` about `company` (the same business, or a subsidiary, brand or division it owns), or about a named customer, supplier or regulator action explicitly linked to it? Judge the entity connection only, not importance. The company profile may be sparse; use its name, ticker, exchange and description when present.",
+    criteria: {
+      true: {
+        what: "The headline or text refers to this company, one of its businesses, or a documented exposure of it.",
+        examples: [
+          "The company reports results or announces a transaction",
+          "A regulator acts against the company or its subsidiary",
+          "A named supplier or customer contract with the company",
+        ],
+      },
+      false: {
+        what: "A different person, place, product or business that merely shares a word of the name, or the company appears only in a passing list.",
+        examples: [
+          "A person or place with the same name",
+          "Another business with a similar name",
+          "A market wrap that lists many tickers",
+        ],
+      },
+    },
   },
   significance: {
     type: "score",
     instructions:
-      "Rate the usefulness of the reported business information for understanding this company’s long-term economic value at its supplied scale. Evaluate the text’s content; do not require a surprise, a proven future outcome, or certainty that an allegation is true. Use company context for scale. An indirect exposure counts when documented.",
+      "Rate the business development that `article` reports, for understanding this company's long-term economic value. Judge from the headline, publisher and snippet; use `article.text` only when it is present. Use company scale when it is supplied; when scale is unknown, judge the nature of the event and do not demote it merely because scale is unknown. Positive and negative developments count equally. Do not require a surprise or proof that an allegation is true.",
     criteria: [
-      "No useful business evidence: only a calendar notice, share trading, name collision, generic promotion, unsupported rumor, or generic boilerplate.",
-      "An actual isolated event too small or routine to inform company economics at the supplied scale.",
-      "Useful evidence about core financial/operating performance or an important business assumption, including stable reported results and supported comparative analysis.",
-      "Potential to meaningfully change company earning power, competitive advantage, capital allocation, management integrity or financial risk.",
-      "Potential transformation of control, survival or the core business.",
+      {
+        summary:
+          "No business development: share-price or trading moves, analyst ratings or price targets on their own, should-you-buy or valuation templates, calendar notices, name collisions, generic promotion.",
+      },
+      {
+        summary:
+          "An actual but routine or small event: minor contract, store opening, marketing campaign, routine board appointment, rating affirmation, small holder change.",
+      },
+      {
+        summary:
+          "Useful evidence about core performance or an important business assumption: reported results, monthly or quarterly operating figures, guidance, pricing, costs, market share, a meaningful partnership.",
+      },
+      {
+        summary:
+          "Could meaningfully change earning power, competitive position, capital allocation, management or financial risk: large acquisition or financing, major customer or licence change, activist campaign, leadership upheaval, material litigation or regulatory decision.",
+      },
+      {
+        summary:
+          "Could transform control, survival or the core business: takeover of the company, insolvency, loss of the core licence or only operating asset.",
+      },
     ],
   },
-  support: {
+  genre: {
     type: "choice",
     instructions:
-      "Classify the visible evidentiary basis of the main BUSINESS information in `article.text`. This is about attribution in the supplied text, not independently proving truth. `article.primary` is supplied provenance. A filed allegation remains an allegation; it can still be attributable. Do not require an audit, legal verdict or a complete valuation.",
+      "What is the primary purpose of `article`? Judge the article as a whole from its headline, publisher and any text, not from a passing sentence.",
     criteria: {
-      attributed:
-        "Actual figures or actions disclosed by the company/regulator; or business claims attributed to identifiable documents, accountable sources, or a described original dataset/method. Reported claims may remain disputed or uncertain.",
-      unsupported:
-        "Text is visible but its business claims are hype, bare prediction, rumor or assertion without a stated evidentiary basis.",
-      absent:
-        "Text is missing, blocked, only a headline, or does not contain the actual business information needed.",
+      company_disclosure:
+        "Issued by the company itself, or a regulator or filing: press release, filing, official statement or presentation, including verbatim newswire copies.",
+      news_report:
+        "Journalism reporting a specific event or disclosure (results, guidance, deal, financing, regulatory action, lawsuit ruling, leadership change, operating update), with or without added analysis.",
+      analysis:
+        "Substantive original analysis or investigation of the business built on evidence, not a stock-picking template.",
+      market_commentary:
+        "Share-price or trading moves, options activity, technical levels, analyst ratings or price targets, or pundit remarks.",
+      investment_opinion:
+        "Should-you-buy pieces, stock-versus-stock comparisons, fair-value or valuation templates, price predictions, dividend or 'most searched stock' templates.",
+      legal_solicitation:
+        "Law-firm notices seeking plaintiffs or reminding investors of class-action deadlines.",
+      other:
+        "Anything else, including unrelated, lifestyle, sport or local-interest stories.",
     },
   },
-  contribution: {
-    type: "choice",
+  issuerRelease: {
+    type: "noul",
     instructions:
-      "For a secondary article, classify its contribution beyond a basic primary announcement. Use `primaryReference` when present. Judge the comparison, data or reasoning actually visible. A new connection among existing public facts can add value; it need not be a scoop. Do not classify something as incremental merely because it is detailed, long or well written.",
+      "Is `article` an announcement issued by `company` itself (its own press release, filing or statement, possibly distributed by a newswire or reprinted verbatim)?",
     criteria: {
-      incremental:
-        "Contains original evidence or documented comparative/causal analysis that changes understanding, such as reserve reconciliation, peer benchmark, contract comparison, unit-economics analysis or independent reporting.",
-      recap:
-        "Repeats disclosure figures or claims, reports share-price reaction, or adds only generic definitions/opinion without a substantive analytical step.",
-      unknown:
-        "Available text does not establish whether there is a substantive contribution.",
+      true: "The company is the author or issuer of the announcement.",
+      false:
+        "A journalist, analyst, law firm, rating agency, another company or an aggregator is the author.",
     },
   },
   temporal: {
     type: "choice",
     instructions:
-      "Is the BUSINESS information current at `asOf`? Use dates within the text and publication date. A recent analysis of older data with a new current implication can be current. A future action announced now can be current. A reprint of old results with no new interpretation is historical. Do not mistake boilerplate forward-looking warnings or prior-year comparisons for the development date.",
+      "Is the development `article` reports current at `asOf`? Day counts in `article.dateFacts` were computed in code; rely on them rather than comparing dates yourself. A recent article about a recent or newly announced event is current. A months-old document with nothing new is historical.",
     criteria: {
-      current:
-        "Current disclosure, development or new analysis as of the supplied evaluation date.",
+      current: "A current disclosure, development or new analysis.",
       historical:
-        "Only an old event or historical release recirculated without new relevance.",
-      unknown: "Insufficient evidence to date the information.",
+        "Only an old event or document recirculated without new relevance.",
+      unknown: "The available evidence does not establish when it happened.",
     },
   },
 } as const;

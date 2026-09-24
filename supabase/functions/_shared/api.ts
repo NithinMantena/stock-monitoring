@@ -18,7 +18,7 @@ import {
   markdownExport,
   parseInvestmentMarkdown,
 } from "./importer.ts";
-import { hash, safeLink } from "./engine.ts";
+import { chicagoParts, hash, safeLink } from "./engine.ts";
 import { companyNewsUrl, isDefaultNewsFeed } from "./news.ts";
 import { configuration, validateFeedUrl, type Env } from "./providers.ts";
 import {
@@ -37,6 +37,7 @@ import {
 } from "./news-batch.ts";
 import {
   digestPreview,
+  sendRunEmail,
   processArticle,
   runMonitor,
   rescreenNews,
@@ -548,9 +549,9 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         id: z.uuid(),
         companyIds: z.array(z.string().min(1).max(100)).min(1).max(1000),
         label: z.string().trim().min(1).max(300),
-        lookbackDays: z
-          .union([z.literal(1), z.literal(7), z.literal(30)])
-          .default(7),
+        // A manual screen's scope: days searched and articles kept per day.
+        lookbackDays: z.number().int().min(1).max(30).default(7),
+        articleLimit: z.number().int().min(1).max(20).default(10),
       })
       .parse(await c.req.json());
     return c.json(await startNewsBatch(store, input));
@@ -589,6 +590,22 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     return c.json(doc.data);
   });
   api.get("/digest", async (c) => c.json(await digestPreview(store)));
+  // Emails the developments found by today's most recent screen (manual or scheduled).
+  api.post("/digest/latest-run", async (c) => {
+    const now = new Date();
+    const today = chicagoParts(now).date;
+    const runs = (
+      await Promise.all([
+        readBatchSummary(store, "latest", { warnings: false }),
+        readBatchSummary(store, "scheduled", { warnings: false }),
+      ])
+    )
+      .filter((r) => r && chicagoParts(new Date(r.createdAt)).date === today)
+      .sort((a, b) => b!.createdAt.localeCompare(a!.createdAt));
+    if (!runs[0])
+      return c.json({ error: "No news screen has run today." }, 404);
+    return c.json(await sendRunEmail(store, env, runs[0], now));
+  });
   api.post("/import/preview", async (c) => {
     const input = z
       .object({ source: z.string().min(1).max(2000000) })

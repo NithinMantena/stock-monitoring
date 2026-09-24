@@ -24,6 +24,7 @@ import {
   fetchQuotes,
   type Article,
   type Env,
+  type Judgment,
 } from "./providers.ts";
 import {
   enrichArticle,
@@ -33,6 +34,7 @@ import {
 } from "./article-content.ts";
 import {
   SCREENING_VERSION,
+  LEGACY_SCREENING_VERSION,
   articleAgeDays,
   digestImportance,
   excludedSource,
@@ -41,6 +43,7 @@ import {
   type NewsAssessment,
 } from "./screening-policy.ts";
 import { ThrottledError } from "./fetch-policy.ts";
+import { hasReadableText } from "./news-screening.ts";
 
 // An insert-only write already refuses an existing record; no separate read needed.
 export async function addEvent(store: Store, event: DeskEvent) {
@@ -85,8 +88,8 @@ export interface ArticleOptions {
   assumeNew?: boolean;
   // Recent company news, shared across a run's articles and kept current here.
   history?: DeskEvent[];
-  // Record a throttled read as unavailable instead of deferring the article.
-  throttleOk?: boolean;
+  // Judge from what is already stored; never fetch the article again (rescreens).
+  noFetch?: boolean;
 }
 export async function processArticle(
   c: Company,
@@ -177,92 +180,137 @@ async function processUnlockedArticle(
       };
       event.priority = "suppressed";
     } else {
-      article = await enrichArticle(c, article, env, store, {
-        throttleOk: options.throttleOk,
-      });
-      event.url = article.url;
-      event.publishedAt = article.publishedAt || event.publishedAt;
-      event.rawText = article.text;
-      event.body = article.text.slice(0, 1000);
-      event.classification = {
-        source: article.source,
-        official: article.official,
+      const history = (
+        options.history || (await companyHistory(store, c.id))
+      ).filter(
+        (e) =>
+          e.kind === "news" &&
+          e.id !== id &&
+          (e.screening?.version === SCREENING_VERSION ||
+            e.screening?.version === LEGACY_SCREENING_VERSION),
+      );
+      const terms = new Set(
+        article.title.toLowerCase().match(/[a-z0-9]{4,}/g) || [],
+      );
+      const overlap = (e: DeskEvent) =>
+        [
+          ...new Set(
+            `${e.title} ${e.evidence || ""}`
+              .toLowerCase()
+              .match(/[a-z0-9]{4,}/g) || [],
+          ),
+        ].filter((t) => terms.has(t)).length;
+      // The same article reached under another feed ID is not "other coverage".
+      const sameArticle = (e: DeskEvent) =>
+        !!article.url &&
+        canonicalUrl(e.url) === canonicalUrl(article.url) &&
+        e.title === article.title;
+      // Up to four earlier surfaced articles that may report the same
+      // development, so repeated coverage (e.g. of one earnings release) joins
+      // one development instead of becoming separate cards.
+      const surfaced = (e: DeskEvent) =>
+        e.screening?.disposition === "relevant" ||
+        e.screening?.disposition === "uncertain" ||
+        e.screening?.articleRole === "coverage_only";
+      const recent = history
+        .map((e) => ({ e, overlap: overlap(e) }))
+        .filter(
+          (item) =>
+            item.overlap >= 1 && surfaced(item.e) && !sameArticle(item.e),
+        )
+        .sort(
+          (a, b) =>
+            b.overlap - a.overlap ||
+            b.e.discoveredAt.localeCompare(a.e.discoveredAt),
+        )
+        .slice(0, 4)
+        .map((item) => item.e);
+      // A direct link (company site, SEC, a configured feed) costs Google
+      // nothing, so it is read before judging. A Google link is judged from its
+      // headline first and opened once, only if the headline has not ruled it
+      // out or the development may be major. A refused read changes nothing else.
+      let googleLink = false;
+      try {
+        googleLink = new URL(article.url).hostname === "news.google.com";
+      } catch {
+        /* no link */
+      }
+      const read = async () => {
+        article = await enrichArticle(c, article, env, store);
+        event.url = article.url;
+        event.publishedAt = article.publishedAt || event.publishedAt;
+        event.classification = {
+          source: article.source,
+          official: article.official,
+        };
+        if (!hasReadableText(article)) return false;
+        event.rawText = article.text;
+        event.body = article.text.slice(0, 1000);
+        return true;
       };
-      if (excludedSource(article.source, article.url, c.excludedNewsSources)) {
+      if (
+        !hasReadableText(article) &&
+        article.url &&
+        !options.noFetch &&
+        !googleLink
+      )
+        await read();
+      let result: Judgment | undefined;
+      let note = "";
+      if (!hasReadableText(article)) {
+        // 1. Headline pass: everything known without the article text.
+        result = await classifyArticle(c, article, env, store, recent);
+        const worthOpening =
+          result.screening.disposition !== "suppressed" ||
+          (result.screening.judgment?.meaningful ?? 0) >= 0.5;
+        if (googleLink && !options.noFetch && worthOpening) {
+          if (await read()) result = undefined;
+          else
+            note =
+              article.retrievalNote ||
+              "Article text unavailable; screened from the headline.";
+        } else
+          note = options.noFetch
+            ? "Re-screened from the stored headline; the article was not fetched again."
+            : googleLink
+              ? "Screened out from the headline; the article was not opened."
+              : article.url
+                ? article.retrievalNote ||
+                  "Article text unavailable; screened from the headline."
+                : "No article link; screened from the headline.";
+      }
+      const excludedAfterRead = excludedSource(
+        article.source,
+        article.url,
+        c.excludedNewsSources,
+      );
+      // 2. With text: the same questions, the text as extra evidence.
+      if (!result && !excludedAfterRead)
+        result = await classifyArticle(c, article, env, store, recent);
+      if (result && note) result.screening.retrievalNote = note;
+      if (excludedAfterRead) {
         event.screening = {
           ...baseAssessment,
           disposition: "suppressed",
           reason: "Source excluded by your news preferences.",
+          reasonCode: "explicit_exclusion",
+          articleRole: "rejected",
+          development: { status: "irrelevant" },
           sourceUrl: article.url,
         };
         event.priority = "suppressed";
-      } else {
-        const documentHash = await hash(
-          JSON.stringify([
-            article.title,
-            article.text,
-            article.publishedAt,
-            article.official,
-            article.contentDepth,
-          ]),
-        );
-        const history = (
-          options.history || (await companyHistory(store, c.id))
-        ).filter(
-            (e) =>
-              e.kind === "news" &&
-              e.id !== id &&
-              e.screening?.version === SCREENING_VERSION,
-          );
-        const terms = new Set(
-          article.title.toLowerCase().match(/[a-z0-9]{4,}/g) || [],
-        );
-        const overlap = (e: DeskEvent) =>
-          [
-            ...new Set(
-              `${e.title} ${e.evidence || ""}`
-                .toLowerCase()
-                .match(/[a-z0-9]{4,}/g) || [],
-            ),
-          ].filter((t) => terms.has(t)).length;
-        const recent = history
-          .map((e) => ({ e, overlap: overlap(e) }))
-          .filter(
-            (item) =>
-              item.overlap >= 2 &&
-              item.e.screening?.documentHash !== documentHash,
-          )
-          .sort(
-            (a, b) =>
-              b.overlap - a.overlap ||
-              b.e.discoveredAt.localeCompare(a.e.discoveredAt),
-          )
-          .slice(0, 3)
-          .map((item) => item.e);
-        // Compare visible primary evidence; raw inference caching includes the comparison hash.
-        const reference = recent.find((e) => e.screening?.primary);
-        if (reference) {
-          const full = (await store.get<DeskEvent>("event", reference.id))
-            ?.data;
-          if (full?.rawText)
-            article.primaryReference = {
-              id: full.id,
-              url: full.url,
-              title: full.title,
-              text: full.rawText,
-              publishedAt: full.publishedAt,
-            };
-        }
-        let result = await classifyArticle(c, article, env, store, recent);
-        // One alternate primary document, never an unbounded recursive search.
+      } else if (result) {
+        // The company's own document is the best lead for a development. One
+        // alternate primary document, never an unbounded recursive search.
         if (
           !options.preferredLookup &&
-          !article.official &&
-          env.TYPESAFE_API_KEY &&
+          !options.noFetch &&
+          !result.screening.primary &&
           baseAssessment.attempts === 1 &&
           primaryUrls(c).length &&
-          (result.screening.articleRole === "coverage_only" ||
-            result.screening.reasonCode === "missing_text")
+          ["news_report", "coverage_only"].includes(
+            result.screening.articleRole || "",
+          )
         ) {
           try {
             const lookupKey = `${c.id}-${new Date().toISOString().slice(0, 10)}-${c.newsRevision}`;
@@ -294,27 +342,16 @@ async function processUnlockedArticle(
               const preferred = await processArticle(c, alternate, store, env, {
                 preferredLookup: true,
                 history: options.history,
-                throttleOk: options.throttleOk,
               });
-              if (
-                preferred.rawText &&
-                preferred.screening?.articleRole === "primary_reading"
-              ) {
-                article.primaryReference = {
-                  id: preferred.id,
-                  url: preferred.url,
-                  title: preferred.title,
-                  text: preferred.rawText,
-                  publishedAt: preferred.publishedAt,
-                };
+              if (preferred.screening?.articleRole === "primary_reading") {
                 recent.unshift(preferred);
-                recent.splice(3);
+                recent.splice(4);
                 result = await classifyArticle(c, article, env, store, recent);
               }
             }
           } catch {
             result.screening.retrievalNote +=
-              " Preferred-source lookup did not establish a readable matching primary document.";
+              " The company's own matching document could not be established.";
           }
         }
         event.classification = {
@@ -330,37 +367,15 @@ async function processUnlockedArticle(
         event.evidence = result.evidence;
         if (result.evidence) event.body = result.evidence;
         event.matches = result.matches.filter((x) => x.relevance >= 0.7);
+        // Several reports of one development stay together: they share a cluster,
+        // and the grouped view leads with the best source (screeningRank).
         const match = result.screening.comparisons
-          ?.filter((x) => x.relation !== "unrelated" && x.probability >= 0.85)
+          ?.filter((x) => x.relation === "same" && x.probability >= 0.7)
           .sort((a, b) => b.probability - a.probability)[0];
         const matched = recent.find((e) => e.id === match?.id);
-        if (match && matched) {
-          if (match.relation === "update")
-            event.relatedEventId = matched.clusterId || matched.id;
-          else {
-            event.clusterId = matched.clusterId || matched.id;
-            if (
-              match.relation === "duplicate" &&
-              !event.screening.primary &&
-              matched.screening?.disposition === "relevant"
-            ) {
-              event.screening.coverageDuplicateOf = matched.id;
-              event.screening = currentAssessment(event)!;
-            }
-            if (
-              matched.screening?.articleRole === "primary_reading" &&
-              event.screening.articleRole === "coverage_only"
-            ) {
-              event.screening.needsPreferredSource = false;
-              event.screening.preferredSourceId = matched.id;
-              event.screening.reason =
-                "Relevant development already covered by a primary document; this article adds no supported analysis.";
-            }
-            // Group duplicates without discarding the only accessible account.
-            // groupNews chooses the best available source for the development.
-          }
-        }
+        if (matched) event.clusterId = matched.clusterId || matched.id;
         // Reused IR URLs must not collapse different reporting periods or updates.
+        const documentHash = result.screening.documentHash;
         const exact = history.find(
           (e) =>
             article.url &&
@@ -370,8 +385,7 @@ async function processUnlockedArticle(
             !!article.publishedAt &&
             e.publishedAt === article.publishedAt,
         );
-        if (exact && match?.relation !== "update")
-          event.clusterId = exact.clusterId || exact.id;
+        if (exact) event.clusterId = exact.clusterId || exact.id;
         event.priority = newsPriority({
           ...result,
           screening: event.screening,
@@ -410,18 +424,6 @@ async function processUnlockedArticle(
           : undefined,
     };
   }
-  if (
-    event.screening?.disposition === "uncertain" &&
-    [
-      "missing_text",
-      "extraction_mismatch",
-      "incomplete_document",
-      "processing_failed",
-    ].includes(event.screening.reasonCode || "") &&
-    !event.screening.retryAfter &&
-    (event.screening.attempts || 0) < 3
-  )
-    event.screening.retryAfter = new Date(Date.now() + 86400000).toISOString();
   if (existing) {
     const fresh = (await store.get<DeskEvent>("event", id))!;
     const updated = {
@@ -537,7 +539,7 @@ export async function rescreenNews(
         },
         store,
         env,
-        { reprocess: true, existingId: e.id },
+        { reprocess: true, existingId: e.id, noFetch: true },
       );
       processed++;
     }
@@ -900,7 +902,8 @@ const escapeHtml = (s: string) =>
   );
 export async function dailySnapshot(store: Store, now = new Date()) {
   const date = chicagoParts(now).date;
-  if (await store.get("backup", date, { fields: [] })) return { created: false };
+  if (await store.get("backup", date, { fields: [] }))
+    return { created: false };
   const records = (
     await Promise.all([
       store.list<Company>("company", { summary: true }),
@@ -943,7 +946,9 @@ async function recentDevelopments(store: Store, since: string, until: string) {
       : d.id;
   const recent = new Set(
     index
-      .filter((d) => d.data.discoveredAt > since && d.data.discoveredAt <= until)
+      .filter(
+        (d) => d.data.discoveredAt > since && d.data.discoveredAt <= until,
+      )
       .map(key),
   );
   const ids = index.filter((d) => recent.has(key(d))).map((d) => d.id);
@@ -954,24 +959,35 @@ async function recentDevelopments(store: Store, since: string, until: string) {
       a.id.localeCompare(b.id),
   );
 }
-export async function digestPreview(store: Store, now = new Date()) {
+// `window` limits the digest to developments found in one period, e.g. one
+// news run (the "email this screen" button); otherwise it covers everything
+// since the last delivered digest.
+export async function digestPreview(
+  store: Store,
+  now = new Date(),
+  window?: { since: string; until?: string; title?: string },
+) {
   const companies = await store.list<Company>("company", { summary: true });
   const names = new Map(companies.map((c) => [c.id, c.data.name]));
-  const previous = (
-    await store.list<{ deliveredAt?: string }>("digest", {
-      fields: ["deliveredAt"],
-    })
-  )
-    .filter((d) => d.data.deliveredAt)
-    .sort((a, b) => b.data.deliveredAt!.localeCompare(a.data.deliveredAt!))[0];
+  const previous = window
+    ? undefined
+    : (
+        await store.list<{ deliveredAt?: string }>("digest", {
+          fields: ["deliveredAt"],
+        })
+      )
+        .filter((d) => d.data.deliveredAt)
+        .sort((a, b) =>
+          b.data.deliveredAt!.localeCompare(a.data.deliveredAt!),
+        )[0];
   const since =
+    window?.since ||
     previous?.data.deliveredAt ||
     new Date(now.getTime() - 86400000).toISOString();
-  const eligible = (
-    await recentDevelopments(store, since, now.toISOString())
-  ).filter(
+  const until = window?.until || now.toISOString();
+  const eligible = (await recentDevelopments(store, since, until)).filter(
     ({ data: e }) =>
-      e.discoveredAt <= now.toISOString() &&
+      e.discoveredAt <= until &&
       (e.kind === "health" ||
         newsBucket(e) === "relevant" ||
         (newsBucket(e) === "uncertain" && e.screening?.possibleMajor)),
@@ -1004,9 +1020,10 @@ export async function digestPreview(store: Store, now = new Date()) {
   );
   const date = chicagoParts(now).date;
   const majors = featured.filter((e) => e.priority === "major").length;
+  const prefix = window?.title ? `Research Desk · ${window.title}` : "Research Desk";
   const subject = developments.length
-    ? `Research Desk · ${date} · ${developments.length} development${developments.length === 1 ? "" : "s"}${majors ? ` · ${majors} important` : ""}`
-    : `Research Desk · ${date} · nothing new`;
+    ? `${prefix} · ${date} · ${developments.length} development${developments.length === 1 ? "" : "s"}${majors ? ` · ${majors} important` : ""}`
+    : `${prefix} · ${date} · nothing new`;
 
   const company = (e: (typeof featured)[number]) =>
     names.get(e.companyId) || "Company";
@@ -1083,6 +1100,7 @@ ${e.coverage.length ? `<div style="font-size:12px;color:#666;margin-top:4px">Als
     `<h2 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#666;border-bottom:1px solid #e5e5e5;padding-bottom:6px;margin:28px 0 14px">${escapeHtml(title)}</h2>${body}`;
   const html = `<div style="max-width:640px;margin:0 auto;padding:24px;font:15px/1.6 -apple-system,system-ui,'Segoe UI',sans-serif;color:#222">
 <div style="font-size:20px;font-weight:700">Research Desk</div>
+${window?.title ? `<div style="font-size:14px;color:#444">${escapeHtml(window.title)}</div>` : ""}
 <div style="font-size:14px;color:#222;margin-top:2px">${escapeHtml(
     developments.length
       ? `${developments.length} development${developments.length === 1 ? "" : "s"}${majors ? `, ${majors} important` : ""}`
@@ -1145,6 +1163,66 @@ ${
     generatedAt: now.toISOString(),
   };
 }
+async function deliverEmail(
+  env: Env,
+  email: { subject: string; text: string; html: string },
+  idempotencyKey: string,
+) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify({
+      from: env.DIGEST_FROM,
+      to: [env.DIGEST_TO || "nithin@mantena.com"],
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    }),
+  });
+  if (!response.ok)
+    throw new Error(`Email delivery returned HTTP ${response.status}.`);
+  return (await response.json()) as { id?: string };
+}
+
+// The "email this screen" button: developments found by one news run.
+export async function sendRunEmail(
+  store: Store,
+  env: Env,
+  run: {
+    id: string;
+    label: string;
+    status: string;
+    createdAt: string;
+    finishedAt?: string;
+  },
+  now = new Date(),
+) {
+  if (!configuration(env).email)
+    throw new Error("Email delivery is not configured on the server.");
+  const preview = await digestPreview(store, now, {
+    since: run.createdAt,
+    until: run.finishedAt || now.toISOString(),
+    title: `${run.label}${run.status === "running" ? " (still running)" : ""}`,
+  });
+  // A key per run and minute: a double click sends once; a later click resends.
+  const receipt = await deliverEmail(
+    env,
+    preview,
+    `research-desk-run-${run.id}-${now.toISOString().slice(0, 16)}`,
+  );
+  return {
+    sent: true,
+    subject: preview.subject,
+    developments: preview.count,
+    providerId: receipt.id,
+  };
+}
+
 export async function sendDueDigest(store: Store, env: Env, now = new Date()) {
   const settings =
     (await store.get<Settings>("settings", "main"))?.data || defaultSettings;
@@ -1195,25 +1273,11 @@ export async function sendDueDigest(store: Store, env: Env, now = new Date()) {
         0,
       ));
     const saved = (pending.data as any).preview || preview;
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      signal: AbortSignal.timeout(15000),
-      headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": `research-desk-${env.MONITOR_OWNER_ID || "local"}-${key}`,
-      },
-      body: JSON.stringify({
-        from: env.DIGEST_FROM,
-        to: [env.DIGEST_TO || "nithin@mantena.com"],
-        subject: saved.subject,
-        text: saved.text,
-        html: saved.html,
-      }),
-    });
-    if (!response.ok)
-      throw new Error(`Email delivery returned HTTP ${response.status}.`);
-    const receipt = await response.json();
+    const receipt = await deliverEmail(
+      env,
+      saved,
+      `research-desk-${env.MONITOR_OWNER_ID || "local"}-${key}`,
+    );
     await store.put(
       "digest",
       key,

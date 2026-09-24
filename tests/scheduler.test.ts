@@ -12,7 +12,7 @@ import {
   type ScheduleState,
 } from "../supabase/functions/_shared/scheduler.ts";
 import { SCREENING_VERSION } from "../supabase/functions/_shared/screening-policy.ts";
-import { assessment } from "./screening-fixtures.ts";
+import { assessment, modelResponse } from "./screening-fixtures.ts";
 
 const stores: LocalStore[] = [];
 afterEach(() => {
@@ -60,9 +60,9 @@ function stubGoogle(at: string) {
   vi.stubGlobal("fetch", fetcher);
   return fetcher;
 }
-async function tickAt(s: Store, iso: string) {
+async function tickAt(s: Store, iso: string, extra: Record<string, string> = {}) {
   vi.setSystemTime(Date.parse(iso));
-  return tick(s, env, { now: new Date(iso), milliseconds: 60000 });
+  return tick(s, { ...env, ...extra }, { now: new Date(iso), milliseconds: 60000 });
 }
 async function runUntilIdle(s: Store, iso: string) {
   for (let i = 0; i < 20; i++) {
@@ -169,13 +169,17 @@ describe("nightly news schedule", () => {
     expect(c.lastNewsCheck).toBe("2026-01-01T00:00:00Z");
   });
 
-  it("pauses re-screens for 30 minutes when Google rate limits them", async () => {
+  it("re-screens from stored data without contacting Google", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { s, daily } = await desk();
-    const fetcher = vi.fn(async () => new Response("busy", { status: 503 }));
+    const fetcher = vi.fn(async (url: string, init?: any) =>
+      String(url).includes("api.typesafe.ai")
+        ? new Response(JSON.stringify(modelResponse({}, JSON.parse(init.body))))
+        : new Response("busy", { status: 503 }),
+    );
     vi.stubGlobal("fetch", fetcher);
     const e: DeskEvent = {
-      id: `news-${daily[0].id}-throttled`,
+      id: `news-${daily[0].id}-old`,
       companyId: daily[0].id,
       kind: "news",
       title: "Old item",
@@ -185,19 +189,16 @@ describe("nightly news schedule", () => {
       discoveredAt: "2026-09-20T00:00:00Z",
       reviewed: false,
       priority: "possible",
-      screening: { ...assessment(), version: "retired-version" },
+      screening: { ...assessment({ contentDepth: "snippet" }), version: "retired-version" },
     };
     await s.put("event", e.id, e, 0);
-    await tickAt(s, TUE_2PM);
-    const waiting = (await state(s)).rescreenBackoffUntil!;
-    expect(Date.parse(waiting) - Date.parse(TUE_2PM)).toBe(30 * 60000);
-    const calls = fetcher.mock.calls.length;
-    await tickAt(s, "2026-09-22T19:10:00Z");
-    expect(fetcher.mock.calls.length).toBe(calls);
-    // The unread item is retried later, not stored as unreadable.
-    expect((await s.get<DeskEvent>("event", e.id))!.data.screening?.version).toBe(
-      "retired-version",
-    );
+    await tickAt(s, TUE_2PM, { TYPESAFE_API_KEY: "test" });
+    expect(
+      fetcher.mock.calls.filter((c) => String(c[0]).includes("google.com")),
+    ).toHaveLength(0);
+    const after = (await s.get<DeskEvent>("event", e.id))!.data.screening!;
+    expect(after.version).toBe("fundamental-v3");
+    expect(after.retrievalNote).toContain("not fetched again");
   });
   it("queues re-screens once per night and works through the queue", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
