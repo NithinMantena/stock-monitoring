@@ -731,11 +731,8 @@ export async function runMonitor(
         if (options.force || due(c, c.lastQuoteCheck)) {
           try {
             if (c.provider === "none") {
-              await healthEvent(
-                store,
-                c,
-                "No quote source configured. Prices and valuation alerts are not being monitored.",
-              );
+              // Having no price source is a setting, not a failure: it is shown
+              // in the digest's coverage gaps rather than as a nightly alert.
               doc = await updateFreshCompany(store, c.id, (latest) =>
                 store.put(
                   "company",

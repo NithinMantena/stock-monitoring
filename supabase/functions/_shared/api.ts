@@ -721,6 +721,40 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     });
   });
   api.get("/export", async (c) => {
+    // ?scope=essential (weekly off-site backups): everything you wrote, plus only
+    // the articles you acted on, without stored text or model internals. Other
+    // articles can be screened again; this keeps backups small and restorable.
+    if (c.req.query("scope") === "essential") {
+      const kinds = ["company", "revision", "settings", "import"];
+      const index = await store.list<DeskEvent>("event", {
+        fields: ["saved", "feedback", "reviewed"],
+      });
+      const ids = index
+        .filter((d) => d.data.saved || d.data.feedback || d.data.reviewed)
+        .map((d) => d.id);
+      const events = (await store.list<DeskEvent>("event", { ids })).map(
+        (d) => {
+          const data: any = structuredClone(d.data);
+          delete data.rawText;
+          if (data.screening) {
+            delete data.screening.rawAnswers;
+            delete data.screening.probabilities;
+            delete data.screening.comparisons;
+          }
+          return { ...d, data };
+        },
+      );
+      return c.json({
+        format: "research-desk",
+        version: 1,
+        scope: "essential",
+        exportedAt: new Date().toISOString(),
+        records: [
+          ...(await Promise.all(kinds.map((k) => store.list(k)))).flat(),
+          ...events,
+        ],
+      });
+    }
     const kinds = ["company", "event", "revision", "settings", "import"];
     const records = (await Promise.all(kinds.map((k) => store.list(k)))).flat();
     return c.json({

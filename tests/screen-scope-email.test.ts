@@ -129,3 +129,60 @@ describe("email the latest screen", () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe("essential export for off-site backups", () => {
+  it("keeps research and acted-on articles, without stored text or model internals", async () => {
+    const s = store(),
+      c = newCompany("Acme");
+    await s.put("company", c.id, c, 0);
+    const acted = {
+      ...news("acted", c.id, "2026-09-23T10:00:00Z"),
+      rawText: "Full article text",
+      screening: {
+        version: "fundamental-v3",
+        at: "2026-09-23T10:00:00Z",
+        disposition: "relevant",
+        reason: "news_report",
+        category: "earnings",
+        identity: 0.95,
+        materiality: 3,
+        quality: 2,
+        addedValue: 2,
+        evidenceSufficiency: 0.9,
+        primary: false,
+        contentDepth: "snippet",
+        charactersRead: 0,
+        availableCharacters: 0,
+        retrievalNote: "",
+        possibleMajor: false,
+        sourceUrl: "https://example.com/acted",
+        comparisons: [{ id: "other", relation: "same", probability: 0.9 }],
+        rawAnswers: { a: 1 },
+        probabilities: { a: 0.5 },
+      } as any,
+    };
+    await s.put("event", "acted", acted, 0);
+    await s.put(
+      "event",
+      "ignored",
+      { ...news("ignored", c.id, "2026-09-23T10:00:00Z"), feedback: undefined },
+      0,
+    );
+    const app = createApi(s, {}, "local");
+    const backup = await (await app.request("/export?scope=essential")).json();
+    const events = backup.records.filter((r: any) => r.kind === "event");
+    expect(backup.records.some((r: any) => r.kind === "company")).toBe(true);
+    expect(events.map((r: any) => r.id)).toEqual(["acted"]);
+    expect(events[0].data.rawText).toBeUndefined();
+    expect(events[0].data.screening.reason).toBe("news_report");
+    expect(events[0].data.screening.rawAnswers).toBeUndefined();
+    expect(events[0].data.screening.probabilities).toBeUndefined();
+    expect(events[0].data.screening.comparisons).toBeUndefined();
+    const restore = await app.request("/restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(backup),
+    });
+    expect(restore.status, await restore.clone().text()).toBe(200);
+  });
+});

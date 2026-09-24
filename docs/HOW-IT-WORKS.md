@@ -451,6 +451,7 @@ The database holds everything as **records**. Each has a **kind** (what sort of 
 
 - **Daily research snapshot** (automatic, kept 30 days): companies, notes, rules, settings and original import files. It does not include articles.
 - **Full export** (on demand, from Import & backup): everything, including all articles and note history. Keep one somewhere outside the project from time to time. The daily snapshots live inside the same project, so they would not survive the project itself being deleted.
+- **Weekly off-site backup** (automatic, Sundays): a GitHub Action in the private repository `NithinMantena/research-desk-backups` downloads the *essential* export and commits it gzipped, keeping the newest 26 (about six months). The essential export has every company, note, rule, feed, setting, import and note revision, plus every article you saved, reviewed or marked useful/noise. Stored article text and model internals are left out, and so are untouched screener results, which the next news run recreates. It is about 0.75 MB before compression, which costs about 3 MB of egress a month. It reads with a `backup:read`-only token that must be renewed yearly. The repository README explains how to restore.
 - **Restore** adds missing records and never overwrites existing ones.
 
 ### How much space it uses
@@ -535,7 +536,7 @@ Several things can happen at once: the timer ringing, you editing a company, an 
 | Many cards say "screened from the headline" | Google refused the article lookup, or the publisher blocks automated reads. This is expected and changes little about where articles go. | Nothing to do. "Read available text" tries one article on demand. Primary sources (SEC CIK, investor-relations feed) give direct, readable documents. |
 | The Scheduled news runs panel says **"resuming around …"** | Google asked the server to slow down; it is waiting as it should. | Nothing to do. It resumes automatically. |
 | A run shows **warnings** | A source failed after retries, for example an investor-relations page blocking automated reads (HTTP 403), or a search refused five times. | Expand the warnings in the panel. A permanently failing source can be removed or replaced in the company's Monitoring tab. |
-| **"Monitoring needs attention"** items in the inbox or digest | A company's source failed during a run, or it has no price source. | The message names the source. See the company's Monitoring tab. |
+| **"Monitoring needs attention"** items in the inbox or digest | A company's source failed during a run. (Companies with no price source are simply skipped; they no longer raise an alert every night.) | The message names the source. See the company's Monitoring tab. |
 | A company never gets any news | Its search wording finds nothing, often a spelling difference (the "Deckers Outdoors" versus "Deckers Outdoor" case), or a name shared with something else. | Monitoring tab → Company news search. Try the search at news.google.com first. |
 | No digest this morning | The digest is off, email delivery is not configured, or it already went out earlier. | Settings & digest → preview. The `digest` record shows what was sent and when. |
 | Items marked **"TypeSafe budget unavailable or reached"** | The monthly AI ceiling was reached. | They wait, labelled, and are re-screened once the new month starts. Usage is shown in Settings. |

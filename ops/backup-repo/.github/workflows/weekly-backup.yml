@@ -1,0 +1,60 @@
+name: Weekly Research Desk backup
+
+on:
+  schedule:
+    - cron: "17 6 * * 0" # Sundays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download essential export
+        env:
+          DESK_BACKUP_TOKEN: ${{ secrets.DESK_BACKUP_TOKEN }}
+          DESK_API: https://tcfricxifanwwzgxgexj.supabase.co/functions/v1/desk/v1
+        run: |
+          set -euo pipefail
+          if [ -z "${DESK_BACKUP_TOKEN}" ]; then
+            echo "::error::DESK_BACKUP_TOKEN secret is not set."; exit 1
+          fi
+          status=$(curl -sS --retry 3 --retry-all-errors --max-time 120 \
+            -H "Authorization: Bearer ${DESK_BACKUP_TOKEN}" \
+            -o export.json -w '%{http_code}' \
+            "${DESK_API}/export?scope=essential")
+          if [ "$status" != "200" ]; then
+            echo "::error::Export returned HTTP $status: $(head -c 300 export.json)"; exit 1
+          fi
+          # Refuse to save something that does not look like a real backup.
+          jq -e '.format == "research-desk"
+                 and .scope == "essential"
+                 and ([.records[] | select(.kind == "company")] | length) > 0
+                 and ([.records[] | select(.kind == "settings")] | length) == 1' export.json > /dev/null \
+            || { echo "::error::Export failed validation."; exit 1; }
+          jq -r '"records: \(.records | length) (companies \([.records[] | select(.kind == "company")] | length), events \([.records[] | select(.kind == "event")] | length))"' export.json
+
+      - name: Store and prune
+        run: |
+          set -euo pipefail
+          mkdir -p backups
+          name="backups/research-desk-$(date -u +%F).json.gz"
+          gzip -9 -n -c export.json > "$name"
+          rm export.json
+          # Keep the newest 26 weekly backups (about six months).
+          ls -1 backups/research-desk-*.json.gz | sort -r | tail -n +27 | xargs -r git rm -q --
+          git config user.name "research-desk-backup"
+          git config user.email "research-desk-backup@users.noreply.github.com"
+          git add backups
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -q -m "Backup $(date -u +%F)"
+          git push -q

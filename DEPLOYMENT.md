@@ -62,6 +62,8 @@ The scheduler is `research-desk-monitor`, installed through `scripts/prepare-sch
 
 Daily hosted research snapshots retain 30 days. Use **Import & backup → Download latest daily research snapshot** or a complete manual export. Restore adds missing IDs and preserves existing records; to recover a prior note on an existing company, use its note history. Always keep an off-project export before deleting or replacing the project. In-project snapshots do not protect against deletion of the entire Supabase project.
 
+The off-project copy is automatic: the private repository `NithinMantena/research-desk-backups` runs `.github/workflows/weekly-backup.yml` every Sunday at 06:17 UTC and on demand. It calls `GET /v1/export?scope=essential` with the `DESK_BACKUP_TOKEN` repository secret, an integration token with only the `backup:read` scope and a one-year expiry. It validates the result, then commits `backups/research-desk-YYYY-MM-DD.json.gz` and keeps the newest 26. The workflow source is mirrored in `ops/backup-repo/`. The essential scope contains companies, revisions, settings, imports and every saved, reviewed or feedback-marked article. Stored text and TypeSafe raw answers, probabilities and comparisons are removed. It restores through the normal Restore button. Never put backups in the public `stock-monitoring` repository.
+
 ## Sources consulted during implementation
 
 - [TypeSafe API](https://docs.typesafe.ai/api), [choice primitive](https://docs.typesafe.ai/primitives/choice), [evidence cookbook](https://docs.typesafe.ai/cookbooks/citation_check).
