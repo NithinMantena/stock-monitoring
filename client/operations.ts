@@ -40,6 +40,10 @@ const monitoring = CompanySchema.pick({
   cadence: true,
   newsQuery: true,
   businessScale: true,
+  sizeClass: true,
+  sizeSource: true,
+  marketCapUsd: true,
+  marketCapAsOf: true,
   businessContext: true,
   contextAsOf: true,
   contextSource: true,
@@ -126,6 +130,14 @@ export const operations: Operation[] = [
       ticker: z.string().max(50).optional(),
       status: CompanySchema.shape.status,
       ideaSource: z.string().max(2000).optional(),
+      sizeClass: CompanySchema.shape.sizeClass
+        .optional()
+        .describe("Size tier: micro, small, mid, large or mega."),
+      marketCapUsd: z
+        .number()
+        .positive()
+        .optional()
+        .describe("Market cap in US dollars; sets the size tier automatically."),
     },
     "research:write",
   ),

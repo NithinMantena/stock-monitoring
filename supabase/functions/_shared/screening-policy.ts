@@ -1,4 +1,5 @@
 import type { DeskEvent, Doc } from "./model.ts";
+import type { SizeSetting } from "./company-size.ts";
 import {
   decideFundamental,
   decideScreening,
@@ -54,6 +55,8 @@ export interface NewsAssessment extends Partial<
   retryAfter?: string;
   attempts?: number;
   contextRevision?: number;
+  // Company size tier at screening time; replays apply the tier's thresholds.
+  sizeClass?: SizeSetting;
   reportedResults?: boolean;
   timeliness?: number;
   staleContent?: boolean;
@@ -139,7 +142,10 @@ export function currentAssessment(
   const a = e.screening;
   if (!a || e.classification?.error) return a;
   if (a.version === SCREENING_VERSION && a.judgment)
-    return { ...a, ...decideScreening({ ...a, signals: a.judgment }) };
+    return {
+      ...a,
+      ...decideScreening({ ...a, signals: a.judgment, size: a.sizeClass }),
+    };
   if (a.version === LEGACY_SCREENING_VERSION && a.signals)
     return { ...a, ...decideFundamental({ ...a, signals: a.signals }) };
   if (a.version !== SCREENING_VERSION) return a;
@@ -261,7 +267,8 @@ export function excludedSource(
 export function decideNews(
   a: Omit<NewsAssessment, "disposition" | "reason">,
 ): Pick<NewsAssessment, "disposition" | "reason"> {
-  if (a.judgment) return decideScreening({ ...a, signals: a.judgment });
+  if (a.judgment)
+    return decideScreening({ ...a, signals: a.judgment, size: a.sizeClass });
   if (a.signals) return decideFundamental({ ...a, signals: a.signals });
   if (a.identity < 0.3)
     return {

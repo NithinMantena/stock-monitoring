@@ -1,3 +1,4 @@
+import { companySize, sizeGuidance } from "./company-size.ts";
 // Screening v3 (headline-first). One TypeSafe request judges an article from its
 // company, headline, publisher, snippet and date. When article text could be
 // read, the same questions are asked again with that text as extra evidence; the
@@ -127,7 +128,9 @@ export function buildScreeningRequest(
       name: c.name,
       ticker: c.ticker || "unknown",
       exchange: c.exchange || "unknown",
-      scale: c.businessScale,
+      officialName: c.officialName || c.name,
+      country: c.country || "unknown",
+      size: sizeGuidance(companySize(c), c.marketCapUsd),
       description: takeBytes(c.businessContext, 2200) || "not provided",
       thesis: takeBytes(c.thesis, 600) || "not provided",
     },
@@ -388,7 +391,8 @@ export async function screenArticle(
     evidence,
     screening: {
       ...assessment,
-      ...decideScreening({ identity, primary, signals }),
+      sizeClass: companySize(c),
+      ...decideScreening({ identity, primary, signals, size: companySize(c) }),
     },
     matches,
     model: String(raw.model || configuration(env).model),

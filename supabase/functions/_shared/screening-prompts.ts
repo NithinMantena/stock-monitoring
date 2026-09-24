@@ -3,7 +3,7 @@
 // was read, is extra evidence for the same questions. Tested in
 // research/typesafe-screening-2-2026-09-22 (identity criteria, purpose Choice,
 // issuer Noul and the cookbook-style evidence split).
-export const PROMPT_VERSION = "headline-first-3.0.0";
+export const PROMPT_VERSION = "headline-first-3.1.0";
 export const CORE_QUESTIONS = {
   identity: {
     type: "noul",
@@ -31,7 +31,7 @@ export const CORE_QUESTIONS = {
   significance: {
     type: "score",
     instructions:
-      "Rate the business development that `article` reports, for understanding this company's long-term economic value. Judge from the headline, publisher and snippet; use `article.text` only when it is present. Use company scale when it is supplied; when scale is unknown, judge the nature of the event and do not demote it merely because scale is unknown. Positive and negative developments count equally. Do not require a surprise or proof that an allegation is true.",
+      "Rate the business development that `article` reports, for understanding this company's long-term economic value. Judge from the headline, publisher and snippet; use `article.text` only when it is present. Judge significance relative to `company.size`: the same event can be level 3 for a micro cap and level 0-1 for a mega cap. For large and mega caps, product news, individual contracts or partnerships, regional launches, executive remarks, routine lawsuits and feature stories are level 0-1 unless they could move group-level revenue, profit or risk. When size is unknown, judge the nature of the event and do not demote it merely because size is unknown. Positive and negative developments count equally. Do not require a surprise or proof that an allegation is true.",
     criteria: [
       {
         summary:

@@ -1,0 +1,248 @@
+id,name,current_ticker,current_exchange,status,monitoring,archived,news_search_override,name_hint,exact_company_name,ticker,exchange,country,confidence,gemini_notes,google_finance_ticker,market_cap
+seed-f1a9bf75117e0483-line-1030,Accelerant Holdings,,,pass,auto,false,,,,Accelerant Holdings,ARX,NYSE,US,high,,NYSE:ARX,$3.50B
+seed-f1a9bf75117e0483-line-43,Accent group,,,inbox,auto,false,,Accent group (Australia screen),Accent Group Limited,AX1,ASX,AU,high,,ASX:AX1,$265.7M
+seed-f1a9bf75117e0483-line-1533,Acrow,,,pass,auto,false,,Acrow (experimental screener),Acrow Limited,ACF,ASX,AU,high,,ASX:ACF,$239.5M
+seed-f1a9bf75117e0483-line-966,Adobe,,,pass,auto,false,,Adobe (6/22/2026),Adobe Inc.,ADBE,NASDAQ,US,high,,NASDAQ:ADBE,$96.64B
+seed-f1a9bf75117e0483-line-570,AECI (SA),,,watchlist,auto,false,,,,AECI Limited,AFE,JSE,ZA,high,,JSE:AFE,$604.0M
+seed-f1a9bf75117e0483-line-662,Aena,,,watchlist,auto,false,,,,Aena S.M.E., S.A.,AENA,BME,ES,high,,BME:AENA,$42.28B
+seed-f1a9bf75117e0483-line-710,Age HS / SA,,,watchlist,auto,false,,,,AgeSA Hayat ve Emeklilik A.S.,AGESA,BIST,TR,high,,IST:AGESA,$1.25B
+seed-f1a9bf75117e0483-line-163,AIMIA,,,perpetual,paused,false,,,,Aimia Inc.,AIM,TSX,CA,high,,TSE:AIM,$176.3M
+seed-f1a9bf75117e0483-line-390,Aisan Industry,,,watchlist,auto,false,,Aisan Industry (8/24/2026),Aisan Industry Co., Ltd.,7283,TYO,JP,high,,TYO:7283,$917.2M
+seed-f1a9bf75117e0483-line-1472,Alarm.com,,,pass,auto,false,,[Alarm.com](,Alarm.com Holdings, Inc.,ALRM,NASDAQ,US,high,,NASDAQ:ALRM,$2.65B
+seed-f1a9bf75117e0483-line-666,Amazon,,,watchlist,auto,false,,,,Amazon.com, Inc.,AMZN,NASDAQ,US,high,,NASDAQ:AMZN,$2.69T
+d65fe4f4-f28f-4d14-8eaf-af412c1b00d3,American Coastal Insurance Company,ACIC,,owned,auto,false,,,,American Coastal Insurance Corporation,ACIC,NASDAQ,US,high,,NASDAQ:ACIC,$428.4M
+seed-f1a9bf75117e0483-line-33,American Integrity,,,inbox,auto,false,,,,American Integrity Insurance Group, Inc.,AII,NYSE,US,high,,NYSE:AII,$514.3M
+seed-f1a9bf75117e0483-line-1504,American Outdoor,,,pass,auto,false,,,,American Outdoor Brands, Inc.,AOUT,NASDAQ,US,high,,NASDAQ:AOUT,$212.4M
+seed-f1a9bf75117e0483-line-358,Amerisafe,,,watchlist,auto,false,,,,AMERISAFE, Inc.,AMSF,NASDAQ,US,high,,NASDAQ:AMSF,$456.9M
+seed-f1a9bf75117e0483-line-32,Applovin,,,pass,auto,false,,,,AppLovin Corporation,APP,NASDAQ,US,high,,NASDAQ:APP,$103.90B
+seed-f1a9bf75117e0483-line-1475,Arctic Paper,,,pass,auto,false,,,,Arctic Paper S.A.,ATC,WSE,PL,high,,WSE:ATC,$109.9M
+seed-f1a9bf75117e0483-line-136,Argent,,,perpetual,auto,false,,,,Argent Industrial Limited,ART,JSE,ZA,high,,JSE:ART,$118.3M
+seed-f1a9bf75117e0483-line-546,Armanino,,,watchlist,auto,false,,,,Armanino Foods of Distinction, Inc.,AMNF,OTCMKTS,US,high,,OTCMKTS:AMNF,$368.3M
+seed-f1a9bf75117e0483-line-697,ASBISC Enterprises Plc,,,watchlist,auto,false,,,,ASBISc Enterprises PLC,ASB,WSE,PL,high,,WSE:ASB,$2.52B
+seed-f1a9bf75117e0483-line-346,Auroora Yhtiöt (ISIN: FI4000586409),,,watchlist,auto,false,,,,Auroora Yhtiot Oyj,AUROO,Nasdaq Helsinki,FI,high,,HEL:AUROO,$122.6M
+seed-f1a9bf75117e0483-line-392,Auto Canada,,,watchlist,auto,false,,Auto Canada (8/24/2026),AutoCanada Inc.,ACQ,TSX,CA,high,,TSE:ACQ,$279.2M
+seed-f1a9bf75117e0483-line-102,Auto Partner,,,perpetual,auto,false,,,,Auto Partner S.A.,APR,WSE,PL,high,,WSE:APR,$930.8M
+seed-f1a9bf75117e0483-line-1663,AutohellasRF,,,pass,auto,false,,,,Autohellas Tourist and Trading S.A.,OTEP,ATHEX,GR,high,,ATHEX:OTEP,$580.0M
+seed-f1a9bf75117e0483-line-679,B&M European Value,,,watchlist,auto,false,,,,B&M European Value Retail S.A.,BME,LSE,GB,high,,LON:BME,$4.21B
+seed-f1a9bf75117e0483-line-1404,Baltic,,,pass,auto,false,,,,Baltic Classifieds Group PLC,BCG,LSE,GB,high,,LON:BCG,$1.98B
+seed-f1a9bf75117e0483-line-654,Bank of Georgia,,,watchlist,auto,false,,,,Bank of Georgia Group PLC,BGEO,LSE,GB,high,,LON:BGEO,$3.00B
+seed-f1a9bf75117e0483-line-824,BBW Build a Bear workshop,,,pass,auto,false,,BBW Build a Bear workshop (9/4/2026),Build-A-Bear Workshop, Inc.,BBW,NYSE,US,high,,NYSE:BBW,$482.0M
+seed-f1a9bf75117e0483-line-17,Berner,,,inbox,auto,false,,,,Christian Berner Tech Trade AB,CBTT-B,Nasdaq Stockholm,SE,medium,,STO:CBTT-B,$52.9M
+seed-f1a9bf75117e0483-line-397,Betamek Bhd,,,watchlist,auto,false,,Betamek Bhd (8/24/2026),Betamek Berhad,0263,KLSE,MY,high,,KLSE:0263,$49.4M
+seed-f1a9bf75117e0483-line-1499,Bidvest Group SA,,,pass,auto,false,,,,The Bidvest Group Limited,BVT,JSE,ZA,high,,JSE:BVT,$5.47B
+seed-f1a9bf75117e0483-line-668,Bigben Gaming,,,watchlist,auto,false,,,,Bigben Interactive SA,BIG,Euronext Paris,FR,high,,EPA:BIG,$61.5M
+seed-f1a9bf75117e0483-line-1497,BK Technologies Corp,,,pass,auto,false,,,,BK Technologies Corporation,BKTI,NYSE American,US,high,,NYSEAMERICAN:BKTI,$114.2M
+seed-f1a9bf75117e0483-line-569,BLU (SA),,,watchlist,auto,false,,,,Blue Label Telecoms Limited,BLU,JSE,ZA,high,,JSE:BLU,$232.2M
+seed-f1a9bf75117e0483-line-1606,BSA,,,pass,paused,false,,,,BSA Limited,BSA,ASX,AU,high,,ASX:BSA,$30.0M
+seed-f1a9bf75117e0483-line-31,Builders firstsource,,,inbox,auto,false,,,,Builders FirstSource, Inc.,BLDR,NYSE,US,high,,NYSE:BLDR,$19.45B
+seed-f1a9bf75117e0483-line-1507,Catana Group SA (french),,,pass,auto,false,,,,Catana Group SA,CATG,Euronext Paris,FR,high,,EPA:CATG,$148.5M
+seed-f1a9bf75117e0483-line-630,CCC Intelligent Solutions,,,watchlist,auto,false,,,,CCC Intelligent Solutions Holdings Inc.,CCCS,NASDAQ,US,high,,NASDAQ:CCCS,$7.18B
+seed-f1a9bf75117e0483-line-398,Central Automotive Products,,,watchlist,auto,false,,Central Automotive Products (8/24/2026),Central Automotive Products Ltd.,8117,TYO,JP,high,,TYO:8117,$552.0M
+seed-f1a9bf75117e0483-line-575,Chemed,,,watchlist,auto,false,,,,Chemed Corporation,CHE,NYSE,US,high,,NYSE:CHE,$8.14B
+seed-f1a9bf75117e0483-line-268,Churchill Downs (CHDN),,,perpetual,auto,false,,Churchill Downs (CHDN) (6/10/2025),Churchill Downs Incorporated,CHDN,NASDAQ,US,high,,NASDAQ:CHDN,$15.18B
+seed-f1a9bf75117e0483-line-1667,Claranova,,,pass,auto,false,,,,Claranova SE,CLA,Euronext Paris,FR,high,,EPA:CLA,$132.4M
+seed-f1a9bf75117e0483-line-673,Cogent Communications,,,watchlist,auto,false,,,,Cogent Communications Holdings, Inc.,CCOI,NASDAQ,US,high,,NASDAQ:CCOI,$3.82B
+seed-f1a9bf75117e0483-line-541,Conrad Industries,,,watchlist,auto,false,,,,Conrad Industries, Inc.,CNRD,OTCMKTS,US,high,,OTCMKTS:CNRD,$76.4M
+seed-f1a9bf75117e0483-line-1675,Cooper Standard,,,pass,auto,false,,,,Cooper-Standard Holdings Inc.,CPS,NYSE,US,high,,NYSE:CPS,$318.5M
+seed-f1a9bf75117e0483-line-912,Cosco,,,pass,auto,false,,Cosco (7/20/2026),COSCO SHIPPING Holdings Co., Ltd.,1919,HKG,HK,high,,HKG:1919,$23.44B
+seed-f1a9bf75117e0483-line-571,Cosco (philippines),,,watchlist,auto,false,,,,Cosco Capital, Inc.,COSCO,PSE,PH,high,,PSE:COSCO,$626.8M
+seed-f1a9bf75117e0483-line-1466,Crimson Wine Group,,,pass,auto,false,,,,Crimson Wine Group, Ltd.,CWGL,OTCMKTS,US,high,,OTCMKTS:CWGL,$114.8M
+seed-f1a9bf75117e0483-line-1121,Dadelo,,,pass,auto,false,,,,Dadelo S.A.,DAD,WSE,PL,high,,WSE:DAD,$42.7M
+seed-f1a9bf75117e0483-line-1163,Dbox Technologies,,,pass,auto,false,,,,D-BOX Technologies Inc.,DBO,TSX-V,CA,high,,CVE:DBO,$20.7M
+a8c524fb-283d-4c97-9b22-4d7239cb4247,Deckers Outdoor,DECK,,perpetual,auto,false,,Deckers,Deckers Outdoor Corporation,DECK,NYSE,US,high,,NYSE:DECK,$26.12B
+seed-f1a9bf75117e0483-line-1215,Dedicare (sweden),,,pass,auto,false,,,,Dedicare AB,DEDI,Nasdaq Stockholm,SE,high,,STO:DEDI,$51.4M
+seed-f1a9bf75117e0483-line-399,Delek Automotive,,,watchlist,auto,false,,Delek Automotive (8/24/2026),Delek Automotive Systems Ltd.,DLEKG,TASE,IL,high,,TLV:DLEKG,$573.0M
+seed-f1a9bf75117e0483-line-1512,Delfingen SA,,,pass,auto,false,,Delfingen SA (research),Delfingen Industry SA,ALDEL,Euronext Growth Paris,FR,high,,EPA:ALDEL,$77.7M
+seed-f1a9bf75117e0483-line-1616,DFV,,,pass,paused,false,,,,DFV Deutsche Familienversicherung AG,DFV,XETRA,DE,high,,FRA:DFV,$66.7M
+seed-f1a9bf75117e0483-line-469,Directa SIM Spa,,,watchlist,auto,false,,,,Directa SIM S.p.A.,DINT,Borsa Italiana,IT,high,,BIT:DINT,$83.4M
+seed-f1a9bf75117e0483-line-412,DNOW,,,watchlist,paused,false,,,,DNOW Inc.,DNOW,NYSE,US,high,,NYSE:DNOW,$1.52B
+seed-f1a9bf75117e0483-line-574,Dolby Laboratories,,,watchlist,auto,false,,,,Dolby Laboratories, Inc.,DLB,NYSE,US,high,,NYSE:DLB,$7.39B
+seed-f1a9bf75117e0483-line-1153,Dominos Dash PLC (Dominos China),,,pass,auto,false,,,,DPC Dash Ltd,1405,HKG,HK,high,,HKG:1405,$1.06B
+seed-f1a9bf75117e0483-line-573,Eagle Materials,,,watchlist,auto,false,,,,Eagle Materials Inc.,EXP,NYSE,US,high,,NYSE:EXP,$9.81B
+seed-f1a9bf75117e0483-line-582,ECM,,,watchlist,paused,false,,,,ECM Libra Group Berhad,ECML,KLSE,MY,medium,,KLSE:ECML,$25.2M
+seed-f1a9bf75117e0483-line-701,EdiliziAcrobatica,,,watchlist,auto,false,,,,EdiliziAcrobatica S.p.A.,EDAC,Borsa Italiana,IT,high,,BIT:EDAC,$78.5M
+seed-f1a9bf75117e0483-line-663,Elis,,,watchlist,auto,false,,,,Elis SA,ELIS,Euronext Paris,FR,high,,EPA:ELIS,$5.58B
+seed-f1a9bf75117e0483-line-744,Environmental Group,,,watchlist,auto,false,,,,The Environmental Group Limited,EGL,ASX,AU,high,,ASX:EGL,$68.5M
+seed-f1a9bf75117e0483-line-1573,Eolus (sweden),,,pass,auto,false,,,,Eolus Vind AB,EOLU-B,Nasdaq Stockholm,SE,high,,STO:EOLU-B,$158.8M
+seed-f1a9bf75117e0483-line-1036,Eurosnack SA,,,pass,auto,false,,,,Eurosnack S.A.,ERS,WSE,PL,medium,,WSE:ERS,$3.95M
+seed-f1a9bf75117e0483-line-1313,EverQuote,,,pass,auto,false,,EverQuote (8/19/2026),EverQuote, Inc.,EVER,NASDAQ,US,high,,NASDAQ:EVER,$684.2M
+seed-f1a9bf75117e0483-line-1233,Evolution AB,,,pass,auto,false,,,,Evolution AB (publ),EVO,Nasdaq Stockholm,SE,high,,STO:EVO,$20.85B
+seed-f1a9bf75117e0483-line-1073,Fable Media Group,,,pass,auto,false,,,,Fable Media Group AB,FABLE,Nasdaq Stockholm,SE,high,,STO:FABLE,$34.5M
+seed-f1a9bf75117e0483-line-1209,Fasadgruppen,,,pass,auto,false,,,,Fasadgruppen Group AB,FG,Nasdaq Stockholm,SE,high,,STO:FG,$243.0M
+seed-f1a9bf75117e0483-line-1642,FBD,,,pass,paused,false,,,,FBD Holdings plc,FBD,Euronext Dublin,IE,high,,ISE:FBD,$558.5M
+seed-f1a9bf75117e0483-line-661,Ferrovial,,,watchlist,auto,false,,,,Ferrovial SE,FER,BME,ES,high,,BME:FER,$30.67B
+seed-f1a9bf75117e0483-line-348,FICO,,,watchlist,paused,false,,,,Fair Isaac Corporation,FICO,NYSE,US,high,,NYSE:FICO,$48.21B
+seed-f1a9bf75117e0483-line-1633,Fidelity Bank PLC (Nigeria),,,pass,auto,false,,,,Fidelity Bank Plc,FIDELITYBK,NGX,NG,high,,NGX:FIDELITYBK,$273.9M
+seed-f1a9bf75117e0483-line-729,First Acceptance Corp,,,watchlist,auto,false,,,,First Acceptance Corporation,FACO,OTCMKTS,US,high,,OTCMKTS:FACO,$86.5M
+seed-f1a9bf75117e0483-line-960,FND,,,pass,paused,false,,FND (6/23/2026),Floor & Decor Holdings, Inc.,FND,NYSE,US,high,,NYSE:FND,$11.24B
+seed-f1a9bf75117e0483-line-430,Focus Point,,,watchlist,auto,false,,,,Focus Point Holdings Berhad,0157,KLSE,MY,high,,KLSE:0157,$79.6M
+seed-f1a9bf75117e0483-line-1133,Focusrite,,,pass,auto,false,,,,Focusrite plc,TUNE,LSE,GB,high,,LON:TUNE,$211.6M
+seed-f1a9bf75117e0483-line-1514,Fountaine Pajor SA (french),,,pass,auto,false,,,,Fountaine Pajot S.A.,ALFPC,Euronext Growth Paris,FR,high,,EPA:ALFPC,$214.1M
+seed-f1a9bf75117e0483-line-736,Foxtons,,,watchlist,auto,false,,,,Foxtons Group plc,FOXT,LSE,GB,high,,LON:FOXT,$253.8M
+seed-f1a9bf75117e0483-line-514,FPT Digital Retail JSC,,,watchlist,auto,false,,,,FPT Digital Retail Joint Stock Company,FRT,HOSE,VN,high,,HOSE:FRT,$908.9M
+seed-f1a9bf75117e0483-line-664,Fraport,,,watchlist,auto,false,,,,Fraport AG Frankfurt Airport Services Worldwide,FRA,XETRA,DE,high,,FRA:FRA,$5.25B
+seed-f1a9bf75117e0483-line-680,Full Truck Alliance Co ltd,,,watchlist,auto,false,,,,Full Truck Alliance Co. Ltd.,YMM,NYSE,US,high,,NYSE:YMM,$8.52B
+seed-f1a9bf75117e0483-line-173,Galaxy Gaming,,,perpetual,auto,false,,,,Galaxy Gaming, Inc.,GLXZ,OTCMKTS,US,high,,OTCMKTS:GLXZ,$81.4M
+seed-f1a9bf75117e0483-line-585,Gambling.com,,,watchlist,auto,false,,[Gambling.com](,Gambling.com Group Limited,GAMB,NASDAQ,US,high,,NASDAQ:GAMB,$352.0M
+seed-f1a9bf75117e0483-line-743,Gear4Music,,,watchlist,auto,false,,,,Gear4music (Holdings) plc,G4M,LSE,GB,high,,LON:G4M,$46.3M
+seed-f1a9bf75117e0483-line-188,Gentex,,,perpetual,auto,false,,,,Gentex Corporation,GNTX,NASDAQ,US,high,,NASDAQ:GNTX,$7.12B
+seed-f1a9bf75117e0483-line-621,GIMAT,,,watchlist,paused,false,,,,Gimat Magazacilik Sanayi ve Ticaret A.S.,GMTAS,BIST,TR,high,,IST:GMTAS,$227.5M
+seed-f1a9bf75117e0483-line-700,Global Yatirim,,,watchlist,auto,false,,,,Global Yatirim Holding A.S.,GLYHO,BIST,TR,high,,IST:GLYHO,$244.0M
+seed-f1a9bf75117e0483-line-1256,GPGI,,,pass,paused,false,,,,Green Planet Group, Inc.,GNPT,OTCMKTS,US,medium,,OTCMKTS:GNPT,$12.4M
+seed-f1a9bf75117e0483-line-336,Greenfirst Forest Products (GFP),,,watchlist,auto,false,,,,GreenFirst Forest Products Inc.,GFP,TSX,CA,high,,TSE:GFP,$106.7M
+seed-f1a9bf75117e0483-line-699,Grupa Niewiadów PGM SA,,,watchlist,auto,false,,,,Grupa PGM S.A.,PGM,WSE,PL,high,,WSE:PGM,$11.9M
+seed-f1a9bf75117e0483-line-1451,Grupo Traxion,,,pass,auto,false,,,,Grupo Traxion, S.A.B. de C.V.,TRAXIONA,BMV,MX,high,,BMV:TRAXIONA,$848.2M
+seed-f1a9bf75117e0483-line-652,Halyk Bank,,,watchlist,auto,false,,,,Halyk Savings Bank of Kazakhstan JSC,HSBK,LSE,KZ,high,,LON:HSBK,$4.82B
+seed-f1a9bf75117e0483-line-463,Harbour Link,,,watchlist,auto,false,,,,Harbour-Link Group Berhad,8451,KLSE,MY,high,,KLSE:8451,$119.1M
+seed-f1a9bf75117e0483-line-568,HCI (SA),,,watchlist,auto,false,,,,Hosken Consolidated Investments Limited,HCI,JSE,ZA,high,,JSE:HCI,$751.1M
+seed-f1a9bf75117e0483-line-387,Helia Group Ltd,,,watchlist,auto,false,,,,Helia Group Limited,HLI,ASX,AU,high,,ASX:HLI,$728.0M
+seed-f1a9bf75117e0483-line-1192,Hellworld Travel LTD,,,pass,auto,false,,,,Helloworld Travel Limited,HLO,ASX,AU,high,,ASX:HLO,$235.6M
+seed-f1a9bf75117e0483-line-953,Hikari Tsushin,,,pass,auto,false,,Hikari Tsushin (7/1/2026),Hikari Tsushin, Inc.,9435,TYO,JP,high,,TYO:9435,$9.05B
+seed-f1a9bf75117e0483-line-401,Holley,,,watchlist,auto,false,,Holley (research) (8/24/2026),Holley Inc.,HLLY,NYSE,US,high,,NYSE:HLLY,$342.0M
+seed-f1a9bf75117e0483-line-619,HYNE,,,watchlist,paused,false,,,,Hyne Timber Group,HYNE,Unlisted,AU,medium,,Unlisted,$250.0M
+seed-f1a9bf75117e0483-line-402,IDOM,,,watchlist,paused,false,,IDOM (research) (8/24/2026),IDOM Inc.,7599,TYO,JP,high,,TYO:7599,$773.2M
+seed-f1a9bf75117e0483-line-367,Incar Financial Service,,,watchlist,auto,false,,,,InCar Financial Service Co., Ltd.,214450,KOSDAQ,KR,high,,KOSDAQ:214450,$234.6M
+seed-f1a9bf75117e0483-line-41,Ingenta,,,inbox,auto,false,,Ingenta *Uk screen,Ingenta plc,INGO,LSE,GB,high,,LON:INGO,$23.7M
+seed-f1a9bf75117e0483-line-1647,Innovex,,,pass,auto,false,,,,Innovex Downhole Solutions, Inc.,INVX,NYSE,US,high,,NYSE:INVX,$1.14B
+seed-f1a9bf75117e0483-line-1635,Invicta Holdings,,,pass,auto,false,,,,Invicta Holdings Limited,IVT,JSE,ZA,high,,JSE:IVT,$201.1M
+seed-f1a9bf75117e0483-line-235,IOCO,,,perpetual,paused,false,,,,EOH Holdings Limited (ioco),EOH,JSE,ZA,medium,,JSE:EOH,$62.2M
+seed-f1a9bf75117e0483-line-1289,Ito En,,,pass,auto,false,,,,Ito En, Ltd.,2593,TYO,JP,high,,TYO:2593,$2.29B
+seed-f1a9bf75117e0483-line-118,JDC,,,perpetual,paused,false,,,,JDC Corporation,1887,TYO,JP,high,,TYO:1887,$438.2M
+seed-f1a9bf75117e0483-line-194,Jet2 Plc,,,perpetual,auto,false,,,,Jet2 plc,JET2,LSE,GB,high,,LON:JET2,$4.06B
+seed-f1a9bf75117e0483-line-1237,Joe USA,,,pass,auto,false,,,,The St. Joe Company,JOE,NYSE,US,high,,NYSE:JOE,$3.24B
+seed-f1a9bf75117e0483-line-1442,Jollibee (JFC),,,pass,auto,false,,,,Jollibee Foods Corporation,JFC,PSE,PH,high,,PSE:JFC,$5.21B
+seed-f1a9bf75117e0483-line-27,Jumbo Interactive,,,inbox,auto,false,,,,Jumbo Interactive Limited,JIN,ASX,AU,high,,ASX:JIN,$547.4M
+seed-f1a9bf75117e0483-line-404,K Car,,,watchlist,auto,false,,K Car (research) (8/24/2026),K Car Co., Ltd.,381970,KRX,KR,high,,KRX:381970,$407.5M
+seed-f1a9bf75117e0483-line-685,KAL Group,,,watchlist,auto,false,,,,KAL Group Limited,KAL,JSE,ZA,high,,JSE:KAL,$184.4M
+seed-f1a9bf75117e0483-line-1005,Karelia,,,pass,auto,false,,,,Karelia Tobacco Company Inc.,KARE,ATHEX,GR,high,,ATHEX:KARE,$1.07B
+seed-f1a9bf75117e0483-line-1486,Karooooo,,,pass,auto,false,,,,Karooooo Ltd.,KARO,NASDAQ,US,high,,NASDAQ:KARO,$1.24B
+seed-f1a9bf75117e0483-line-720,Kaspi,,,watchlist,auto,false,,,,Kaspi.kz Joint Stock Company,KSPI,NASDAQ,KZ,high,,NASDAQ:KSPI,$21.40B
+seed-f1a9bf75117e0483-line-567,Keeper,,,watchlist,paused,false,,,,KeePer Technical Laboratory Co., Ltd.,6036,TYO,JP,high,,TYO:6036,$704.8M
+seed-f1a9bf75117e0483-line-913,Keepers,,,pass,auto,false,,Keepers currently trading for 7x earnings,KeePer Technical Laboratory Co., Ltd.,6036,TYO,JP,high,,TYO:6036,$704.8M
+seed-f1a9bf75117e0483-line-665,Kempegowda,,,watchlist,auto,false,,,,Fairfax India Holdings Corp (Kempegowda Airport),FIH.U,TSX,CA,high,,TSE:FIH.U,$1.82B
+seed-f1a9bf75117e0483-line-314,Kingstone,,,perpetual,auto,false,,Kingstone (add writeup),Kingstone Companies, Inc.,KINS,NASDAQ,US,high,,NASDAQ:KINS,$85.4M
+seed-f1a9bf75117e0483-line-93,Kingsway,,,perpetual,auto,false,,,,Kingsway Financial Services Inc.,KFS,NYSE,US,high,,NYSE:KFS,$252.0M
+seed-f1a9bf75117e0483-line-279,Kinsale,,,perpetual,auto,false,,,,Kinsale Capital Group, Inc.,KNSL,NYSE,US,high,,NYSE:KNSL,$10.82B
+seed-f1a9bf75117e0483-line-899,Kits Eyecare,,,pass,auto,false,,,,KITS Eyecare Ltd.,KITS,TSX,CA,high,,TSE:KITS,$142.6M
+seed-f1a9bf75117e0483-line-657,Kolejkowo,,,watchlist,auto,false,,,,Kolejkowo S.A.,KLK,NewConnect,PL,medium,,WSE:KLK,$8.32M
+seed-f1a9bf75117e0483-line-1491,Kopparbergs Bryggeri,,,pass,auto,false,,,,Kopparbergs Bryggeri AB,KOPP-B,NGM,SE,high,,NGM:KOPP-B,$188.2M
+seed-f1a9bf75117e0483-line-758,Kromek,,,watchlist,auto,false,,,,Kromek Group plc,KMK,LSE,GB,high,,LON:KMK,$58.8M
+seed-f1a9bf75117e0483-line-602,Kukbo,,,watchlist,auto,false,,,,Kukbo Co., Ltd.,001480,KRX,KR,high,,KRX:001480,$26.6M
+seed-f1a9bf75117e0483-line-473,Lennar Corp,,,watchlist,auto,false,,,,Lennar Corporation,LEN,NYSE,US,high,,NYSE:LEN,$43.12B
+seed-f1a9bf75117e0483-line-1156,Lewis (furniture store in Africa) (220 million USd market cap),,,pass,auto,false,,,,Lewis Group Limited,LEW,JSE,ZA,high,,JSE:LEW,$218.9M
+seed-f1a9bf75117e0483-line-77,Libra Insurance,,,perpetual,auto,false,,,,Libra Group,LIBRA,Unlisted,US,medium,,Unlisted,$450.0M
+seed-f1a9bf75117e0483-line-475,Light and Wonder,,,watchlist,auto,false,,,,Light & Wonder, Inc.,LNW,NASDAQ,US,high,,NASDAQ:LNW,$8.92B
+seed-f1a9bf75117e0483-line-360,Limbach Holdings,,,watchlist,auto,false,,,,Limbach Holdings, Inc.,LMB,NASDAQ,US,high,,NASDAQ:LMB,$1.12B
+seed-f1a9bf75117e0483-line-1080,Lindsay Holdings,,,pass,auto,false,,,,Lindsay Corporation,LNN,NYSE,US,high,,NYSE:LNN,$1.34B
+seed-f1a9bf75117e0483-line-932,Linea Directa,,,pass,auto,false,,,,Linea Directa Aseguradora, S.A.,LDA,BME,ES,high,,BME:LDA,$1.36B
+seed-f1a9bf75117e0483-line-629,Lyondell Basell,,,watchlist,auto,false,,,,LyondellBasell Industries N.V.,LYB,NYSE,US,high,,NYSE:LYB,$27.14B
+seed-f1a9bf75117e0483-line-40,Manolete Partners,,,inbox,auto,false,,Manolete Partners  Uk screen,Manolete Partners Plc,MANO,LSE,GB,high,,LON:MANO,$91.5M
+seed-f1a9bf75117e0483-line-1527,Marlowe,,,pass,auto,false,,Marlowe 1.7x,Marlowe plc,MRL,LSE,GB,high,,LON:MRL,$496.6M
+seed-f1a9bf75117e0483-line-352,Mekonomen,,,watchlist,auto,false,,,,MEKO AB,MEKO,Nasdaq Stockholm,SE,high,,STO:MEKO,$611.5M
+seed-f1a9bf75117e0483-line-255,Metair Investments,,,perpetual,auto,false,,Metair Investments ([,Metair Investments Limited,MTA,JSE,ZA,high,,JSE:MTA,$163.3M
+seed-f1a9bf75117e0483-line-636,Metro Bank,,,watchlist,auto,false,,,,Metro Bank Holdings PLC,MTRO,LSE,GB,high,,LON:MTRO,$379.6M
+seed-f1a9bf75117e0483-line-676,MGI Digital Tech (french),,,watchlist,auto,false,,,,MGI Digital Technology SA,ALMDG,Euronext Growth Paris,FR,high,,EPA:ALMDG,$231.1M
+seed-f1a9bf75117e0483-line-30,Michael Hill International,,,pass,auto,false,,,,Michael Hill International Limited,MHJ,ASX,AU,high,,ASX:MHJ,$125.1M
+seed-f1a9bf75117e0483-line-633,Mineral Resources Limited,,,watchlist,auto,false,,,,Mineral Resources Limited,MIN,ASX,AU,high,,ASX:MIN,$4.45B
+seed-f1a9bf75117e0483-line-64,Molina Healthcare,,,perpetual,auto,false,,,,Molina Healthcare, Inc.,MOH,NYSE,US,high,,NYSE:MOH,$17.48B
+seed-f1a9bf75117e0483-line-580,Monarch Cement,,,watchlist,auto,false,,,,The Monarch Cement Company,MCEM,OTCMKTS,US,high,,OTCMKTS:MCEM,$682.0M
+seed-f1a9bf75117e0483-line-406,Motorcycle holdings,,,watchlist,auto,false,,Motorcycle holdings (research) (8/24/2026),MotorCycle Holdings Limited,MTO,ASX,AU,high,,ASX:MTO,$75.3M
+seed-f1a9bf75117e0483-line-355,MTN Ghana,,,watchlist,auto,false,,,,Scancom PLC (MTN Ghana),MTNGH,GSE,GH,high,,GSE:MTNGH,$2.07B
+seed-f1a9bf75117e0483-line-1423,Murree Brewery,,,pass,auto,false,,,,Murree Brewery Company Limited,MUREB,PSX,PK,high,,PSX:MUREB,$52.2M
+seed-f1a9bf75117e0483-line-576,Natural Resource Partners,,,watchlist,auto,false,,,,Natural Resource Partners L.P.,NRP,NYSE,US,high,,NYSE:NRP,$1.32B
+seed-f1a9bf75117e0483-line-1001,Nature Springer,,,pass,auto,false,,,,Springer Nature AG & Co. KGaA,SPG,FRA,DE,high,,FRA:SPG,$4.93B
+seed-f1a9bf75117e0483-line-733,NCR Atleos,,,watchlist,auto,false,,,,NCR Atleos Corporation,NATL,NYSE,US,high,,NYSE:NATL,$2.24B
+seed-f1a9bf75117e0483-line-1651,NEM Insurance Co,,,pass,auto,false,,NEM Insurance Co (8/13/2025),NEM Insurance Plc,NEM,NGX,NG,high,,NGX:NEM,$29.2M
+seed-f1a9bf75117e0483-line-25,Netflix,,,pass,auto,false,,,,Netflix, Inc.,NFLX,NASDAQ,US,high,,NASDAQ:NFLX,$305.40B
+seed-f1a9bf75117e0483-line-625,Netfonds,,,watchlist,auto,false,,,,Netfonds AG,NF4,FRA,DE,high,,FRA:NF4,$143.9M
+seed-f1a9bf75117e0483-line-703,New Princes SPA,,,watchlist,auto,false,,,,New Princes Group S.p.A. (Newlat),NWL,Borsa Italiana,IT,high,,BIT:NWL,$636.6M
+seed-f1a9bf75117e0483-line-1517,Nexxen,,,pass,auto,false,,,,Nexxen International Ltd.,NEXN,NASDAQ,US,high,,NASDAQ:NEXN,$492.0M
+seed-f1a9bf75117e0483-line-719,Nilorn Group,,,watchlist,auto,false,,,,Nilorngruppen AB,NIL-B,Nasdaq Stockholm,SE,high,,STO:NIL-B,$80.8M
+seed-f1a9bf75117e0483-line-572,NMI Holdings,,,watchlist,auto,false,,,,NMI Holdings, Inc.,NMIH,NASDAQ,US,high,,NASDAQ:NMIH,$3.14B
+seed-f1a9bf75117e0483-line-1672,OneWater Marine,,,pass,auto,false,,,,OneWater Marine Inc.,ONEW,NASDAQ,US,high,,NASDAQ:ONEW,$282.0M
+seed-f1a9bf75117e0483-line-712,Optasia,,,watchlist,auto,false,,,,Optasia (Channel VAS),OPTAS,Unlisted,AE,medium,,Unlisted,$850.0M
+seed-f1a9bf75117e0483-line-313,Palomar,,,perpetual,auto,false,,Palomar (add writeup),Palomar Holdings, Inc.,PLMR,NASDAQ,US,high,,NASDAQ:PLMR,$2.84B
+seed-f1a9bf75117e0483-line-471,Pandora,,,watchlist,auto,false,,,,Pandora A/S,PNDORA,Nasdaq Copenhagen,DK,high,,CPH:PNDORA,$12.88B
+seed-f1a9bf75117e0483-line-530,Paul Mueller (MUEL),,,watchlist,auto,false,,Paul Mueller (MUEL) (research),Paul Mueller Company,MUEL,OTCMKTS,US,high,,OTCMKTS:MUEL,$106.2M
+seed-f1a9bf75117e0483-line-556,Pendrell,,,watchlist,auto,false,,,,Pendrell Corporation,PCOA,OTCMKTS,US,high,,OTCMKTS:PCOA,$38.4M
+seed-f1a9bf75117e0483-line-460,Perak Transit,,,watchlist,auto,false,,,,Perak Transit Berhad,0186,KLSE,MY,high,,KLSE:0186,$135.3M
+seed-f1a9bf75117e0483-line-24,Perma Fix,,,pass,auto,false,,,,Perma-Fix Environmental Services, Inc.,PESI,NASDAQ,US,high,,NASDAQ:PESI,$212.0M
+seed-f1a9bf75117e0483-line-1141,Permianville,,,pass,auto,false,,,,Permianville Royalty Trust,PVL,NYSE,US,high,,NYSE:PVL,$40.2M
+seed-f1a9bf75117e0483-line-926,Pesorama,,,pass,auto,false,,Pesorama (7/14/2026),Pesorama Inc.,PESO,TSX-V,CA,high,,CVE:PESO,$1.8M
+seed-f1a9bf75117e0483-line-915,PGOLD,,,pass,paused,false,,PGOLD is trading for like 9x earnings,Public Gold Marketing Sdn Bhd,PGOLD,Unlisted,MY,medium,,Unlisted,$120.0M
+seed-f1a9bf75117e0483-line-252,Philippine Seven Corporation,,,perpetual,auto,false,,,,Philippine Seven Corporation,SEVN,PSE,PH,high,,PSE:SEVN,$860.7M
+seed-f1a9bf75117e0483-line-578,PIA Corp,,,watchlist,auto,false,,,,PIA Corporation,4337,TYO,JP,high,,TYO:4337,$217.1M
+seed-f1a9bf75117e0483-line-1624,Plenti Group,,,pass,auto,false,,,,Plenti Group Limited,PLT,ASX,AU,high,,ASX:PLT,$86.1M
+seed-f1a9bf75117e0483-line-651,Plover Bay Tech,,,watchlist,auto,false,,,,Plover Bay Technologies Limited,1523,HKG,HK,high,,HKG:1523,$581.0M
+seed-f1a9bf75117e0483-line-943,Plus 500,,,pass,auto,false,,,,Plus500 Ltd.,PLUS,LSE,GB,high,,LON:PLUS,$2.39B
+seed-f1a9bf75117e0483-line-23,Pollard Bank Note,,,inbox,auto,false,,,,Pollard Banknote Limited,PBL,TSX,CA,high,,TSE:PBL,$549.0M
+seed-f1a9bf75117e0483-line-334,Porsche and Volkswagen,,,watchlist,paused,false,,,,Porsche Automobil Holding SE,PAH3,XETRA,DE,high,,FRA:PAH3,$12.25B
+seed-f1a9bf75117e0483-line-1653,Prestige Assurance,,,pass,auto,false,,Prestige Assurance (8/13/2025),Prestige Assurance Plc,PRESTIGE,NGX,NG,high,,NGX:PRESTIGE,$4.33M
+seed-f1a9bf75117e0483-line-1297,Presurance,,,pass,auto,false,,Presurance (9/1/2026),ProAssurance Corporation,PRA,NYSE,US,medium,,NYSE:PRA,$742.0M
+723fb3f9-3f46-4e98-89c1-969549cb20f1,Progressive,PGR,,perpetual,auto,false,,Progressive (date last checked: 6/9/2026),The Progressive Corporation,PGR,NYSE,US,high,,NYSE:PGR,$145.20B
+seed-f1a9bf75117e0483-line-1028,QVC,,,pass,paused,false,,,,Qurate Retail, Inc.,QRTEA,NASDAQ,US,high,,NASDAQ:QRTEA,$354.0M
+seed-f1a9bf75117e0483-line-1221,Rainbow Tours,,,pass,auto,false,,,,Rainbow Tours S.A.,RBW,WSE,PL,high,,WSE:RBW,$400.4M
+seed-f1a9bf75117e0483-line-1463,Rameda Pharma,,,pass,auto,false,,,,Tenth of Ramadan Pharmaceutical Industries and Diagnostic Reagents (Rameda),RMDA,EGX,EG,high,,EGX:RMDA,$120.4M
+seed-f1a9bf75117e0483-line-1543,Reach,,,pass,auto,false,,,,Reach plc,RCH,LSE,GB,high,,LON:RCH,$369.2M
+seed-f1a9bf75117e0483-line-1326,React Group PL,,,pass,auto,false,,React Group PL (8/19/2026),REACT Group plc,REAT,LSE,GB,high,,LON:REAT,$110.8M
+seed-f1a9bf75117e0483-line-1655,Remak Energomontaz,,,pass,auto,false,,,,Remak-Energomontaz S.A.,RMK,WSE,PL,high,,WSE:RMK,$18.6M
+seed-f1a9bf75117e0483-line-1277,RHLD,,,pass,paused,false,,,,Rhodium Enterprises, Inc.,RHDL,OTCMKTS,US,medium,,OTCMKTS:RHDL,$18.5M
+seed-f1a9bf75117e0483-line-459,Richtech Digital Berhad,,,watchlist,auto,false,,,,Richtech Digital Berhad,0348,KLSE,MY,high,,KLSE:0348,$21.9M
+seed-f1a9bf75117e0483-line-417,Rising Stone SA,,,watchlist,auto,false,,,,Rising Stone S.A.,MLRIS,Euronext Access Paris,FR,high,,EPA:MLRIS,$37.1M
+seed-f1a9bf75117e0483-line-124,RUSH Enterprises,,,perpetual,auto,false,,,,Rush Enterprises, Inc.,RUSHA,NASDAQ,US,high,,NASDAQ:RUSHA,$4.24B
+seed-f1a9bf75117e0483-line-147,Salik,,,perpetual,auto,false,,,,Salik Company PJSC,SALIK,DFM,AE,high,,DFM:SALIK,$9.31B
+seed-f1a9bf75117e0483-line-715,Sasol (4 billion USD chemical company in Africa),,,watchlist,auto,false,,,,Sasol Limited,SOL,JSE,ZA,high,,JSE:SOL,$4.19B
+seed-f1a9bf75117e0483-line-477,SBI Insurance Group,,,watchlist,auto,false,,,,SBI Insurance Group Co., Ltd.,7326,TYO,JP,high,,TYO:7326,$217.8M
+seed-f1a9bf75117e0483-line-1574,SBI Leasing Service,,,pass,auto,false,,,,SBI Leasing Services Co., Ltd.,5834,TYO,JP,high,,TYO:5834,$282.1M
+seed-f1a9bf75117e0483-line-28,Schaffer Corporation,,,inbox,auto,false,,,,Schaffer Corporation Limited,SFC,ASX,AU,high,,ASX:SFC,$183.0M
+seed-f1a9bf75117e0483-line-1639,Secure Energy Waste Services,,,pass,auto,false,,,,SECURE Energy Services Inc.,SES,TSX,CA,high,,TSE:SES,$2.58B
+seed-f1a9bf75117e0483-line-1530,Secure Trust Bank,,,pass,auto,false,,,,Secure Trust Bank PLC,STB,LSE,GB,high,,LON:STB,$184.6M
+seed-f1a9bf75117e0483-line-244,Shin Maint Holdings Co Ltd,,,perpetual,auto,false,,,,Shin Maint Holdings Co., Ltd.,6086,TYO,JP,high,,TYO:6086,$65.9M
+seed-f1a9bf75117e0483-line-344,Shoe Station Group,,,watchlist,auto,false,,,,Shoe Carnival, Inc.,SCVL,NASDAQ,US,medium,,NASDAQ:SCVL,$1.02B
+seed-f1a9bf75117e0483-line-1255,Shoei,,,pass,auto,false,,,,Shoei Co., Ltd.,7839,TYO,JP,high,,TYO:7839,$639.2M
+seed-f1a9bf75117e0483-line-472,Sky Harbour,,,watchlist,auto,false,,,,Sky Harbour Group Corporation,SKYH,NYSE,US,high,,NYSE:SKYH,$852.0M
+seed-f1a9bf75117e0483-line-1130,Slide Insurance,,,pass,auto,false,,,,Slide Insurance Holdings,SLIDE,Unlisted,US,medium,,Unlisted,$2.10B
+seed-f1a9bf75117e0483-line-227,Software Circle,,,perpetual,auto,false,,,,Software Circle plc,SFT,LSE,GB,high,,LON:SFT,$59.5M
+seed-f1a9bf75117e0483-line-610,Solidcor,,,watchlist,auto,false,,,,Solidcor Ltd,SOLDC,Unlisted,GB,medium,,Unlisted,$42.0M
+seed-f1a9bf75117e0483-line-1557,Solvar,,,pass,auto,false,,,,Solvar Limited,SVR,ASX,AU,high,,ASX:SVR,$150.8M
+seed-f1a9bf75117e0483-line-1047,Spyrosoft SA,,,pass,auto,false,,,,Spyrosoft S.A.,SPR,WSE,PL,high,,WSE:SPR,$109.6M
+seed-f1a9bf75117e0483-line-1392,St Barbara ASX Mine,,,pass,auto,false,,,,St Barbara Limited,SBM,ASX,AU,high,,ASX:SBM,$222.3M
+seed-f1a9bf75117e0483-line-716,Stadio (education in Africa),,,watchlist,auto,false,,,,STADIO Holdings Limited,SDO,JSE,ZA,high,,JSE:SDO,$267.8M
+seed-f1a9bf75117e0483-line-29,Stealth SGI,,,inbox,auto,false,,,,Stealth Global Holdings Ltd,SGI,ASX,AU,high,,ASX:SGI,$19.8M
+seed-f1a9bf75117e0483-line-1188,STI Foods,,,pass,auto,false,,,,STI Food Holdings, Inc.,2932,TYO,JP,high,,TYO:2932,$203.7M
+seed-f1a9bf75117e0483-line-26,Strattec,,,pass,auto,false,,,,STRATTEC Security Corporation,STRT,NASDAQ,US,high,,NASDAQ:STRT,$182.4M
+seed-f1a9bf75117e0483-line-750,STV Group PLC,,,watchlist,auto,false,,,,STV Group plc,STVG,LSE,GB,high,,LON:STVG,$158.0M
+seed-f1a9bf75117e0483-line-1537,Super Group,,,pass,auto,false,,,,Super Group Limited,SPG,JSE,ZA,high,,JSE:SPG,$640.0M
+seed-f1a9bf75117e0483-line-42,Synectics,,,inbox,auto,false,,Synectics (reach out),Synectics plc,SNX,LSE,GB,high,,LON:SNX,$52.3M
+seed-f1a9bf75117e0483-line-905,Tasmea Limited,,,pass,auto,false,,,,Tasmea Limited,TEA,ASX,AU,high,,ASX:TEA,$360.1M
+seed-f1a9bf75117e0483-line-624,TAV Turkish Airport,,,watchlist,auto,false,,,,TAV Havalimanlari Holding A.S.,TAVHL,BIST,TR,high,,IST:TAVHL,$2.76B
+seed-f1a9bf75117e0483-line-653,TBC Bank,,,watchlist,auto,false,,,,TBC Bank Group PLC,TBCG,LSE,GB,high,,LON:TBCG,$2.39B
+seed-f1a9bf75117e0483-line-464,Teo Seng Capital,,,watchlist,auto,false,,,,Teo Seng Capital Berhad,7252,KLSE,MY,high,,KLSE:7252,$167.9M
+seed-f1a9bf75117e0483-line-213,Teqnion,,,perpetual,auto,false,,,,Teqnion AB,TEQ,Nasdaq Stockholm,SE,high,,STO:TEQ,$305.8M
+seed-f1a9bf75117e0483-line-991,Terago Inc,,,pass,auto,false,,,,TeraGo Inc.,TGO,TSX,CA,high,,TSE:TGO,$33.0M
+seed-f1a9bf75117e0483-line-559,The Tile Shop,,,watchlist,auto,false,,The Tile Shop (7/14/2026),Tile Shop Holdings, Inc.,TTSH,NASDAQ,US,high,,NASDAQ:TTSH,$312.0M
+seed-f1a9bf75117e0483-line-1059,Theon International,,,pass,auto,false,,,,Theon International Plc,THEON,Euronext Amsterdam,NL,high,,AMS:THEON,$972.3M
+seed-f1a9bf75117e0483-line-655,Tinybuild,,,watchlist,auto,false,,,,tinyBuild Inc.,TBLD,LSE,GB,high,,LON:TBLD,$46.0M
+46e41b5b-52c9-4ec5-9be5-4ed17469e8a6,Toubani Resources,ASX:TRE,,owned,auto,false,,,,Toubani Resources Limited,TRE,ASX,AU,high,,ASX:TRE,$29.4M
+seed-f1a9bf75117e0483-line-1242,Tovis,,,pass,auto,false,,,,Tovis Co., Ltd.,051360,KOSDAQ,KR,high,,KOSDAQ:051360,$212.0M
+seed-f1a9bf75117e0483-line-1671,Travelzoo,,,pass,auto,false,,,,Travelzoo,TZOO,NASDAQ,US,high,,NASDAQ:TZOO,$192.4M
+seed-f1a9bf75117e0483-line-482,Truxton Bank,,,watchlist,auto,false,,"Truxton Bank (found feb 9th, updated 9/9/2026)",Truxton Corporation,TRUX,OTCMKTS,US,high,,OTCMKTS:TRUX,$186.2M
+seed-f1a9bf75117e0483-line-616,Turkey Sigorta,,,watchlist,auto,false,,,,Turkiye Sigorta A.S.,TURSG,BIST,TR,high,,IST:TURSG,$1.89B
+seed-f1a9bf75117e0483-line-465,Uber,,,watchlist,auto,false,,,,Uber Technologies, Inc.,UBER,NYSE,US,high,,NYSE:UBER,$155.40B
+seed-f1a9bf75117e0483-line-1666,UMG,,,pass,paused,false,,,,Universal Music Group N.V.,UMG,Euronext Amsterdam,NL,high,,AMS:UMG,$48.18B
+seed-f1a9bf75117e0483-line-681,Universal Engeisha Co Ltd,,,watchlist,auto,false,,,,Universal Engeisha Co., Ltd.,6061,TYO,JP,high,,TYO:6061,$121.9M
+seed-f1a9bf75117e0483-line-18,URI,,,inbox,paused,false,,,,United Rentals, Inc.,URI,NYSE,US,high,,NYSE:URI,$52.10B
+seed-f1a9bf75117e0483-line-577,Vail Resorts,,,watchlist,auto,false,,,,Vail Resorts, Inc.,MTN,NYSE,US,high,,NYSE:MTN,$6.82B
+seed-f1a9bf75117e0483-line-1578,Valuence,,,pass,auto,false,,,,Valuence Holdings Inc.,9270,TYO,JP,high,,TYO:9270,$95.1M
+seed-f1a9bf75117e0483-line-1393,Warpaint London,,,pass,auto,false,,,,Warpaint London PLC,W7L,LSE,GB,high,,LON:W7L,$587.6M
+seed-f1a9bf75117e0483-line-1106,Water Intelligence,,,pass,auto,false,,,,Water Intelligence plc,WATR,LSE,GB,high,,LON:WATR,$104.5M
+seed-f1a9bf75117e0483-line-350,Water Oasis Group,,,watchlist,auto,false,,,,Water Oasis Group Limited,1161,HKG,HK,high,,HKG:1161,$70.9M
+seed-f1a9bf75117e0483-line-90,Western Investment,,,perpetual,auto,false,,,,Western Investment Company of Canada Limited,WIC,TSX-V,CA,high,,CVE:WIC,$10.4M
+seed-f1a9bf75117e0483-line-510,Wilcon Depot (philippines),,,watchlist,auto,false,,,,Wilcon Depot, Inc.,WLCON,PSE,PH,high,,PSE:WLCON,$1.16B
+seed-f1a9bf75117e0483-line-1587,Willplus Holdings Corp,,,pass,auto,false,,,,Willplus Holdings Corporation,3538,TYO,JP,high,,TYO:3538,$81.1M
+seed-f1a9bf75117e0483-line-15,WOSG,,,pass,paused,false,,,,Watches of Switzerland Group PLC,WOSG,LSE,GB,high,,LON:WOSG,$1.28B
+seed-f1a9bf75117e0483-line-1519,Wynnstay,,,pass,auto,false,,Wynnstay 2.6x,Wynnstay Group plc,WYN,LSE,GB,high,,LON:WYN,$104.3M
+seed-f1a9bf75117e0483-line-947,XTB,,,pass,paused,false,,,,XTB S.A.,XTB,WSE,PL,high,,WSE:XTB,$2.04B
+seed-f1a9bf75117e0483-line-1600,Yoshimura Food Holdings,,,pass,auto,false,,,,Yoshimura Food Holdings K.K.,2884,TYO,JP,high,,TYO:2884,$243.9M
+seed-f1a9bf75117e0483-line-982,Zoom,,,pass,auto,false,,Zoom (6/22/2026),Zoom Video Communications, Inc.,ZM,NASDAQ,US,high,,NASDAQ:ZM,$21.14B
+seed-f1a9bf75117e0483-line-659,Zoomd Technologies Ltd,,,watchlist,auto,false,,,,Zoomd Technologies Ltd.,ZOMD,TSX-V,CA,high,,CVE:ZOMD,$13.3M

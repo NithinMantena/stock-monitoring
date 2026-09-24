@@ -128,6 +128,54 @@
               "large"
             ]
           },
+          "sizeClass": {
+            "default": "unknown",
+            "type": "string",
+            "enum": [
+              "unknown",
+              "micro",
+              "small",
+              "mid",
+              "large",
+              "mega"
+            ]
+          },
+          "sizeSource": {
+            "default": "none",
+            "type": "string",
+            "enum": [
+              "none",
+              "market_cap",
+              "manual"
+            ]
+          },
+          "marketCapUsd": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "marketCapAsOf": {
+            "default": "",
+            "type": "string",
+            "maxLength": 40
+          },
+          "officialName": {
+            "default": "",
+            "type": "string",
+            "maxLength": 300
+          },
+          "country": {
+            "default": "",
+            "type": "string",
+            "maxLength": 8
+          },
           "businessContext": {
             "default": "",
             "type": "string",
@@ -734,6 +782,24 @@
                   "ideaSource": {
                     "type": "string",
                     "maxLength": 2000
+                  },
+                  "sizeClass": {
+                    "description": "Size tier: micro, small, mid, large or mega.",
+                    "default": "unknown",
+                    "type": "string",
+                    "enum": [
+                      "unknown",
+                      "micro",
+                      "small",
+                      "mid",
+                      "large",
+                      "mega"
+                    ]
+                  },
+                  "marketCapUsd": {
+                    "description": "Market cap in US dollars; sets the size tier automatically.",
+                    "type": "number",
+                    "exclusiveMinimum": 0
                   }
                 },
                 "required": [
@@ -1011,6 +1077,44 @@
                               "medium",
                               "large"
                             ]
+                          },
+                          "sizeClass": {
+                            "default": "unknown",
+                            "type": "string",
+                            "enum": [
+                              "unknown",
+                              "micro",
+                              "small",
+                              "mid",
+                              "large",
+                              "mega"
+                            ]
+                          },
+                          "sizeSource": {
+                            "default": "none",
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "market_cap",
+                              "manual"
+                            ]
+                          },
+                          "marketCapUsd": {
+                            "default": null,
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "marketCapAsOf": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 40
                           },
                           "businessContext": {
                             "default": "",

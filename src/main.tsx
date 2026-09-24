@@ -40,6 +40,14 @@ import {
   quoteState,
 } from "../supabase/functions/_shared/engine";
 import type { ImportPreview } from "../supabase/functions/_shared/importer";
+import {
+  SIZE_BANDS,
+  SIZE_CLASSES,
+  companySize,
+  formatMarketCap,
+  parseMarketCap,
+  sizeFromMarketCap,
+} from "../supabase/functions/_shared/company-size";
 import "./style.css";
 
 type ScreenScope = {
@@ -1320,11 +1328,20 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
               e.preventDefault();
               const f = new FormData(e.currentTarget);
               await action(async () => {
+                const cap = String(f.get("marketCap") || "").trim();
+                if (cap && parseMarketCap(cap) === null)
+                  throw new Error(
+                    "Market cap not understood. Use a number such as 3.5B, 265M or 1.2T.",
+                  );
                 const doc = await api<Doc<Company>>("/companies", {
                   name: f.get("name"),
                   ticker: f.get("ticker"),
                   ideaSource: f.get("ideaSource"),
                   status: f.get("status"),
+                  sizeClass: f.get("sizeClass"),
+                  marketCapUsd: String(f.get("marketCap") || "").trim()
+                    ? parseMarketCap(String(f.get("marketCap")))
+                    : null,
                 });
                 setSelected(doc.id);
                 setTab("research");
@@ -1369,8 +1386,25 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 </select>
               </Field>
             </div>
+            <div className="form-grid">
+              <Field label="Size">
+                <select name="sizeClass" defaultValue="unknown">
+                  <option value="unknown">Not sure yet</option>
+                  {SIZE_CLASSES.map((k) => (
+                    <option key={k} value={k}>
+                      {SIZE_BANDS[k].label} ({SIZE_BANDS[k].range})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="…or market cap, USD">
+                <input name="marketCap" placeholder="e.g. 3.5B or 265M" />
+              </Field>
+            </div>
             <p className="muted">
-              You can link market data and news sources after adding it.
+              Size tells TypeSafe how big a development must be to matter. A
+              market cap sets the size automatically. You can link market data
+              and news sources after adding it.
             </p>
             <Field label="Where did you find this idea?">
               <input
@@ -1431,7 +1465,14 @@ const CompanyRow = React.memo(function CompanyRow({
       <td>
         {c.quote?.pe && c.quote.pe > 0 ? c.quote.pe.toFixed(1) + "×" : "—"}
       </td>
-      {!showDetail && <td>{formatMoney(c.quote?.marketCap, c.currency)}</td>}
+      {!showDetail && (
+        <td>
+          {c.marketCapUsd
+            ? formatMarketCap(c.marketCapUsd)
+            : formatMoney(c.quote?.marketCap, c.currency)}
+          <small>{sizeLabel(c)}</small>
+        </td>
+      )}
       <td>
         <span className="cadence">{cadenceOf(c)}</span>
         <small>
@@ -1514,8 +1555,12 @@ function CompanyDetail({
           </b>
         </div>
         <div>
-          <small>Market cap</small>
-          <b>{formatMoney(c.quote?.marketCap, c.currency)}</b>
+          <small>Market cap · {sizeLabel(c)}</small>
+          <b>
+            {c.marketCapUsd
+              ? formatMarketCap(c.marketCapUsd)
+              : formatMoney(c.quote?.marketCap, c.currency)}
+          </b>
         </div>
       </div>
       <p className="quote-source">
@@ -1956,20 +2001,53 @@ function CompanyDetail({
             )}
             <h3>News sources</h3>
             <div className="form-grid">
-              <Field label="Business scale for news screening">
+              <Field label="Company size for news screening">
                 <select
-                  value={c.businessScale}
-                  onChange={(e) =>
-                    edit({
-                      businessScale: e.target.value as Company["businessScale"],
-                    })
-                  }
+                  value={c.sizeSource === "market_cap" ? "market_cap" : c.sizeClass}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "market_cap")
+                      edit({
+                        sizeSource: "market_cap",
+                        sizeClass: sizeFromMarketCap(c.marketCapUsd),
+                      });
+                    else
+                      edit({
+                        sizeSource: v === "unknown" ? "none" : "manual",
+                        sizeClass: v as Company["sizeClass"],
+                      });
+                  }}
                 >
                   <option value="unknown">Not established</option>
-                  <option value="small">Small business</option>
-                  <option value="medium">Medium business</option>
-                  <option value="large">Large business</option>
+                  <option value="market_cap">From market cap</option>
+                  {SIZE_CLASSES.map((k) => (
+                    <option key={k} value={k}>
+                      {SIZE_BANDS[k].label} ({SIZE_BANDS[k].range})
+                    </option>
+                  ))}
                 </select>
+              </Field>
+              <Field label="Market cap, USD (e.g. 3.5B, 265M)">
+                <input
+                  key={`${c.id}-${c.marketCapUsd}`}
+                  defaultValue={c.marketCapUsd ? formatMarketCap(c.marketCapUsd) : ""}
+                  placeholder="Not recorded"
+                  onBlur={(e) => {
+                    const raw = e.target.value.trim();
+                    const usd = raw ? parseMarketCap(raw) : null;
+                    if (raw && usd === null) return;
+                    if (usd === c.marketCapUsd) return;
+                    edit({
+                      marketCapUsd: usd,
+                      marketCapAsOf: usd ? new Date().toISOString().slice(0, 10) : "",
+                      ...(usd
+                        ? { sizeSource: "market_cap" as const, sizeClass: sizeFromMarketCap(usd) }
+                        : c.sizeSource === "market_cap"
+                          ? { sizeSource: "none" as const, sizeClass: "unknown" as const }
+                          : {}),
+                    });
+                  }}
+                />
               </Field>
               <Field label="Context as of">
                 <input
@@ -2728,3 +2806,8 @@ root.render(
     <Root />
   </React.StrictMode>,
 );
+
+function sizeLabel(c: Company) {
+  const size = companySize(c);
+  return size === "unknown" ? "Size not set" : SIZE_BANDS[size].label;
+}

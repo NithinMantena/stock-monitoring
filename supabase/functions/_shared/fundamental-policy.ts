@@ -1,3 +1,4 @@
+import { SIZE_BANDS, SIZE_THRESHOLDS, type SizeSetting } from "./company-size.ts";
 // Admission thresholds are application policy, not model confidence scores.
 export const POLICY_VERSION = "fundamental-policy-2.0.0";
 export interface FundamentalSignals {
@@ -201,7 +202,7 @@ export function decideFundamental(a: {
 // it could be read, refines the same judgments but is never required. Missing
 // text, company context or a ticker never sends an article to verification.
 // Verification is reserved for "possibly this company and possibly major".
-export const POLICY_VERSION_V3 = "headline-first-policy-3.0.0";
+export const POLICY_VERSION_V3 = "headline-first-policy-3.1.0";
 // A daily desk reports current developments.
 export const MAX_DEVELOPMENT_AGE_DAYS = 45;
 export const GENRES = [
@@ -235,8 +236,12 @@ export function decideScreening(a: {
   identity: number;
   primary: boolean;
   signals: ScreeningSignals;
+  // Company size tier; sets how significant a development must be.
+  size?: SizeSetting;
 }): FundamentalDecision {
   const s = a.signals;
+  const size = a.size || "unknown";
+  const bar = SIZE_THRESHOLDS[size] || SIZE_THRESHOLDS.unknown;
   const g = s.genre;
   const result = (
     status: DevelopmentStatus,
@@ -266,7 +271,7 @@ export function decideScreening(a: {
   const historical = (reason: string) =>
     result("historical", "rejected", "historical_only", reason);
   // "Possibly major" is the one thing never silently screened out.
-  const major = s.meaningful >= 0.5;
+  const major = s.meaningful >= bar.majorAt;
 
   if (a.identity < 0.2)
     return reject(
@@ -305,7 +310,7 @@ export function decideScreening(a: {
           "Probably a different entity, and nothing significant is reported.",
         );
   if (Math.max(g.market_commentary || 0, g.investment_opinion || 0) >= 0.6)
-    return s.meaningful >= 0.2
+    return s.meaningful >= bar.minMeaningful
       ? result(
           "relevant",
           "coverage_only",
@@ -316,8 +321,13 @@ export function decideScreening(a: {
           "commentary",
           "Share-price, analyst-rating or investment-opinion content without a business development.",
         );
-  if (s.meaningful < 0.2 && s.useful < 0.6)
-    return reject("immaterial", "No business development of consequence.");
+  if (s.meaningful < bar.minMeaningful && s.useful < bar.minUseful)
+    return size === "large" || size === "mega"
+      ? reject(
+          "immaterial_at_scale",
+          `Too small to matter for a ${SIZE_BANDS[size].label.toLowerCase()} company.`,
+        )
+      : reject("immaterial", "No business development of consequence.");
   if (s.historical >= 0.5)
     return major
       ? verify(

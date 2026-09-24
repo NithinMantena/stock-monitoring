@@ -1,3 +1,4 @@
+import { normalizeSize } from "./company-size.ts";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { DatabaseReadError } from "./database-read.ts";
@@ -140,11 +141,23 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         status: CompanySchema.shape.status,
         ticker: z.string().max(50).optional(),
         ideaSource: z.string().max(2000).optional(),
+        // Either a size tier or a market cap (USD); a market cap wins.
+        sizeClass: CompanySchema.shape.sizeClass.optional(),
+        marketCapUsd: z.number().positive().finite().nullable().optional(),
       })
       .parse(await c.req.json());
-    const company = newCompany(input.name, input.status);
+    let company = newCompany(input.name, input.status);
     company.ticker = input.ticker || "";
     company.ideaSource = input.ideaSource || "";
+    if (input.marketCapUsd) {
+      company.marketCapUsd = input.marketCapUsd;
+      company.marketCapAsOf = new Date().toISOString().slice(0, 10);
+      company.sizeSource = "market_cap";
+    } else if (input.sizeClass && input.sizeClass !== "unknown") {
+      company.sizeClass = input.sizeClass;
+      company.sizeSource = "manual";
+    }
+    company = normalizeSize(company);
     return c.json(await store.put("company", company.id, company, 0), 201);
   });
   api.put("/companies/:id", async (c) => {
@@ -181,6 +194,12 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           "ideaSource",
           "newsQuery",
           "businessScale",
+          "sizeClass",
+          "sizeSource",
+          "marketCapUsd",
+          "marketCapAsOf",
+          "officialName",
+          "country",
           "businessContext",
           "contextAsOf",
           "contextSource",
@@ -312,7 +331,7 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         JSON.stringify(old.data.feeds.map((f) => [f.id, f.url])) !==
         JSON.stringify(input.data.feeds.map((f) => [f.id, f.url]));
       const value: Company = {
-        ...input.data,
+        ...normalizeSize(input.data),
         feeds: input.data.feeds.map((feed) => {
           const prior = old.data.feeds.find(
             (f) => f.id === feed.id && f.url === feed.url,
@@ -340,6 +359,9 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
             "thesis",
             "watchPoints",
             "businessScale",
+            "sizeClass",
+            "marketCapUsd",
+            "officialName",
             "businessContext",
             "contextAsOf",
             "contextSource",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { statuses, type Status } from "./constants.ts";
 import { companyNewsUrl } from "./news.ts";
+import { SIZE_CLASSES } from "./company-size.ts";
 export { statuses, statusLabels, defaultSettings } from "./constants.ts";
 export type { Status } from "./constants.ts";
 const text = (max = 500) => z.string().max(max);
@@ -64,6 +65,14 @@ export const CompanySchema = z.object({
   businessScale: z
     .enum(["unknown", "small", "medium", "large"])
     .default("unknown"),
+  // Size tier used by news screening (see company-size.ts). Set directly, or
+  // derived from marketCapUsd when sizeSource is "market_cap".
+  sizeClass: z.enum(["unknown", ...SIZE_CLASSES]).default("unknown"),
+  sizeSource: z.enum(["none", "market_cap", "manual"]).default("none"),
+  marketCapUsd: z.number().positive().finite().nullable().default(null),
+  marketCapAsOf: text(40).default(""),
+  officialName: text(300).default(""),
+  country: text(8).default(""),
   businessContext: text(6000).default(""),
   contextAsOf: text(40).default(""),
   contextSource: text(2000).default(""),
