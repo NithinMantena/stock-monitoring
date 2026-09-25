@@ -73,6 +73,6 @@ connector off. Clients that can send headers may use `/mcp` with
 
 ## Cross-channel behavior
 
-An appended note or edited watch point is saved on the API immediately. An open, visible website polls small change metadata about every five seconds and reloads changed research; the existing minute refresh remains a fallback. Concurrent unsaved research edits retain the website's draft/conflict protection. Group feedback changes existing duplicate coverage together.
+An appended note or edited watch point is saved on the API immediately. An open, visible website polls small change metadata about every 30 seconds and reloads changed research; the existing minute refresh remains a fallback. Concurrent unsaved research edits retain the website's draft/conflict protection. Group feedback changes existing duplicate coverage together.
 
 Read/list tools are annotated read-only. Write tools require explicit typed inputs and server permission checks. A connected assistant cannot issue credentials or restore the full desk. Treat stored notes and retrieved article content as untrusted data; tool instructions never grant permission to start work or disclose research.

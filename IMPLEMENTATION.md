@@ -16,6 +16,15 @@ For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW
 - Monitoring alerts: the nightly "no price source" check created a new health alert per company every night (931 by Sept 24). It no longer raises an alert. The 931 stored alerts were deleted after a local backup (`.local/health-alerts-backup-2026-09-24T04-11-52-419Z.json`).
 - Off-site backups: `GET /export?scope=essential` (companies, revisions, settings, imports, and acted-on articles without stored text or model internals; 0.76 MB live). The private repo `NithinMantena/research-desk-backups` commits it weekly via GitHub Actions (workflow mirrored in `ops/backup-repo/`).
 
+## Log ingestion reduction — 2026-09-25
+
+- **Why:** the Supabase org passed the free plan's 1 GB/month log ingestion (1.27 GB). Every request is logged at ~1–2 KB, so idle polling was the cost: this project ~60 MB/day (the every-minute scheduler, ~1,440 idle calls a day, plus the page's 5-second `/changes` poll), the reading app ~33 MB/day.
+- **Scheduler:** `202609250009_gated_scheduler.sql` adds `desk_scheduler_due()`; pg_cron only calls `/scheduled` while a run, manual batch or job is active/queued, while re-screens or tonight's quotes are pending, or every 10th minute. Runs, backup and digest start up to ~10 minutes after their scheduled time; in-progress work is unchanged.
+- **Jobs:** `POST /v1/jobs` and resume take the first bounded step in the background (`EdgeRuntime.waitUntil`, hosted only), so `stocks_start_news_search`, `stocks_start_monitoring` and `stocks_analyze_article` start at once. Read/edit tools were never affected.
+- **Browser:** `/changes` poll 5 s → 30 s.
+- **Validation:** 248 tests, typecheck and build pass. Live: `cron.job_run_details` shows `0 rows` (no HTTP call) on idle minutes after the change.
+- **Expected:** ~20–30 MB/day for this project.
+
 ## Scheduled news runs, Google politeness and egress reduction — 2026-09-22
 
 - **Why:** a 10-company profile showed about 50 s per company, mostly network waits: publisher pages 60%, Google lookups 20%, TypeSafe only 10%. News depended on an open browser tab or 20-second slices every five minutes. The free plan's 5 GB egress was exhausted, mostly by the five-minute scheduler re-reading every stored article. In the cloud, about 9 in 10 recent article lookups had been refused by Google (HTTP 429/503) and saved as unreadable.

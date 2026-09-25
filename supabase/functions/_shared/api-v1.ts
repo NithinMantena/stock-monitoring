@@ -178,6 +178,23 @@ export function createV1Api(
 ) {
   const app = new Hono(),
     legacy = createApi(store, env, mode);
+  // Hosted only: take the first bounded step of newly queued or resumed work
+  // after the response is sent, so it starts without waiting for a scheduler
+  // tick. Later steps run on the scheduler, which ticks every minute while work
+  // is queued (desk_scheduler_due()).
+  const kick = (work: () => Promise<unknown>) => {
+    if (mode !== "cloud") return;
+    const running = work().catch(() => {});
+    (
+      globalThis as {
+        EdgeRuntime?: { waitUntil(promise: Promise<unknown>): void };
+      }
+    ).EdgeRuntime?.waitUntil(running);
+  };
+  const kickNews = (id: string) =>
+    kick(() =>
+      advanceNewsBatch(store, env, { id, maxSteps: 1, milliseconds: 20000 }),
+    );
   const forward = (path: string, body?: unknown, method = "POST") =>
     legacy.request(
       path,
@@ -691,12 +708,16 @@ export function createV1Api(
         })
         .strict()
         .parse(input);
-      return c.json(
-        await startNewsBatch(store, { ...p, id: crypto.randomUUID() }),
-        202,
-      );
+      const batch = await startNewsBatch(store, {
+        ...p,
+        id: crypto.randomUUID(),
+      });
+      kickNews(batch.id);
+      return c.json(batch, 202);
     }
-    return c.json(await enqueueJob(store, input), 202);
+    const job = await enqueueJob(store, input);
+    kick(() => advanceJob(store, env, job.id));
+    return c.json(job, 202);
   });
   app.get("/jobs/:id", async (c) => {
     const id = c.req.param("id"),
@@ -713,11 +734,13 @@ export function createV1Api(
   app.post("/jobs/:id/control", async (c) => {
     const { action } = ControlInput.parse(await c.req.json());
     const id = c.req.param("id");
-    return c.json(
-      (await store.get("job", id))
-        ? await controlJob(store, id, action)
-        : await controlNewsBatch(store, id, action),
-    );
+    const isJob = !!(await store.get("job", id));
+    const result = isJob
+      ? await controlJob(store, id, action)
+      : await controlNewsBatch(store, id, action);
+    if (action === "resume")
+      isJob ? kick(() => advanceJob(store, env, id)) : kickNews(id);
+    return c.json(result);
   });
   app.post("/jobs/:id/advance", async (c) => {
     requireScope(actor, "jobs:start");

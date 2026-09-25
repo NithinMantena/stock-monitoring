@@ -445,7 +445,9 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         busy = false;
       }
     };
-    const timer = setInterval(tick, 5000);
+    // Every request is a Supabase log entry (free plan: 1 GB/month), so check
+    // for outside edits every 30 s rather than every 5 s.
+    const timer = setInterval(tick, 30000);
     document.addEventListener("visibilitychange", tick);
     return () => {
       live = false;

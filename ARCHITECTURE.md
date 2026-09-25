@@ -16,7 +16,7 @@ flowchart TD
     MCP[Local MCP server: stocks tools] --> Client
     Bot[OpenClaw skill and CLI] --> Client
     Client --> API[Authenticated Hono API v1]
-    Cron[Hosted scheduler: tick every minute] --> API
+    Cron[Hosted scheduler: every minute while busy, else every 10 min] --> API
     API --> Store[Versioned document store]
     Store --> Local[Local: SQLite]
     Store --> Cloud[Hosted: Supabase Postgres]
@@ -39,7 +39,7 @@ The website, MCP and OpenClaw call the same versioned API. `client/operations.ts
 
 Company writes use optimistic version checks. Notes can be appended without replacing a whole company; individual watch points, rules and feeds can be changed independently. Development feedback updates all existing duplicate members atomically. Required request keys prevent ordinary retry duplication, and an audit trail distinguishes website, MCP and OpenClaw actions. A crash after a domain write but before its response is recorded is reported as uncertain and requires inspection, rather than an automatic retry.
 
-Integration credentials are shown once, hashed at rest, scoped, expiring and revocable in Settings. Starting paid work has a separate permission. Durable jobs enqueue quickly, expose status and support pause/cancel; the server performs bounded units under leases. The local worker runs while the Node server is running, and hosted jobs advance on scheduler ticks. Completed results survive interruption. The website polls small change metadata every five seconds while visible and retains draft conflict handling when another channel edits research.
+Integration credentials are shown once, hashed at rest, scoped, expiring and revocable in Settings. Starting paid work has a separate permission. Durable jobs enqueue quickly, expose status and support pause/cancel; the server performs bounded units under leases. The local worker runs while the Node server is running, and hosted jobs take their first bounded step right after they are queued or resumed (in the background, after the response), then advance on scheduler ticks. Completed results survive interruption. The website polls small change metadata every 30 seconds while visible and retains draft conflict handling when another channel edits research.
 
 ## Where to change things
 
@@ -94,7 +94,7 @@ Event actions also update immediately. While a write is pending, the UI disables
 
 ## Scheduled and manual news runs
 
-pg_cron calls `POST /scheduled` every minute; the route runs `tick()` in `scheduler.ts` under a 150-second `scheduler-tick` lease with a ~50-second work budget. Each tick reads `run/schedule` and works through these steps in order, each isolated so one failure does not block the rest:
+pg_cron fires every minute but calls `POST /scheduled` only when `public.desk_scheduler_due()` (migration `202609250009_gated_scheduler.sql`) returns true: while a scheduled run, manual batch or API job is in progress or queued, while re-screens or tonight's closing prices are pending, and otherwise every 10th minute. The check runs inside Postgres, so skipped minutes produce no API or function logs. Consequently the daily/weekly runs, backup and digest start up to ~10 minutes after their scheduled time; once started they tick every minute as before. The route runs `tick()` in `scheduler.ts` under a 150-second `scheduler-tick` lease with a ~50-second work budget. Each tick reads `run/schedule` and works through these steps in order, each isolated so one failure does not block the rest:
 
 1. One step of a queued API job (`job-queue.ts`, found by a projected status scan).
 2. The digest, until today's is sent or skipped (`digestDate`).
@@ -175,7 +175,7 @@ Quotes require a configured provider and confirmed instrument mapping. EODHD sup
 
 Each device keeps its events and news cursor in IndexedDB (`src/news-cache.ts`, discarded after 21 days). With a cached copy, startup calls `/bootstrap?events=none` and `/news/updates?since=<cursor>`, downloading only changed events. Without one, `/bootstrap` returns inbox and saved events: a projected index is filtered and only those records are read. The first news update then downloads the full history once and caches it. The cache is saved a few seconds after each successful update, never while a feedback write is pending. The update cursor is taken before the read, and filtering includes its boundary. Version-aware merges ignore older records, preserve pending actions, and reuse unchanged arrays. Batch and run responses are ordered by update time, so a delayed progress response cannot undo a newer Pause.
 
-While visible, the page polls `/changes` every 5 seconds. Company or settings changes trigger `/bootstrap?events=none&companiesSince=<previous cursor>`, which returns only changed companies to merge. Event, batch and job changes trigger an incremental news update. A full company reload happens on returning to the tab after 10 minutes. The minute timer fetches only incremental news. Status reads (`readBatchSummary`) project summary fields and omit queues, company lists and, for frequent scheduled-run updates, warnings. Concurrent news refreshes share one pending request. Grouping computes source ranks and group timestamps once; filter/group calculations are memoized. Postgres indexes owner/kind/update time and event discovery time; SQLite indexes kind/update time.
+While visible, the page polls `/changes` every 30 seconds (5 seconds before 2026-09-25; reduced for log ingestion). Company or settings changes trigger `/bootstrap?events=none&companiesSince=<previous cursor>`, which returns only changed companies to merge. Event, batch and job changes trigger an incremental news update. A full company reload happens on returning to the tab after 10 minutes. The minute timer fetches only incremental news. Status reads (`readBatchSummary`) project summary fields and omit queues, company lists and, for frequent scheduled-run updates, warnings. Concurrent news refreshes share one pending request. Grouping computes source ranks and group timestamps once; filter/group calculations are memoized. Postgres indexes owner/kind/update time and event discovery time; SQLite indexes kind/update time.
 
 These optimizations reduce repeated network transfers, sorting, rendering, and duplicated work. They do not lower screening thresholds, change the model/prompts, shorten the reading window, or reduce the requested discovery scope.
 
@@ -194,6 +194,8 @@ Rules for future changes:
 - After changing server reads, check `pg_stat_statements` call counts and the dashboard's egress chart.
 
 Measured after the change (2026-09-22): an idle tick makes 6 store calls returning about 370 bytes. An end-to-end weekly-style run on 10 real companies (307 checked, 144 new) averaged 15 store calls and about 28 KB per new article. About 40% of that is rows returned by writes; a `desk_put` variant returning only the version would remove it, but needs a migration. The estimated monthly total is 0.7–0.8 GB.
+
+**Log ingestion (free plan: 1 GB/month, shared with the reading-app project).** Supabase logs every API request, function invocation and function boot/shutdown at roughly 1–2 KB each, regardless of response size, so request *count* is the budget here, not bytes. By 2026-09-25 this project used ~60 MB/day: an idle scheduler tick is ~8–12 log entries (function invocation plus 6 store calls), 1,440 times a day, and an open tab added ~3 entries every 5 seconds. Since 2026-09-25 idle minutes make no HTTP call (`desk_scheduler_due()`), the tab polls every 30 s, and queued/resumed jobs start via an immediate background step instead of waiting for a tick. Expected: roughly 20–30 MB/day, most of it the nightly and Friday runs themselves. Rules for future code: do not add fixed-interval HTTP polling from cron or the browser; gate cron calls with an in-database check.
 
 CPU: the same profile measured about 80 ms of processing per article (HTML parsing dominates), so `articlesPerTick` is 10 (~0.8 s). TypeSafe: estimated ~$3/month against the $5 server ceiling (weekly sweeps ~$1.6, daily runs ~$0.3, rescreens ≤$1). Database: about 48 MB used, and about 5 KB per stored article including cache and index.
 

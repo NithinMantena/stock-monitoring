@@ -14,14 +14,17 @@ do $block$ begin
   perform vault.update_secret((select id from vault.secrets where name='research_desk_cron'), '${setup.cronSecret}');
  end if;
 end $block$;
--- Every minute: idle minutes read one small record; see scheduler.ts.
+-- Fires every minute but only calls the desk when desk_scheduler_due() says
+-- work is in progress (else every 10th minute). Requires migration
+-- 202609250009_gated_scheduler.sql; see scheduler.ts.
 select cron.schedule('research-desk-monitor','* * * * *',$job$
  select net.http_post(
   url := 'https://tcfricxifanwwzgxgexj.supabase.co/functions/v1/desk/scheduled',
   headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name='research_desk_cron')),
   body := '{}'::jsonb,
-  timeout_milliseconds := 70000
- );
+  timeout_milliseconds := 120000
+ )
+ where public.desk_scheduler_due();
 $job$);
 commit;`,
 );

@@ -46,7 +46,7 @@ The request ledger and audit entry are committed together after the domain opera
 | `/companies/{id}/quote`, `/revisions`, `/markdown` | Supplied quote, note history, Markdown export |
 | `/developments`, `/developments/{id}` | Filter/group coverage, inspect members, atomic feedback |
 | `/events/{id}`, `/events/{id}/content` | Article metadata and available extracted text |
-| `/jobs`, `/jobs/{id}`, `/jobs/{id}/control` | Enqueue, inspect, pause/resume/cancel |
+| `/jobs`, `/jobs/{id}`, `/jobs/{id}/control` | Enqueue, inspect, pause/resume/cancel. Hosted: enqueue and resume run the first bounded step immediately in the background; later steps run on the scheduler, which ticks every minute while a job is queued or running |
 | `/jobs/{id}/advance` | Explicit bounded worker step; requires both job scopes |
 | `/settings`, `/health`, `/digest` | Settings, monitoring/usage health, digest preview |
 | `/import/preview`, `/import/commit`, `/import/{id}/rollback` | Research import lifecycle |

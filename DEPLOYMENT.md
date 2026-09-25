@@ -58,7 +58,7 @@ Migrations were initially applied through `supabase db query --linked --file ...
 
 `scripts/prepare-cloud.ps1` and `scripts/prepare-cloud.ts` handle approved account/credential setup. They temporarily use powerful credentials in ignored `.local` files. Keep those files private, remove them after setup/testing, and exclude `.local` from any Obsidian/cloud-file synchronization. They must never be committed. Existing environment TypeSafe keys are copied only to the app's server secrets.
 
-The scheduler is `research-desk-monitor`, installed through `scripts/prepare-schedule.ts`. It uses a Vault secret and does not depend on GitHub Actions or the user's PC. Inspect recent `net._http_response` status codes and `desk_records` kind `run` to diagnose failures. Disable it with `select cron.unschedule('research-desk-monitor');` when intentionally stopping monitoring.
+The scheduler is `research-desk-monitor`, installed through `scripts/prepare-schedule.ts` and gated by `public.desk_scheduler_due()` (migration `202609250009_gated_scheduler.sql`, which must exist first). It uses a Vault secret and does not depend on GitHub Actions or the user's PC. Inspect recent `net._http_response` status codes and `desk_records` kind `run` to diagnose failures. Disable it with `select cron.unschedule('research-desk-monitor');` when intentionally stopping monitoring.
 
 ## Backup and recovery
 
@@ -106,17 +106,27 @@ The implementation and gate definitions are documented in `docs/fundamental-scre
 
 A private local export was taken before rollout. Do not commit `.local`, research working files, account exports, raw model requests, or credentials. The GitHub repository is public. Public validation artifacts contain synthetic cases only.
 
+## Log ingestion reduction (2026-09-25)
+
+The org exceeded the free plan's 1 GB/month log ingestion (1.27 GB by Sept 25; ~60 MB/day from this project, ~33 MB/day from the reading-app project). Supabase logs every request at ~1–2 KB, so idle polling, not data size, was the cost.
+
+- Migration `supabase/migrations/202609250009_gated_scheduler.sql` adds `public.desk_scheduler_due()` and re-points `research-desk-monitor` (via `cron.alter_job`, keeping the Vault credential) to `select net.http_post(...) where public.desk_scheduler_due();`. The cron still fires every minute; the HTTP call happens only while work is in progress or queued, or every 10th minute. Skipped minutes show `0 rows` in `cron.job_run_details` and nothing in `net._http_response`. Applied 2026-09-25 22:43 UTC with `supabase db query --linked -f`.
+- `POST /v1/jobs` and resume in `/v1/jobs/{id}/control` run the first bounded step in the background (`EdgeRuntime.waitUntil`), so MCP/API jobs start at once rather than on the next tick.
+- The website's `/changes` poll went from 5 s to 30 s.
+- Deployed together: migration, `desk` function, frontend.
+- To revert the scheduler: `select cron.alter_job(job_id := (select jobid from cron.job where jobname='research-desk-monitor'), command := <the command without the where clause>);`.
+
 ## Scheduled news runs and egress reduction (2026-09-22)
 
 Measured on the live project before this change (4.7 days of `pg_stat_statements`): the five-minute scheduler re-read every stored article (about 15–18 MB) for the rescreen check, the full daily backup record (about 660 KB) to test whether it existed, and every company (about 470 KB) for monitoring, 288 times a day. That alone exceeded the free plan's 5 GB monthly egress within days. Open browser tabs added a full company reload every minute and a full article download on every page load.
 
 What runs now (`supabase/functions/_shared/scheduler.ts`; times in `NEWS_SCHEDULE`, `constants.ts`, America/Chicago):
 
-- **Every minute** the hosted scheduler calls `/scheduled`. An idle minute reads one small state record (`run/schedule`), a job-status projection and settings: a few hundred bytes.
+- **Every minute while work is in progress, otherwise every 10 minutes** (since 2026-09-25, see above) the hosted scheduler calls `/scheduled`. An idle call reads one small state record (`run/schedule`), a job-status projection and settings: a few hundred bytes.
 - **Daily run, 1am:** daily-cadence companies (portfolio and perpetual watch), articles since the previous run started minus a 2-hour overlap (normally the last 26 hours).
 - **Weekly run, Friday 6pm:** every non-paused company, last 7 days, daily companies first. Saturday's daily run is skipped because the weekly run covers it. A missed Friday is caught up after 8 days.
 - **Once per night:** closing prices (quotes only; news comes from the runs above), the daily snapshot, and up to 300 rescreens (retries, context changes, policy versions). The rescreen queue is computed once from a projected scan and stored in `run/rescreen-queue`.
-- The 7am digest, API jobs and a running manual batch still progress every minute. Manual batches no longer need an open browser tab.
+- API jobs and a running manual batch progress every minute; the 7am digest goes out on the next 10-minute heartbeat. Manual batches no longer need an open browser tab.
 - Each tick processes at most 10 articles (measured ~80 ms CPU each against the 2 s Edge Function allowance) and about 45 seconds of work. Scheduled runs are stored in `news_batch/scheduled`, separate from the manual batch in `news_batch/latest`; the desk shows both.
 
 Google News politeness: searches are spaced 2 s apart and article/link requests 0.6 s apart; each refusal doubles the spacing (up to 20 s / 10 s) and it eases back 5% per success. Article pages are requested with Google's locale parameters, skipping a redirect (two Google requests per article instead of three). A throttled rescreen pauses rescreens for 30 minutes. HTTP 429/503 from Google is a throttle, not a failure: the run waits 1, 3, 10, 20 then 30 minutes and retries the same step. Only after five consecutive refusals is that search reported and skipped. A throttled article is never cached or screened as unreadable. Publishers that return 401/403 or time out twice in a row are skipped for the rest of the run (the article is recorded as unreadable, as before). The publisher timeout is 8 s (10 s for configured and SEC hosts); no successful read in the 2026-09-22 profile took longer.

@@ -1,6 +1,6 @@
 # How Research Desk works
 
-*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated September 23, 2026.*
+*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated September 25, 2026.*
 
 If you only read one section, read [The short version](#1-the-short-version). If you want to understand a specific behaviour, the [contents](#contents) will take you straight there. Technical detail for programmers lives in [ARCHITECTURE.md](../ARCHITECTURE.md); this guide links to it where useful but never depends on it.
 
@@ -48,7 +48,7 @@ flowchart LR
     You([You]) --> Website[The website<br/>your desk]
     Assistants([MCP / OpenClaw<br/>AI assistants]) --> Server
     Website --> Server[The server<br/>the back office]
-    Timer[The timer<br/>rings every minute] --> Server
+    Timer[The timer<br/>checks every minute] --> Server
     Server --> Database[(The database<br/>the filing cabinet)]
     Server --> Google[Google News<br/>the newsstand]
     Server --> Publishers[Publisher websites<br/>and the SEC]
@@ -62,7 +62,7 @@ flowchart LR
 | **The website** | The desk you look at. It shows your companies, notes and news, and sends your edits to the server. It holds no secrets and does no research itself. | A React web app hosted on **Cloudflare Pages** at [research-desk-2p0.pages.dev](https://research-desk-2p0.pages.dev). |
 | **The server** | The back office. Every real piece of work happens here: searching, reading, asking the AI, applying rules, saving results, sending email. | A single program called `desk`, running as a **Supabase Edge Function**. It runs for at most about a minute each time it is called, then stops. |
 | **The database** | The filing cabinet. It holds every company, note, article, setting and piece of progress. | A **Supabase Postgres** database, project `tcfricxifanwwzgxgexj`. |
-| **The timer** | An alarm clock that rings every minute and tells the server "check whether anything needs doing". Without it, nothing happens overnight. | A **pg_cron** job named `research-desk-monitor`, set to `* * * * *` (every minute). |
+| **The timer** | An alarm clock that checks every minute, inside the database, whether anything is in progress. If so, it wakes the server; if not, it only wakes the server every 10 minutes. Without it, nothing happens overnight. | A **pg_cron** job named `research-desk-monitor`, set to `* * * * *`, gated by `desk_scheduler_due()`. |
 | **Google News** | The newsstand. It tells the system which articles exist about a company. It does not provide the article text. | Google News RSS search, the same results you would see at news.google.com. |
 | **Publishers and the SEC** | Where the actual articles and filings live: Reuters, company press releases, trade magazines, SEC filings. | Ordinary public web pages and PDFs. |
 | **TypeSafe** | The analyst. It never searches or browses. It reads exactly the text the server hands it and answers a fixed list of multiple-choice questions, giving its confidence in each answer. | The TypeSafe API, model `jev-1.13.0`. |
@@ -384,7 +384,7 @@ The digest time (7am Chicago by default), a preview of tomorrow's digest, AI usa
 ### How the website stays current, cheaply
 
 - The website keeps a copy of your articles **in the browser itself**. Opening the desk downloads only what changed since your last visit on that device. The first visit on a new device, or after three weeks away, downloads everything once.
-- Every 5 seconds while the page is visible, it asks the server "has anything changed?", a tiny question. Every minute it fetches any new or changed articles.
+- Every 30 seconds while the page is visible, it asks the server "has anything changed?", a tiny question. Every minute it fetches any new or changed articles.
 - Company data is only re-fetched for companies that actually changed, or when you come back to the tab after 10 minutes away.
 - When the tab is hidden, it stops asking.
 
@@ -477,7 +477,9 @@ Since September 22 the rule is: **read only what you need, only when you need it
 - Heavy chores happen **once a night**, not every minute.
 - The website keeps its own copy of your articles and asks only for changes.
 
-Measured results: a quiet minute now reads about **370 bytes**. A news run reads about **28 KB per new article**. Expected total: **roughly 0.7 to 0.8 GB a month**, comfortably inside 5 GB. The detailed rules for future changes are in [ARCHITECTURE.md](../ARCHITECTURE.md#egress-and-resource-budgets).
+Measured results: a quiet minute now reads about **370 bytes**. A news run reads about **28 KB per new article**. Expected total: **roughly 0.7 to 0.8 GB a month**, comfortably inside 5 GB.
+
+There is a second free allowance: **1 GB a month of logs**, shared with the reading app. Supabase writes a small log entry for every single request, however tiny, so a timer that knocks every minute costs logs even when there is nothing to do. Since September 25 the timer only wakes the server when something is actually in progress (otherwise every 10 minutes), and the page asks "has anything changed?" every 30 seconds instead of every 5. News searches you start from Claude or ChatGPT still begin immediately. The detailed rules for future changes are in [ARCHITECTURE.md](../ARCHITECTURE.md#egress-and-resource-budgets).
 
 ### Server time and computing power
 
@@ -541,7 +543,7 @@ Several things can happen at once: the timer ringing, you editing a company, an 
 | No digest this morning | The digest is off, email delivery is not configured, or it already went out earlier. | Settings & digest → preview. The `digest` record shows what was sent and when. |
 | Items marked **"TypeSafe budget unavailable or reached"** | The monthly AI ceiling was reached. | They wait, labelled, and are re-screened once the new month starts. Usage is shown in Settings. |
 | The desk feels stale | The browser only refreshes while the tab is visible. | Switch back to the tab, or reload. |
-| You suspect the server has stopped | The timer or the server may be failing. | Ask for a check of the timer's recent answers (the `net._http_response` table: each minute should show status 200) and of the `run/schedule` record. |
+| You suspect the server has stopped | The timer or the server may be failing. | Ask for a check of the timer's recent answers (the `net._http_response` table: status 200 at least every 10 minutes, and every minute while a run is in progress) and of the `run/schedule` record. |
 | Worried about data transfer | Something may be reading too much. | Supabase dashboard → Usage → Egress. The database's query statistics (`pg_stat_statements`) show which reads run most often. |
 
 ---
