@@ -6,6 +6,7 @@
     "hono": "npm:hono@4.13.8",
     "hono/body-limit": "npm:hono@4.13.8/body-limit",
     "zod": "npm:zod@4.6.5",
+    "@modelcontextprotocol/server": "npm:@modelcontextprotocol/server@2.0.0",
     "fast-xml-parser": "npm:fast-xml-parser@5.11.1",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.116.0"
   }

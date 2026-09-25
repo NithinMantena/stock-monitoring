@@ -6,12 +6,42 @@ import {
   type Actor,
 } from "../_shared/integrations.ts";
 import { createClient, SupabaseStore } from "../_shared/supabase-store.ts";
+import { createRemoteMcp } from "./mcp.ts";
 const env = Deno.env.toObject();
 const admin = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 const app = new Hono();
+const remoteMcp = createRemoteMcp((request) => app.fetch(request));
 app.all("*", async (c) => {
+  // Remote MCP for URL-only connectors: /k/<integration token>/mcp, or /mcp
+  // with a Bearer token. Called server to server, so no Origin/CORS handling.
+  const remote = /^\/(?:k\/([^/]+)\/)?mcp\/?$/.exec(
+    new URL(c.req.url).pathname.replace(/^\/(?:functions\/v1\/)?desk/, "") ||
+      "/",
+  );
+  if (remote) {
+    const token = remote[1]
+      ? decodeURIComponent(remote[1])
+      : c.req.header("authorization")?.replace(/^Bearer /i, "") || "";
+    const actor =
+      token.startsWith("smt_") && env.MONITOR_OWNER_ID
+        ? await authenticateIntegration(
+            new SupabaseStore(admin, env.MONITOR_OWNER_ID),
+            token,
+          )
+        : null;
+    if (!actor)
+      return c.json(
+        {
+          error: "Integration expired, revoked or invalid.",
+          code: "unauthorized",
+        },
+        401,
+        { "Cache-Control": "no-store" },
+      );
+    return remoteMcp(c.req.raw, token);
+  }
   const origin = c.req.header("origin");
   const allowed = (env.APP_ORIGIN || "")
     .split(",")

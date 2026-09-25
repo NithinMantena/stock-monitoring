@@ -54,6 +54,23 @@ node bot/stocks.ts search_companies request.json
 
 Request files contain operation arguments, never credentials. Notes and article text are best supplied through a private temporary file rather than interpolated shell strings. Both the CLI and MCP tools return typed errors, including a request key for uncertain writes. Do not silently repeat an uncertain write under a new key.
 
+## Remote MCP (claude.ai and ChatGPT on the web and mobile)
+
+The `desk` Edge Function also serves the same `stocks_*` tools at a URL, for apps
+whose connector settings only accept a URL:
+
+```text
+https://tcfricxifanwwzgxgexj.supabase.co/functions/v1/desk/k/<smt_ token>/mcp
+```
+
+It runs `mcp/server.ts`'s `createServer()` (`supabase/functions/desk/mcp.ts`), and every
+tool call goes through the `/v1` API with that integration token, so scopes, versions
+and idempotency are exactly as for the Docker server. Create a separate integration
+(channel **MCP**) on the website with the scopes the connector should have. The URL
+contains the token: treat it as a password, and revoke the integration to cut the
+connector off. Clients that can send headers may use `/mcp` with
+`Authorization: Bearer <token>` instead. Deploy with `desk` as usual.
+
 ## Cross-channel behavior
 
 An appended note or edited watch point is saved on the API immediately. An open, visible website polls small change metadata about every five seconds and reloads changed research; the existing minute refresh remains a fallback. Concurrent unsaved research edits retain the website's draft/conflict protection. Group feedback changes existing duplicate coverage together.
