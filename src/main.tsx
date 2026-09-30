@@ -6,9 +6,24 @@ import {
   ScheduledRunStatus,
   EventList,
   type EventUpdate,
+  type ListActions,
   type ScheduledRunRecord,
 } from "./news-panel";
 import { mergeDocuments, latestBatch, latestRun } from "./sync";
+import { TagChip, TagWindow } from "./tag-window";
+import { CustomSearchPanel } from "./custom-search";
+import {
+  defaultLibrary,
+  emptyCriteria,
+  matchCriteria,
+  slugForList,
+  sameTag,
+  normalizeTag,
+  tagCounts,
+  hasTag,
+  type CompanyCriteria,
+  type Library,
+} from "../supabase/functions/_shared/library";
 import { loadNewsCache, saveNewsCache } from "./news-cache";
 import React, {
   useCallback,
@@ -51,28 +66,66 @@ import {
 import "./style.css";
 
 type ScreenScope = {
-  companies: "filtered" | "daily" | "all";
+  companies: "filtered" | "daily" | "all" | "custom";
+  // 0 = the exact dates in from/to.
   days: number;
   perDay: number;
+  from: string;
+  to: string;
+  criteria: CompanyCriteria;
 };
+const DAY_CHOICES = [1, 2, 3, 7, 14, 30];
+const isoDay = (offsetDays = 0) =>
+  new Date(Date.now() - offsetDays * 86400000).toISOString().slice(0, 10);
 function readScreenScope(): ScreenScope {
-  const fallback: ScreenScope = { companies: "filtered", days: 7, perDay: 10 };
+  const fallback: ScreenScope = {
+    companies: "filtered",
+    days: 7,
+    perDay: 10,
+    from: isoDay(13),
+    to: isoDay(),
+    criteria: emptyCriteria(),
+  };
   try {
     const saved = JSON.parse(localStorage.getItem("screen-scope") || "null");
+    const strings = (v: unknown) =>
+      Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+    const day = (v: unknown, d: string) =>
+      typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : d;
     return {
-      companies: ["filtered", "daily", "all"].includes(saved?.companies)
+      companies: ["filtered", "daily", "all", "custom"].includes(
+        saved?.companies,
+      )
         ? saved.companies
         : fallback.companies,
-      days: [1, 2, 3, 7, 14, 30].includes(saved?.days)
+      days: [0, ...DAY_CHOICES].includes(saved?.days)
         ? saved.days
         : fallback.days,
       perDay: [3, 5, 10, 20].includes(saved?.perDay)
         ? saved.perDay
         : fallback.perDay,
+      from: day(saved?.from, fallback.from),
+      to: day(saved?.to, fallback.to),
+      criteria: {
+        tags: strings(saved?.criteria?.tags),
+        tagMode: saved?.criteria?.tagMode === "all" ? "all" : "any",
+        statuses: strings(saved?.criteria?.statuses),
+        groups: strings(saved?.criteria?.groups),
+        sizes: strings(saved?.criteria?.sizes),
+        companyIds: strings(saved?.criteria?.companyIds),
+      },
     };
   } catch {
     return fallback;
   }
+}
+// Inclusive number of days in an exact window, or 0 when it is invalid.
+function windowDays(from: string, to: string) {
+  const a = Date.parse(from),
+    b = Date.parse(to);
+  return Number.isFinite(a) && Number.isFinite(b) && b >= a
+    ? Math.round((b - a) / 86400000) + 1
+    : 0;
 }
 import { loadDrafts, saveDraft, type Draft } from "./drafts";
 import {
@@ -234,6 +287,8 @@ interface Bootstrap {
   events: Doc<DeskEvent>[];
   settings: Settings;
   settingsVersion: number;
+  library?: Library;
+  libraryVersion?: number;
   configuration: any;
   run?: any;
   newsBatch?: NewsBatchSummary | null;
@@ -267,6 +322,9 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       return next;
     });
   const [emailingRun, setEmailingRun] = useState(false);
+  const [tagFilter, setTagFilter] = useState("");
+  // The tag window: null when closed, otherwise the tag it opened on ("" = none).
+  const [tagWindow, setTagWindow] = useState<string | null>(null);
   const search = useDeferredValue(query.toLowerCase());
   const [selected, setSelected] = useState(
     () => new URLSearchParams(location.hash.slice(1)).get("company") || "",
@@ -385,6 +443,9 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
             newsRun: latestRun(old?.newsRun, next.newsRun),
             ...(old && old.settingsVersion > next.settingsVersion
               ? { settings: old.settings, settingsVersion: old.settingsVersion }
+              : {}),
+            ...(old && (old.libraryVersion || 0) > (next.libraryVersion || 0)
+              ? { library: old.library, libraryVersion: old.libraryVersion }
               : {}),
           };
         });
@@ -687,16 +748,140 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       setSavingEvents(new Set(eventWrites.current.keys()));
     }
   };
+  const library = data?.library || defaultLibrary();
+  // Library writes use the stored version; a conflict reloads and asks to retry.
+  const saveLibrary = async (change: (old: Library) => Library) => {
+    const current = state.current;
+    if (!current) return;
+    const old = current.library || defaultLibrary();
+    try {
+      const result = await api<{ library: Library; version: number }>(
+        "/library",
+        { version: current.libraryVersion || 0, data: change(old) },
+        "PUT",
+      );
+      setData(
+        (prev) =>
+          prev && {
+            ...prev,
+            library: result.library,
+            libraryVersion: result.version,
+          },
+      );
+    } catch (error) {
+      await reload();
+      throw error;
+    }
+  };
+  const listActions: ListActions = {
+    lists: library.lists,
+    create: async (name) => {
+      const trimmed = name.trim();
+      const existing = library.lists.find(
+        (l) => l.name.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (existing) return existing.id;
+      const id = slugForList(
+        trimmed,
+        library.lists.map((l) => l.id),
+      );
+      await saveLibrary((old) => ({
+        ...old,
+        lists: [...old.lists, { id, name: trimmed }],
+      }));
+      return id;
+    },
+    rename: (id, name) =>
+      saveLibrary((old) => ({
+        ...old,
+        lists: old.lists.map((l) =>
+          l.id === id ? { ...l, name: name.trim() } : l,
+        ),
+      })),
+    remove: async (id) => {
+      await saveLibrary((old) => ({
+        ...old,
+        lists: old.lists.filter((l) => l.id !== id),
+      }));
+      await reloadNews();
+    },
+  };
+  const createTag = (tag: string) =>
+    saveLibrary((old) =>
+      old.tags.some((t) => sameTag(t, tag))
+        ? old
+        : { ...old, tags: [...old.tags, normalizeTag(tag)] },
+    );
+  const deleteTag = (tag: string) =>
+    saveLibrary((old) => ({
+      ...old,
+      tags: old.tags.filter((t) => !sameTag(t, tag)),
+    }));
+  const bulkTag = async (tag: string, add: string[], remove: string[]) => {
+    const since = new Date(Date.now() - 1000).toISOString();
+    const result = await api<{
+      updated: { id: string; version: number; tags: string[]; updatedAt: string }[];
+      failed: string[];
+    }>("/companies/tags", { tag, add, remove });
+    const byId = new Map(result.updated.map((u) => [u.id, u]));
+    setData(
+      (old) =>
+        old && {
+          ...old,
+          companies: old.companies.map((d) => {
+            const u = byId.get(d.id);
+            return u && u.version >= d.version
+              ? {
+                  ...d,
+                  version: u.version,
+                  updatedAt: u.updatedAt,
+                  data: { ...d.data, tags: u.tags },
+                }
+              : d;
+          }),
+        },
+    );
+    // Keep the tag in the catalogue even if it ends up on no company.
+    if (!library.tags.some((t) => sameTag(t, tag)))
+      await createTag(tag).catch(() => {});
+    void reload(since);
+    if (result.failed.length)
+      throw new Error(
+        `${result.failed.length} compan${result.failed.length === 1 ? "y was" : "ies were"} being edited elsewhere and did not change. Try again.`,
+      );
+  };
+  const openTags = useCallback((tag = "") => setTagWindow(tag), []);
   const docs = data?.companies || [];
   const filtered = useMemo(
-    () => filterCompanies(docs, { status: filter, group, search }),
-    [docs, filter, group, search],
+    () =>
+      filterCompanies(docs, { status: filter, group, search }).filter(
+        (d) => !tagFilter || hasTag(d.data, tagFilter),
+      ),
+    [docs, filter, group, search, tagFilter],
+  );
+  const allTags = useMemo(
+    () => tagCounts(docs, data?.library),
+    [docs, data?.library],
+  );
+  const customMatched = useMemo(
+    () =>
+      batchScope.companies === "custom"
+        ? matchCriteria(docs, batchScope.criteria, companySize)
+        : [],
+    [docs, batchScope.companies, batchScope.criteria],
   );
   const activeNewsCompany = filtered.some((d) => d.id === newsCompany)
     ? newsCompany
     : "";
+  const customDates = batchScope.days === 0;
+  const searchDays = customDates
+    ? windowDays(batchScope.from, batchScope.to)
+    : batchScope.days;
+  const datesInvalid = customDates && (!searchDays || searchDays > 60);
   const batchCompanies =
-    batchScope.companies === "daily"
+    batchScope.companies === "custom"
+      ? customMatched
+      : batchScope.companies === "daily"
       ? docs.filter((d) => !d.data.archived && cadenceOf(d.data) === "daily")
       : batchScope.companies === "all"
         ? docs.filter((d) => !d.data.archived && cadenceOf(d.data) !== "paused")
@@ -708,13 +893,31 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       batchStarting ||
       data?.newsBatch?.status === "running" ||
       data?.newsBatch?.status === "paused" ||
-      !batchCompanies.length
+      !batchCompanies.length ||
+      datesInvalid
     )
       return;
     setBatchStarting(true);
     setError("");
     const label = [
-      ...(batchScope.companies === "daily"
+      ...(batchScope.companies === "custom"
+        ? [
+            "Custom",
+            batchScope.criteria.tags.length &&
+              `tags: ${batchScope.criteria.tags.join(batchScope.criteria.tagMode === "all" ? " + " : " / ")}`,
+            batchScope.criteria.statuses.length &&
+              batchScope.criteria.statuses
+                .map((x) => statusLabels[x as Status] || x)
+                .join(" / "),
+            batchScope.criteria.sizes.length &&
+              `size: ${batchScope.criteria.sizes.join(" / ")}`,
+            batchScope.criteria.groups.length &&
+              batchScope.criteria.groups.join(" / "),
+            batchCompanies.length <= 3
+              ? batchCompanies.map((d) => d.data.name).join(", ")
+              : `${batchCompanies.length} companies`,
+          ]
+        : batchScope.companies === "daily"
         ? ["Daily companies"]
         : batchScope.companies === "all"
           ? ["All monitored companies"]
@@ -725,12 +928,15 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   ? "Archived"
                   : statusLabels[filter],
               group,
+              tagFilter && `Tag: ${tagFilter}`,
               query && `Search: ${query}`,
               section === "news" &&
                 activeNewsCompany &&
                 batchCompanies[0]?.data.name,
             ]),
-      `last ${batchScope.days} day${batchScope.days === 1 ? "" : "s"}`,
+      customDates
+        ? `${batchScope.from} to ${batchScope.to}`
+        : `last ${batchScope.days} day${batchScope.days === 1 ? "" : "s"}`,
       `${batchScope.perDay}/day`,
     ]
       .filter(Boolean)
@@ -741,7 +947,9 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         id: crypto.randomUUID(),
         label,
         companyIds: batchCompanies.map((d) => d.id),
-        lookbackDays: batchScope.days,
+        ...(customDates
+          ? { from: batchScope.from, to: batchScope.to }
+          : { lookbackDays: batchScope.days }),
         articleLimit: batchScope.perDay,
       });
       setData((old) => old && { ...old, newsBatch: batch });
@@ -810,18 +1018,40 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         <option value="filtered">Companies matching filters</option>
         <option value="daily">Daily companies</option>
         <option value="all">All monitored companies</option>
+        <option value="custom">Custom selection…</option>
       </select>
       <select
         aria-label="Days to search back"
         value={batchScope.days}
         onChange={(e) => updateBatchScope({ days: Number(e.target.value) })}
       >
-        {[1, 2, 3, 7, 14, 30].map((d) => (
+        {DAY_CHOICES.map((d) => (
           <option key={d} value={d}>
             Last {d} day{d === 1 ? "" : "s"}
           </option>
         ))}
+        <option value={0}>Exact dates…</option>
       </select>
+      {customDates && (
+        <span className="date-window">
+          <input
+            type="date"
+            aria-label="Search from date"
+            value={batchScope.from}
+            max={batchScope.to || isoDay()}
+            onChange={(e) => updateBatchScope({ from: e.target.value })}
+          />
+          <span aria-hidden>to</span>
+          <input
+            type="date"
+            aria-label="Search to date"
+            value={batchScope.to}
+            min={batchScope.from}
+            max={isoDay()}
+            onChange={(e) => updateBatchScope({ to: e.target.value })}
+          />
+        </span>
+      )}
       <select
         aria-label="Articles kept per company per day"
         value={batchScope.perDay}
@@ -842,10 +1072,15 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         batchStarting ||
         data?.newsBatch?.status === "running" ||
         data?.newsBatch?.status === "paused" ||
-        !batchCompanies.length
+        !batchCompanies.length ||
+        datesInvalid
       }
       onClick={startBatch}
-      title={`Up to ${batchScope.perDay} articles per day for each of the last ${batchScope.days} UTC calendar day${batchScope.days === 1 ? "" : "s"}, including today: ${(batchCompanies.length * batchScope.days).toLocaleString()} Google News searches and up to ${(batchCompanies.length * batchScope.days * batchScope.perDay).toLocaleString()} articles across this selection, plus configured primary sources.`}
+      title={
+        datesInvalid
+          ? "Choose an end date on or after the start date, at most 60 days apart."
+          : `Up to ${batchScope.perDay} articles per day for each of ${searchDays} UTC calendar day${searchDays === 1 ? "" : "s"}${customDates ? ` (${batchScope.from} to ${batchScope.to})` : ", including today"}: ${(batchCompanies.length * searchDays).toLocaleString()} Google News searches and up to ${(batchCompanies.length * searchDays * batchScope.perDay).toLocaleString()} articles across this selection, plus configured primary sources.`
+      }
     >
       {batchStarting
         ? "Starting…"
@@ -866,8 +1101,30 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       }}
       group={group}
       setGroup={setGroup}
+      tags={allTags}
+      tag={tagFilter}
+      setTag={(value) => {
+        setTagFilter(value);
+        setNewsCompany("");
+      }}
     />
   );
+  const customPanel = batchScope.companies === "custom" && (
+    <CustomSearchPanel
+      docs={docs}
+      tags={allTags}
+      criteria={batchScope.criteria}
+      onChange={(criteria) => updateBatchScope({ criteria })}
+      matched={customMatched}
+    />
+  );
+  const scopeNote = datesInvalid ? (
+    <span className="muted" role="alert">
+      {searchDays > 60
+        ? "Exact dates can span at most 60 days."
+        : "The end date must be on or after the start date."}
+    </span>
+  ) : null;
   const selectedDoc = docs.find((c) => c.id === selected);
   const unseen = groupNews(
     (data?.events || []).filter(
@@ -1032,13 +1289,22 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                     Companies <span>{filtered.length}</span>
                   </h1>
                 </div>
-                <input
-                  className="search"
-                  aria-label="Search companies and notes"
-                  placeholder="Search companies, tickers, notes…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+                <div className="heading-actions">
+                  <input
+                    className="search"
+                    aria-label="Search companies and notes"
+                    placeholder="Search companies, tickers, notes…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => openTags(tagFilter)}
+                    title="Tag many companies at once"
+                  >
+                    # Tags
+                  </button>
+                </div>
               </div>
               {companyFilters}
               <div className="batch-toolbar">
@@ -1048,12 +1314,14 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   News only. Up to{" "}
                   {(
                     batchCompanies.length *
-                    batchScope.days *
+                    searchDays *
                     batchScope.perDay
                   ).toLocaleString()}{" "}
                   articles.
                 </span>
+                {scopeNote}
               </div>
+              {customPanel}
               <NewsBatchStatus
                 batch={data.newsBatch}
                 onControl={controlBatch}
@@ -1105,6 +1373,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                             selected={selected === c.id}
                             showDetail={!!selectedDoc}
                             onSelect={openCompany}
+                            onOpenTag={openTags}
                           />
                         ))}
                       </tbody>
@@ -1134,6 +1403,9 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                     action={action}
                     updateEvent={updateEvent}
                     savingEvents={savingEvents}
+                    listActions={listActions}
+                    tags={allTags}
+                    onOpenTag={openTags}
                   />
                 )}
               </div>
@@ -1150,8 +1422,10 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   {scopeControls}
                   {batchButton}
                   {emailRunButton}
+                  {scopeNote}
                 </div>
               </div>
+              {customPanel}
               <p className="muted">
                 New items appear at the top. Review to clear your inbox, or save
                 to keep. Unsaved unread items leave the inbox after 30 days.
@@ -1167,6 +1441,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
               <ScheduledRunStatus
                 run={data.newsRun}
                 history={data.newsRunHistory}
+                manual={data.newsBatch}
               />
               <NewsBatchStatus
                 batch={data.newsBatch}
@@ -1180,6 +1455,8 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 onCompanyFilterChange={setNewsCompany}
                 updateEvent={updateEvent}
                 savingEvents={savingEvents}
+                listActions={listActions}
+                onOpenTag={openTags}
               />
             </>
           )}
@@ -1301,12 +1578,49 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
           {section === "settings" && (
             <>
               <SettingsPanel data={data} action={action} busy={busy} />
+              <div className="settings-card">
+                <h2>Tags</h2>
+                <p className="muted">
+                  Group companies by theme, such as serial acquirers. The tag
+                  window lets you create a tag and apply it to many companies
+                  at once.
+                </p>
+                <div className="tag-cloud">
+                  {allTags.map((t) => (
+                    <button
+                      type="button"
+                      key={t.tag}
+                      className="tag-chip"
+                      onClick={() => openTags(t.tag)}
+                    >
+                      {t.tag} <small>{t.count}</small>
+                    </button>
+                  ))}
+                  {!allTags.length && (
+                    <span className="muted">No tags yet.</span>
+                  )}
+                </div>
+                <button type="button" onClick={() => openTags("")}>
+                  Open tag window
+                </button>
+              </div>
               <IntegrationsPanel />
               <JobsPanel />
             </>
           )}
         </main>
       </div>
+      {tagWindow !== null && (
+        <TagWindow
+          companies={docs}
+          library={library}
+          initialTag={tagWindow}
+          onClose={() => setTagWindow(null)}
+          onConfirm={bulkTag}
+          onCreateTag={createTag}
+          onDeleteTag={deleteTag}
+        />
+      )}
       {adding && (
         <dialog
           className="modal-backdrop"
@@ -1430,11 +1744,13 @@ const CompanyRow = React.memo(function CompanyRow({
   selected,
   showDetail,
   onSelect,
+  onOpenTag,
 }: {
   c: Company;
   selected: boolean;
   showDetail: boolean;
   onSelect: (id: string) => void;
+  onOpenTag: (tag: string) => void;
 }) {
   return (
     <tr
@@ -1451,6 +1767,13 @@ const CompanyRow = React.memo(function CompanyRow({
             ? `${c.ticker} · ${c.exchange || "Exchange unconfirmed"}`
             : "Symbol not linked"}
         </small>
+        {c.tags.some(Boolean) && (
+          <span className="row-tags">
+            {c.tags.filter(Boolean).map((t) => (
+              <TagChip key={t} tag={t} small onOpen={onOpenTag} />
+            ))}
+          </span>
+        )}
       </td>
       <td>
         <span className={"status " + c.status}>{statusLabels[c.status]}</span>
@@ -1501,6 +1824,9 @@ interface DetailProps {
   action: (fn: () => Promise<unknown>, message?: string) => Promise<void>;
   updateEvent: EventUpdate;
   savingEvents: Set<string>;
+  listActions: ListActions;
+  tags: { tag: string; count: number }[];
+  onOpenTag: (tag: string) => void;
 }
 function CompanyDetail({
   doc,
@@ -1514,6 +1840,9 @@ function CompanyDetail({
   action,
   updateEvent,
   savingEvents,
+  listActions,
+  tags,
+  onOpenTag,
 }: DetailProps) {
   const c = doc.data;
   const [preview, setPreview] = useState(false);
@@ -1642,14 +1971,12 @@ function CompanyDetail({
               />
             )}
             <div className="form-grid">
-              <Field label="Tags (comma separated)">
-                <input
-                  value={c.tags.join(", ")}
-                  onChange={(e) =>
-                    edit({
-                      tags: e.target.value.split(",").map((x) => x.trim()),
-                    })
-                  }
+              <Field label="Tags">
+                <TagEditor
+                  tags={c.tags}
+                  known={tags}
+                  onChange={(next) => edit({ tags: next })}
+                  onOpenTag={onOpenTag}
                 />
               </Field>
               <Field label="Next research review">
@@ -1929,6 +2256,7 @@ function CompanyDetail({
               companies={[doc]}
               updateEvent={updateEvent}
               savingEvents={savingEvents}
+              listActions={listActions}
               compact
             />
           </>
@@ -2292,18 +2620,93 @@ function CompanyDetail({
   );
 }
 
+// Chips for one company's tags: click to open the tag window, × to remove, and
+// type to add (suggesting existing tags).
+function TagEditor({
+  tags,
+  known,
+  onChange,
+  onOpenTag,
+}: {
+  tags: string[];
+  known: { tag: string; count: number }[];
+  onChange: (tags: string[]) => void;
+  onOpenTag: (tag: string) => void;
+}) {
+  const [text, setText] = useState("");
+  const current = tags.filter((t) => t.trim());
+  const add = (raw: string) => {
+    const tag = known.find((k) => sameTag(k.tag, raw))?.tag || normalizeTag(raw);
+    if (tag && !current.some((t) => sameTag(t, tag)))
+      onChange([...current, tag]);
+    setText("");
+  };
+  return (
+    <div className="tag-editor">
+      {current.map((t) => (
+        <span key={t} className="tag-chip editable">
+          <button
+            type="button"
+            className="tag-chip-name"
+            title={`Open the tag window for "${t}"`}
+            onClick={() => onOpenTag(t)}
+          >
+            {t}
+          </button>
+          <button
+            type="button"
+            className="tag-chip-remove"
+            aria-label={`Remove tag ${t}`}
+            onClick={() => onChange(current.filter((x) => x !== t))}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        list="known-tags"
+        aria-label="Add a tag"
+        placeholder="Add tag…"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            add(text);
+          } else if (e.key === "Backspace" && !text && current.length)
+            onChange(current.slice(0, -1));
+        }}
+        onBlur={() => text.trim() && add(text)}
+      />
+      <datalist id="known-tags">
+        {known
+          .filter((k) => !current.some((t) => sameTag(t, k.tag)))
+          .map((k) => (
+            <option key={k.tag} value={k.tag} />
+          ))}
+      </datalist>
+    </div>
+  );
+}
+
 function CompanyScopeFilters({
   docs,
   filter,
   setFilter,
   group,
   setGroup,
+  tags,
+  tag,
+  setTag,
 }: {
   docs: Doc<Company>[];
   filter: Status | "all" | "archived";
   setFilter: (value: Status | "all" | "archived") => void;
   group: string;
   setGroup: (value: string) => void;
+  tags: { tag: string; count: number }[];
+  tag: string;
+  setTag: (value: string) => void;
 }) {
   return (
     <div className="filters" role="group" aria-label="Filter companies">
@@ -2323,6 +2726,21 @@ function CompanyScopeFilters({
               : statusLabels[s]}
         </button>
       ))}
+      <select
+        aria-label="Tag"
+        className="tag-filter"
+        value={tag}
+        onChange={(e) => setTag(e.target.value)}
+      >
+        <option value="">All tags</option>
+        {tags
+          .filter((t) => t.count > 0)
+          .map((t) => (
+            <option key={t.tag} value={t.tag}>
+              {t.tag} ({t.count})
+            </option>
+          ))}
+      </select>
       <select
         aria-label="Original research group"
         value={group}

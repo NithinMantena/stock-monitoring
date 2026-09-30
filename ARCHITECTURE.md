@@ -46,7 +46,9 @@ Integration credentials are shown once, hashed at rest, scoped, expiring and rev
 | File or directory | Responsibility |
 | --- | --- |
 | `src/main.tsx` | Sign-in, navigation, company editor, autosave, settings, imports, monitoring health |
-| `src/news-panel.tsx` | News folders, filters, grouped cards, feedback, reader, search controls |
+| `src/news-panel.tsx` | News folders, saved lists, filters, grouped cards, feedback, reader, run status |
+| `src/tag-window.tsx`, `src/save-lists.tsx`, `src/custom-search.tsx` | Bulk tag window and tag chips; Save picker and list manager; custom news-search company picker |
+| `supabase/functions/_shared/library.ts` | Saved lists and tag catalogue (`settings/library`), list/save invariants, tag matching, company search ranking, custom-search criteria |
 | `src/api.ts` | Browser API requests, session header, timeout and HTTP error handling |
 | `client/` | Shared authenticated transport, typed operation catalog and private integration configuration |
 | `mcp/`, `bot/`, `openclaw/` | MCP stdio server, Docker setup, OpenClaw CLI and skill |
@@ -115,7 +117,7 @@ pg_cron fires every minute but calls `POST /scheduled` only when `public.desk_sc
 5. When a scheduled run finishes a company, it updates `lastNewsCheck` (unless a feed failed) and each feed's `lastSuccess`/`error`, and files one health event per failing source.
 6. The run saves `skippedHosts` and learned Google `pace` so later slices continue with them.
 
-**Manual Search news** keeps its behaviour: the current company selection becomes a saved batch (one at a time), with up to 10 items per UTC day for 7 days per company plus primary sources, and pause/resume/cancel. The visible page advances it; scheduler ticks also advance it after the scheduled run's share, so closing the browser does not stop it.
+**Manual Search news** keeps its behaviour: the chosen company selection (current filters, daily, all, or a custom selection by tag/list/size/group/name) becomes a saved batch (one at a time), with up to the chosen number of items per UTC day over the last N days or an exact `from`–`to` window (≤ 60 days) per company plus primary sources, and pause/resume/cancel. The visible page advances it; scheduler ticks also advance it after the scheduled run's share, so closing the browser does not stop it.
 
 Each article also has a 600-second lease shared by every worker, preventing duplicate paid processing. A crashed worker's lease expires, which can delay a retry but not lose work.
 
@@ -161,7 +163,7 @@ The admission policy combines the model's judgments with source/content depth an
 
 Duplicates are grouped by company and development cluster. The best eligible source leads the card according to `screeningRank`. Additional coverage remains expandable. Grouping does not delete articles. Later updates with new information can remain distinct. Useful overrides screening; Noise suppresses the reader's development until undone.
 
-Inbox holds unsaved, unreviewed events for 30 days after discovery or an explicit return to inbox. Saved has no time limit. History retains reviewed/expired unsaved items. Folders and screening buckets are separate: review status is not a judgment about fundamental importance. Filters operate on the full loaded dataset; the UI renders 50 grouped cards initially and adds 50 at a time.
+Inbox holds unsaved, unreviewed events for 30 days after discovery or an explicit return to inbox. Saved has no time limit; saved events belong to one or more owner-defined lists (`lists`, stored in `settings/library`), and `saved` always equals membership of at least one list. History retains reviewed/expired unsaved items. Folders and screening buckets are separate: review status is not a judgment about fundamental importance. Filters operate on the full loaded dataset; the UI renders 50 grouped cards initially and adds 50 at a time.
 
 The digest uses the same current policy/explanations and effective priority, with important developments before ordinary ones. It is prepared in America/Chicago time and sent through Resend only when enabled and configured. Delivery is idempotent for that local day.
 

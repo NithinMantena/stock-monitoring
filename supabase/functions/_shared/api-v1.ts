@@ -3,6 +3,7 @@ import { bodyLimit } from "hono/body-limit";
 import { DatabaseReadError } from "./database-read.ts";
 import { z } from "zod";
 import { createApi } from "./api.ts";
+import { ListIds, applySavePatch, eventLists } from "./library.ts";
 import {
   CompanySchema,
   ConflictError,
@@ -116,6 +117,8 @@ const Feedback = z
   .object({
     reviewed: z.boolean().optional(),
     saved: z.boolean().optional(),
+    // Saved-list ids; replaces the development's lists (empty = unsaved).
+    lists: ListIds.optional(),
     feedback: z.enum(["useful", "noise"]).nullable().optional(),
     feedbackReason: z
       .enum([
@@ -262,7 +265,7 @@ export function createV1Api(
         ? path.endsWith("/notes")
           ? "research:write"
           : "monitoring:write"
-        : path === "/companies"
+        : path === "/companies" || path === "/companies/tags"
           ? "research:write"
           : /^\/companies\/[^/]+$/.test(path) && c.req.method === "PATCH"
             ? "read"
@@ -275,7 +278,7 @@ export function createV1Api(
                   ? "jobs:start"
                   : /^\/(jobs|news\/batches)\/.+\/(control|advance)$/.test(path)
                     ? "jobs:control"
-                    : path === "/settings"
+                    : path === "/settings" || path === "/library"
                       ? "settings:write"
                       : path.startsWith("/import")
                         ? "import:write"
@@ -590,6 +593,7 @@ export function createV1Api(
         publishedAt: d.data.publishedAt,
         reviewed: d.data.reviewed,
         saved: d.data.saved,
+        lists: eventLists(d.data),
       })),
       versions: Object.fromEntries(members.map((d) => [d.id, d.version])),
     });
@@ -625,9 +629,10 @@ export function createV1Api(
         input.patch.feedback === null
           ? undefined
           : (input.patch.feedback ?? d.data.feedback);
+      const { saved, lists, ...rest } = input.patch;
       const data = {
-        ...d.data,
-        ...input.patch,
+        ...applySavePatch(d.data, { saved, lists }),
+        ...rest,
         feedback,
         feedbackReason:
           feedback === "noise"
@@ -705,8 +710,11 @@ export function createV1Api(
           lookbackDays: z
             .union([z.literal(1), z.literal(7), z.literal(30)])
             .default(7),
+          from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+          to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
         })
         .strict()
+        .refine((x) => !x.from === !x.to, "Give both from and to dates.")
         .parse(input);
       const batch = await startNewsBatch(store, {
         ...p,

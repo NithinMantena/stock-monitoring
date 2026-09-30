@@ -26,13 +26,51 @@ import {
 } from "../supabase/functions/_shared/news";
 import { api } from "./api";
 import { Field, chicagoDate } from "./ui";
+import {
+  eventLists,
+  type SavedList,
+} from "../supabase/functions/_shared/library";
+import { ListManager, SavePicker } from "./save-lists";
+import { TagChip } from "./tag-window";
 export type EventUpdate = (
   doc: Doc<DeskEvent>,
   patch: Partial<
-    Pick<DeskEvent, "reviewed" | "saved" | "feedback" | "feedbackReason">
+    Pick<
+      DeskEvent,
+      "reviewed" | "saved" | "lists" | "feedback" | "feedbackReason"
+    >
   >,
   scope?: "article" | "development",
 ) => Promise<void>;
+export interface ListActions {
+  lists: SavedList[];
+  create: (name: string) => Promise<string>;
+  rename: (id: string, name: string) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+}
+
+// A finished or cancelled manual search stays visible for a day, or until
+// dismissed on this device; its summary remains under Recent runs.
+const DISMISSED_KEY = "dismissed-news-batches";
+const HIDE_AFTER_MS = 86400000;
+function readDismissed(): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+export function batchIsStale(
+  batch: NewsBatchSummary,
+  dismissed: string[],
+  now = Date.now(),
+) {
+  if (batch.status === "running" || batch.status === "paused") return false;
+  if (dismissed.includes(batch.id)) return true;
+  const ended = Date.parse(batch.finishedAt || batch.updatedAt);
+  return Number.isFinite(ended) && now - ended > HIDE_AFTER_MS;
+}
 export function NewsBatchStatus({
   batch,
   onControl,
@@ -42,9 +80,33 @@ export function NewsBatchStatus({
   onControl: (action: "pause" | "resume" | "cancel") => void;
   controlBusy: boolean;
 }) {
-  if (!batch) return null;
+  const [dismissed, setDismissed] = useState(readDismissed);
+  if (!batch || batchIsStale(batch, dismissed)) return null;
+  const finished = batch.status === "completed" || batch.status === "cancelled";
   return (
-    <section className="news-batch" aria-label="News search progress">
+    <section
+      className={finished ? "news-batch finished" : "news-batch"}
+      aria-label="News search progress"
+    >
+      {finished && (
+        <button
+          type="button"
+          className="dismiss"
+          aria-label="Dismiss this search summary"
+          title="Hide this summary. It stays under Recent runs."
+          onClick={() => {
+            const next = [batch.id, ...dismissed].slice(0, 20);
+            setDismissed(next);
+            try {
+              localStorage.setItem(DISMISSED_KEY, JSON.stringify(next));
+            } catch {
+              /* hidden for this visit only */
+            }
+          }}
+        >
+          ×
+        </button>
+      )}
       <div role="status">
         <strong>
           {
@@ -75,9 +137,12 @@ export function NewsBatchStatus({
       )}
       <small>
         {batch.dailySearch &&
-          `Up to ${batch.articleLimit} articles per day × ${batch.lookbackDays} days per company, plus primary sources. `}
+          `Up to ${batch.articleLimit} articles per day × ${batch.lookbackDays} days${batch.from ? ` (${batch.from} to ${batch.to})` : ""} per company, plus primary sources. `}
         {batch.status === "running" &&
           "Progress is saved; the server continues if you leave this page."}
+        {finished &&
+          batch.finishedAt &&
+          `Ended ${chicagoTime(batch.finishedAt)}. `}
         {(batch.status === "paused" || batch.status === "cancelled") &&
           "Completed articles are kept. An article already being processed may finish; no further articles in this search will start."}
       </small>
@@ -132,9 +197,11 @@ const hourLabel = (h: number) =>
 export function ScheduledRunStatus({
   run,
   history = [],
+  manual,
 }: {
   run?: NewsBatchSummary | null;
   history?: ScheduledRunRecord[];
+  manual?: NewsBatchSummary | null;
 }) {
   const waiting =
     run?.status === "running" &&
@@ -190,10 +257,17 @@ export function ScheduledRunStatus({
           </ul>
         </details>
       )}
-      {history.length > 0 && (
+      {(history.length > 0 || manual) && (
         <details>
-          <summary>Recent scheduled runs</summary>
+          <summary>Recent runs</summary>
           <ul>
+            {manual && (
+              <li>
+                Last manual search · {chicagoTime(manual.createdAt)} ·{" "}
+                {manual.status} · {manual.label} · {manual.completedCompanies}/
+                {manual.totalCompanies} companies · {manual.added} new
+              </li>
+            )}
             {history.slice(0, 7).map((h) => (
               <li key={h.id}>
                 {chicagoTime(h.startedAt)} · {h.schedule} · {h.status} ·{" "}
@@ -279,6 +353,8 @@ export function EventList({
   compact = false,
   companyFilter,
   onCompanyFilterChange,
+  listActions,
+  onOpenTag,
 }: {
   docs: Doc<DeskEvent>[];
   companies: Doc<Company>[];
@@ -287,9 +363,19 @@ export function EventList({
   compact?: boolean;
   companyFilter?: string;
   onCompanyFilterChange?: (id: string) => void;
+  listActions: ListActions;
+  onOpenTag?: (tag: string) => void;
 }) {
   const [show, setShow] = useState<NewsView>("relevant");
   const [folder, setFolder] = useState<EventFolder>("inbox");
+  // Within Saved: one list, or "" for everything saved.
+  const [savedList, setSavedList] = useState("");
+  const knownLists = useMemo(
+    () => new Set(listActions.lists.map((l) => l.id)),
+    [listActions.lists],
+  );
+  const listsOf = (e: DeskEvent) =>
+    eventLists(e).filter((id) => knownLists.has(id));
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
@@ -306,10 +392,14 @@ export function EventList({
   const [visibleCount, setVisibleCount] = useState(50);
   useEffect(
     () => setVisibleCount(50),
-    [show, folder, query, company, importance, source, after, before],
+    [show, folder, savedList, query, company, importance, source, after, before],
   );
   const names = useMemo(
     () => new Map(companies.map((x) => [x.id, x.data.name])),
+    [companies],
+  );
+  const companyTags = useMemo(
+    () => new Map(companies.map((x) => [x.id, x.data.tags.filter(Boolean)])),
     [companies],
   );
   const membersByGroup = useMemo(() => {
@@ -340,10 +430,26 @@ export function EventList({
         })),
     [docs, names, company],
   );
+  const inSavedList = (e: DeskEvent) =>
+    folder !== "saved" || !savedList || eventLists(e).includes(savedList);
   const folderDocs = useMemo(
-    () => scoped.filter((d) => inEventFolder(d.data, folder, now)),
-    [scoped, folder, now],
+    () =>
+      scoped.filter(
+        (d) => inEventFolder(d.data, folder, now) && inSavedList(d.data),
+      ),
+    [scoped, folder, now, savedList],
   );
+  // Developments per saved list, for the list chips.
+  const listCounts = useMemo(() => {
+    const sets = new Map<string, Set<string>>();
+    for (const d of scoped)
+      if (d.data.saved)
+        for (const id of eventLists(d.data)) {
+          if (!sets.has(id)) sets.set(id, new Set());
+          sets.get(id)!.add(eventGroupKey(d.data));
+        }
+    return new Map([...sets].map(([id, set]) => [id, set.size]));
+  }, [scoped]);
   const sources = useMemo(
     () =>
       [
@@ -373,13 +479,13 @@ export function EventList({
           (f !== "inbox" || bucket === "relevant")
         )
           folders[f].add(key);
-      if (inEventFolder(d.data, folder, now)) {
+      if (inEventFolder(d.data, folder, now) && inSavedList(d.data)) {
         views.all.add(key);
         if (d.data.kind !== "health") views[bucket].add(key);
       }
     }
     return { folders, views };
-  }, [scoped, folder, now]);
+  }, [scoped, folder, now, savedList]);
   const filtered = useMemo(
     () =>
       folderDocs
@@ -437,10 +543,43 @@ export function EventList({
         ))}
       </div>
       {folder === "saved" && (
-        <p className="muted">
-          Saved items stay here until you unsave them, including items older
-          than 30 days.
-        </p>
+        <>
+          <div
+            className="filters saved-lists"
+            role="group"
+            aria-label="Saved lists"
+          >
+            <button
+              className={!savedList ? "chip selected" : "chip"}
+              onClick={() => setSavedList("")}
+            >
+              All saved ({counts.folders.saved.size})
+            </button>
+            {listActions.lists.map((l) => (
+              <button
+                key={l.id}
+                className={savedList === l.id ? "chip selected" : "chip"}
+                onClick={() => setSavedList(l.id)}
+              >
+                {l.name} ({listCounts.get(l.id) || 0})
+              </button>
+            ))}
+          </div>
+          <ListManager
+            lists={listActions.lists}
+            counts={listCounts}
+            onCreate={listActions.create}
+            onRename={listActions.rename}
+            onDelete={async (id) => {
+              await listActions.remove(id);
+              if (savedList === id) setSavedList("");
+            }}
+          />
+          <p className="muted">
+            Saved items stay in their lists until you remove them, including
+            items older than 30 days.
+          </p>
+        </>
       )}
       {folder === "history" && (
         <p className="muted">
@@ -579,6 +718,10 @@ export function EventList({
             <article className={"event " + e.priority} key={e.id}>
               <div className="event-meta">
                 <b>{names.get(e.companyId) || "Company"}</b>
+                {!compact &&
+                  (companyTags.get(e.companyId) || []).map((t) => (
+                    <TagChip key={t} tag={t} small onOpen={onOpenTag} />
+                  ))}
                 <span>
                   {e.kind === "health"
                     ? "Coverage issue"
@@ -722,15 +865,13 @@ export function EventList({
                 >
                   {folder === "inbox" ? "Mark reviewed" : "Return to inbox"}
                 </button>
-                <button
+                <SavePicker
+                  lists={listActions.lists}
+                  selected={listsOf(e)}
                   disabled={saving}
-                  aria-pressed={!!e.saved}
-                  onClick={() =>
-                    updateGroup({ saved: !e.saved, reviewed: true })
-                  }
-                >
-                  {e.saved ? "Unsave" : "Save"}
-                </button>
+                  onChange={(lists) => updateGroup({ lists, reviewed: true })}
+                  onCreateList={listActions.create}
+                />
                 <button
                   disabled={saving}
                   aria-pressed={e.feedback === "useful"}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CompanySchema, SettingsSchema } from "./model.ts";
+import { LIBRARY_ID, LibrarySchema } from "./library.ts";
 
 const text = z.string();
 const probability = z.number().finite().min(0).max(1);
@@ -46,6 +47,7 @@ const Event = z
     discoveredAt: text,
     reviewed: z.boolean(),
     saved: z.boolean().optional(),
+    lists: z.array(text).optional(),
     inboxAt: text.optional(),
     feedback: z.enum(["useful", "noise"]).optional(),
     clusterId: text.optional(),
@@ -78,7 +80,7 @@ export function validateRestoreRecords(
     keys.add(key);
     const schema = {
       company: CompanySchema,
-      settings: SettingsSchema,
+      settings: record.id === LIBRARY_ID ? LibrarySchema : SettingsSchema,
       event: Event,
       revision: Revision,
       import: Import,

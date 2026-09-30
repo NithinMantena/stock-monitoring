@@ -431,6 +431,7 @@ async function processUnlockedArticle(
       discoveredAt: fresh.data.discoveredAt,
       reviewed: fresh.data.reviewed,
       saved: fresh.data.saved,
+      lists: fresh.data.lists,
       inboxAt: fresh.data.inboxAt,
       feedback: fresh.data.feedback,
       feedbackReason: fresh.data.feedbackReason,

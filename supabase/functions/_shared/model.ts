@@ -122,6 +122,8 @@ export interface DeskEvent {
   discoveredAt: string;
   reviewed: boolean;
   saved?: boolean;
+  // Saved-list ids (see library.ts); absent on articles saved before lists.
+  lists?: string[];
   inboxAt?: string;
   feedback?: "useful" | "noise";
   feedbackReason?:

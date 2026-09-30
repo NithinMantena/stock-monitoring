@@ -2294,6 +2294,15 @@
                       "saved": {
                         "type": "boolean"
                       },
+                      "lists": {
+                        "description": "Saved-list ids (replaces the development's lists; [] unsaves). saved:true alone adds to review-later.",
+                        "maxItems": 50,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 60
+                        }
+                      },
                       "feedback": {
                         "anyOf": [
                           {

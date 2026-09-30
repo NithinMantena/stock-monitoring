@@ -2,6 +2,14 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Saved lists, tag window, custom searches, tidier run status — 2026-09-29
+
+- **Saved lists.** Save opens a picker of the owner's lists; an article can be in several. Lists live in the `settings/library` record (no new record kind or migration; included in full and essential exports, validated by restore with its own schema). Events gain `lists: string[]`; `saved` stays the folder flag and always equals "in at least one list" (`applySavePatch` in `_shared/library.ts`). Articles saved before lists count as **Review later** (`eventLists`), so nothing was migrated. `PUT /library` is version-checked; removing a list rewrites affected articles (a projected `saved,lists` index, then 50-id reads). `PATCH /developments/:id` and `update_development` accept `lists`; `saved:true` alone still means Review later.
+- **Tag window.** `POST /companies/tags {tag, add[], remove[]}` changes one tag across companies under each company's edit lock, keeping other tags and any existing spelling; it reports companies it could not change. Tags compare case-insensitively. The window (`src/tag-window.tsx`) opens from Companies, Settings and any tag chip. The company tag field is now chips, and Companies has a tag filter.
+- **Custom news searches.** Scope "Custom selection…" (tags any/all, lists, size, research groups, and companies picked by name, see `matchCriteria`) and "Exact dates…" (`from`/`to`, ≤ 60 days, end capped at today). Manual batches store `from`/`to`; `batchSearchDays` searches each day of the window, and `selectBatchArticles` keeps articles inside it. `start_news_search` accepts `from`/`to`.
+- **Run status.** A completed or cancelled manual search collapses to a short summary with × and hides after 24 hours (dismissal is per device, in `localStorage`). "Recent runs" now includes the last manual search.
+- Verified: 260 tests (12 new in `tests/library.test.ts`), TypeScript and the production build pass. The UI was exercised against the disposable review preview at desktop and phone widths: create a tag, add by Enter/click, remove, confirm; save into a new list; the Saved list chips; dismissing a cancelled search; the custom panel and exact dates. No search was started in the preview, to avoid live Google requests.
+
 ## Headline-first screening (v3) — 2026-09-23
 
 - Rebuilt article screening around what is known about every article: company, headline, publisher, snippet and code-computed age. Text is read when possible and refines the same answers, but is never required. Spec: [docs/fundamental-screening-v3.md](docs/fundamental-screening-v3.md). Research basis: `research/google-rate-limits-2026-09-22` and `research/typesafe-screening-2-2026-09-22`.

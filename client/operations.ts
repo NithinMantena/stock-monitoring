@@ -272,6 +272,13 @@ export const operations: Operation[] = [
         .object({
           reviewed: z.boolean().optional(),
           saved: z.boolean().optional(),
+          lists: z
+            .array(z.string().max(60))
+            .max(50)
+            .optional()
+            .describe(
+              "Saved-list ids (replaces the development's lists; [] unsaves). saved:true alone adds to review-later.",
+            ),
           feedback: z.enum(["useful", "noise"]).nullable().optional(),
           feedbackReason: z
             .enum([
@@ -299,6 +306,16 @@ export const operations: Operation[] = [
       lookbackDays: z
         .union([z.literal(1), z.literal(7), z.literal(30)])
         .default(7),
+      from: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional()
+        .describe("Exact window start (UTC date); requires to. Max 60 days."),
+      to: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional()
+        .describe("Exact window end (UTC date, inclusive)."),
     },
     "jobs:start",
     (a) => ({
@@ -306,6 +323,7 @@ export const operations: Operation[] = [
       companyIds: a.companyIds,
       label: a.label,
       lookbackDays: a.lookbackDays,
+      ...(a.from && a.to ? { from: a.from, to: a.to } : {}),
     }),
   ),
   op(

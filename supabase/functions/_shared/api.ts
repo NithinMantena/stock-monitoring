@@ -29,6 +29,15 @@ import {
 } from "./article-content.ts";
 import { MAX_ARTICLE_CHARS } from "./screening-policy.ts";
 import { inEventFolder, isExpired } from "./event-inbox.ts";
+import {
+  LIBRARY_ID,
+  LibrarySchema,
+  applySavePatch,
+  defaultLibrary,
+  eventLists,
+  normalizeTag,
+  sameTag,
+} from "./library.ts";
 import { validateRestoreRecords } from "./restore.ts";
 import {
   advanceNewsBatch,
@@ -46,6 +55,7 @@ import {
 } from "./jobs.ts";
 import { scheduleState, tick } from "./scheduler.ts";
 
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
   const api = new Hono();
   const normalLimit = bodyLimit({
@@ -96,7 +106,7 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
   api.get("/bootstrap", async (c) => {
     const companiesSince = c.req.query("companiesSince");
     if (companiesSince) z.iso.datetime().parse(companiesSince);
-    const [companies, events, settings, run, imports, usage, newsBatch, newsRun, schedule] =
+    const [companies, events, settings, run, imports, usage, newsBatch, newsRun, schedule, library] =
       await Promise.all([
         // Browsers ask for changed companies only after an edit elsewhere.
         store.list<Company>("company", {
@@ -111,6 +121,7 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         readBatchSummary(store, "latest"),
         readBatchSummary(store, "scheduled"),
         scheduleState(store),
+        store.get<unknown>("settings", LIBRARY_ID),
       ]);
     return c.json({
       companies,
@@ -119,6 +130,8 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       newsRunHistory: schedule?.data.history || [],
       settings: settings?.data || defaultSettings,
       settingsVersion: settings?.version || 0,
+      library: library ? LibrarySchema.parse(library.data) : defaultLibrary(),
+      libraryVersion: library?.version || 0,
       run: run?.data,
       imports: imports
         .filter((x) => !x.data.importedBatch)
@@ -511,7 +524,10 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         {
           ...doc.data,
           reviewed: input.reviewed,
-          saved: input.saved ?? doc.data.saved ?? false,
+          ...applySavePatch(
+            { saved: doc.data.saved ?? false, lists: doc.data.lists },
+            { saved: input.saved },
+          ),
           inboxAt:
             !input.reviewed && (doc.data.reviewed || isExpired(doc.data))
               ? new Date().toISOString()
@@ -555,6 +571,120 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       await store.put("settings", "main", input.data, input.version),
     );
   });
+  // Saved lists and the tag catalogue. Removing a list takes its articles out of
+  // it; an article left in no list is no longer saved.
+  api.put("/library", async (c) => {
+    const input = z
+      .object({ version: z.number().int().nonnegative(), data: LibrarySchema })
+      .parse(await c.req.json());
+    const old = await store.get<unknown>("settings", LIBRARY_ID);
+    if ((old?.version || 0) !== input.version) throw new ConflictError();
+    const before = old ? LibrarySchema.parse(old.data) : defaultLibrary();
+    const kept = new Set(input.data.lists.map((l) => l.id));
+    const removed = before.lists.filter((l) => !kept.has(l.id)).map((l) => l.id);
+    const data = {
+      ...input.data,
+      tags: [
+        ...new Map(
+          input.data.tags
+            .map(normalizeTag)
+            .filter(Boolean)
+            .map((t) => [t.toLowerCase(), t]),
+        ).values(),
+      ],
+    };
+    const saved = await store.put("settings", LIBRARY_ID, data, input.version);
+    if (removed.length) {
+      const index = await store.list<DeskEvent>("event", {
+        fields: ["saved", "lists"],
+      });
+      const affected = index
+        .filter((d) => eventLists(d.data).some((id) => removed.includes(id)))
+        .map((d) => d.id);
+      for (let i = 0; i < affected.length; i += 50) {
+        const docs = await store.list<DeskEvent>("event", {
+          ids: affected.slice(i, i + 50),
+        });
+        await store.batch(
+          docs.map((d) => ({
+            kind: "event",
+            id: d.id,
+            expected: d.version,
+            data: applySavePatch(d.data, {
+              lists: eventLists(d.data).filter((id) => !removed.includes(id)),
+            }),
+          })),
+        );
+      }
+    }
+    return c.json({ library: data, version: saved.version });
+  });
+  // Bulk tagging from the tag window: add and remove one tag across companies.
+  api.post("/companies/tags", async (c) => {
+    const input = z
+      .object({
+        tag: z.string().trim().min(1).max(80),
+        add: z.array(z.string().min(1).max(100)).max(1000).default([]),
+        remove: z.array(z.string().min(1).max(100)).max(1000).default([]),
+      })
+      .parse(await c.req.json());
+    const tag = normalizeTag(input.tag);
+    const changes = new Map<string, "add" | "remove">([
+      ...input.add.map((id) => [id, "add"] as const),
+      ...input.remove.map((id) => [id, "remove"] as const),
+    ]);
+    const updated: { id: string; version: number; tags: string[]; updatedAt: string }[] = [];
+    const failed: string[] = [];
+    for (const [id, change] of changes) {
+      const lock = await store.claim(`company-${id}`, 30);
+      if (!lock) {
+        failed.push(id);
+        continue;
+      }
+      try {
+        const old = await store.get<Company>("company", id);
+        if (!old) {
+          failed.push(id);
+          continue;
+        }
+        const others = old.data.tags.filter((t) => t.trim() && !sameTag(t, tag));
+        // A company that already has the tag keeps its spelling.
+        const tags =
+          change === "remove"
+            ? others
+            : old.data.tags.some((t) => sameTag(t, tag))
+              ? old.data.tags
+              : [...others, tag];
+        if (JSON.stringify(tags) === JSON.stringify(old.data.tags)) {
+          updated.push({ id, version: old.version, tags, updatedAt: old.updatedAt });
+          continue;
+        }
+        if (tags.length > 50) {
+          failed.push(id);
+          continue;
+        }
+        const now = new Date().toISOString();
+        const doc = await store.put(
+          "company",
+          id,
+          {
+            ...old.data,
+            tags,
+            revision: old.data.revision + 1,
+            updatedAt: now,
+          },
+          old.version,
+        );
+        updated.push({ id, version: doc.version, tags, updatedAt: doc.updatedAt });
+      } catch (error) {
+        if (!(error instanceof ConflictError)) throw error;
+        failed.push(id);
+      } finally {
+        await store.release(`company-${id}`, lock);
+      }
+    }
+    return c.json({ tag, updated, failed });
+  });
   api.post("/monitor", async (c) => {
     const input = z
       .object({ companyId: z.string().optional() })
@@ -574,7 +704,11 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
         // A manual screen's scope: days searched and articles kept per day.
         lookbackDays: z.number().int().min(1).max(30).default(7),
         articleLimit: z.number().int().min(1).max(20).default(10),
+        // Optional exact publication window (UTC dates, inclusive); replaces lookbackDays.
+        from: day.optional(),
+        to: day.optional(),
       })
+      .refine((x) => !x.from === !x.to, "Give both a start and an end date.")
       .parse(await c.req.json());
     return c.json(await startNewsBatch(store, input));
   });

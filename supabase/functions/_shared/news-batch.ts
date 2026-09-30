@@ -42,6 +42,9 @@ export interface NewsBatch {
   finishedAt?: string;
   status: "running" | "paused" | "cancelled" | "completed";
   lookbackDays?: number;
+  // Manual searches over an exact window: UTC dates, inclusive.
+  from?: string;
+  to?: string;
   articleLimit?: number;
   dailySearch?: boolean;
   tokens?: number;
@@ -102,6 +105,8 @@ const SUMMARY_FIELDS = [
   "finishedAt",
   "status",
   "lookbackDays",
+  "from",
+  "to",
   "articleLimit",
   "dailySearch",
   "tokens",
@@ -152,9 +157,12 @@ export async function startNewsBatch(
     companyIds: string[];
     label: string;
     lookbackDays?: number;
+    from?: string;
+    to?: string;
     articleLimit?: number;
   },
 ) {
+  const range = input.from && input.to ? searchWindow(input.from, input.to) : null;
   // One bounded article can contain up to 30 sequential 15-second model
   // requests. Keep a second worker from taking over its queue mid-article.
   const lease = await store.claim("manual-news-batch", 600);
@@ -186,7 +194,8 @@ export async function startNewsBatch(
       createdAt: at,
       updatedAt: at,
       status: "running",
-      lookbackDays: input.lookbackDays ?? 7,
+      lookbackDays: range?.days ?? input.lookbackDays ?? 7,
+      ...(range ? { from: range.from, to: range.to } : {}),
       articleLimit: input.articleLimit ?? 10,
       dailySearch: true,
       tokens: 0,
@@ -294,7 +303,31 @@ export async function controlNewsBatch(
 
 // UTC calendar days to search: from the scheduled cutoff through the run's start,
 // or the manual batch's fixed lookback.
+export const MAX_WINDOW_DAYS = 60;
+// Validates an exact window. The end is capped at today (UTC); nothing later exists.
+export function searchWindow(from: string, to: string, now = new Date()) {
+  const today = now.toISOString().slice(0, 10);
+  const end = to > today ? today : to;
+  const start = Date.parse(from),
+    last = Date.parse(end);
+  if (!Number.isFinite(start) || !Number.isFinite(last))
+    throw new Error("Choose valid start and end dates.");
+  if (start > last)
+    throw new Error("The start date must be on or before the end date.");
+  const days = Math.round((last - start) / 86400000) + 1;
+  if (days > MAX_WINDOW_DAYS)
+    throw new Error(
+      `Choose a window of at most ${MAX_WINDOW_DAYS} days; this one has ${days}.`,
+    );
+  return { from, to: end, days };
+}
+
 export function batchSearchDays(batch: NewsBatch): string[] {
+  if (batch.from && batch.to)
+    return newsSearchDays(
+      `${batch.to}T00:00:00.000Z`,
+      Math.round((Date.parse(batch.to) - Date.parse(batch.from)) / 86400000) + 1,
+    );
   if (!batch.since) return newsSearchDays(batch.createdAt, batch.lookbackDays ?? 7);
   const first = Date.parse(batch.since.slice(0, 10));
   const last = Date.parse(batch.createdAt.slice(0, 10));
@@ -308,10 +341,13 @@ export function selectBatchArticles(
   articles: Article[],
   batch: NewsBatch,
 ): Article[] {
-  const cutoff = batch.since
-    ? Date.parse(batch.since)
-    : Date.parse(batch.createdAt.slice(0, 10)) -
-      ((batch.lookbackDays ?? 7) - 1) * 86400000;
+  const cutoff = batch.from
+    ? Date.parse(batch.from)
+    : batch.since
+      ? Date.parse(batch.since)
+      : Date.parse(batch.createdAt.slice(0, 10)) -
+        ((batch.lookbackDays ?? 7) - 1) * 86400000;
+  const end = batch.to ? Date.parse(batch.to) + 86400000 : Infinity;
   return [
     ...new Map(
       articles
@@ -319,7 +355,8 @@ export function selectBatchArticles(
           (a) =>
             !a.publishedAt ||
             !Number.isFinite(Date.parse(a.publishedAt)) ||
-            Date.parse(a.publishedAt) >= cutoff,
+            (Date.parse(a.publishedAt) >= cutoff &&
+              Date.parse(a.publishedAt) < end),
         )
         .map((a) => [a.id, { ...a, text: a.text.slice(0, 8000) }]),
     ).values(),

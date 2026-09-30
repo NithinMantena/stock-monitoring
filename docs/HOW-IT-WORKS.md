@@ -343,26 +343,38 @@ The website has five sections, in the left-hand navigation.
 
 ### Companies
 
-Your list of companies, searchable and filterable by status, research group and text. Selecting one opens its detail panel with four tabs:
+Your list of companies, searchable and filterable by status, tag, research group and text. Each company's tags show under its name. Selecting one opens its detail panel with four tabs:
 
-- **Research:** notes (Markdown, saved automatically as you type), thesis, status, tags, idea source, and full note history.
+- **Research:** notes (Markdown, saved automatically as you type), thesis, status, tags (type to add, × to remove), idea source, and full note history.
 - **Watch points:** specific concerns you want every article checked against, for example "customer concentration with Walmart". Up to 20 per company.
 - **Alerts:** numerical rules such as "tell me if the price falls below $40" or "if it drops 25% from my baseline". See [section 9](#9-price-alerts).
 - **Monitoring:** how this company is checked. Frequency (automatic, daily, weekly, paused), the Google News search wording, business scale and written business context (which the AI uses to judge significance), primary sources, SEC CIK number, enabled publishers, and publishers to exclude. The status of each news source is shown here too.
+
+**The tag window** tags many companies at once. Open it with the **# Tags** button on Companies, **Open tag window** in Settings, or by clicking any tag chip (on a company row, a news card or a company's Research tab), which opens it on that tag. It has three panes:
+
+- **Left: tags.** Find a tag, pick it, or type a new name and press Enter to create it. Unused tags can be deleted here.
+- **Middle: companies.** Every company with its ticker, list (status), market cap, date found and other tags. Click anywhere on a row to select it; selected rows turn light blue. Type in the search box to narrow the list as you type; Enter adds the best match (↑/↓ choose a different one). Clicking a company that already has the tag marks it for removal (red).
+- **Right: this tag's companies.** "Added this session" (green) is kept apart from "Already tagged", so you can see what you have done so far; removals are shown struck through.
+
+Nothing is saved until **Confirm**. The window then stays open, so you can pick another tag and carry on; **Done** closes it.
 
 ### News & alerts
 
 The inbox of developments, newest first.
 
 - **Folders:** **Inbox** holds unreviewed, unsaved items for 30 days after discovery. **Saved** keeps items forever. **History** holds reviewed items and ones that aged out. "Return to inbox" gives an item a fresh 30 days.
+- **Saved lists:** saved items live in lists you name, like playlists. Two come ready-made: **Review later** (everything saved before lists existed went here) and **Favorites**. Inside Saved, chips show each list and its count; **Manage lists** creates, renames and deletes lists. Deleting a list takes its items out of it; an item left in no list moves to History.
 - **Views:** **Relevant developments** (one card per development, led by its best source), **Needs verification** (rare: possibly major but unclear), **Coverage / commentary** (price and opinion pieces about a real development), **Screened out / noise**, and **All events**.
 - **Filters:** keyword, company, publisher, importance and publication date range.
-- **Actions** on each card: Review, Save, Useful, Noise, Undo, and **Read available text**, which fetches the article text for you without any AI cost or change to the verdict.
-- **The "Scheduled news runs" panel** shows the current or last nightly run (companies done, articles checked, new items, warnings), whether it is waiting because Google asked it to slow down, and a short history of recent runs.
+- **Actions** on each card: Review, **Save ▾** (opens your lists; tick one or more, or create a new list on the spot), Useful, Noise, Undo, and **Read available text**, which fetches the article text for you without any AI cost or change to the verdict. News cards also show the company's tags.
+- **The "Scheduled news runs" panel** shows the current or last nightly run (companies done, articles checked, new items, warnings), whether it is waiting because Google asked it to slow down, and **Recent runs**: the last few scheduled runs and your last manual search.
+- **Your own search's panel** appears in full while it is running or paused. Once it finishes or is cancelled it shrinks to a short summary with a ×, and disappears by itself after a day. Either way its summary stays under Recent runs. (Dismissing is remembered on that device only.)
 - **Search news** starts your own screen, separate from the scheduled daily and weekly runs. Three choices beside the button set its size, and are remembered on that device:
-  - **which companies:** those matching your current filters, your daily companies (Portfolio and Perpetual watch), or every monitored (non-paused) company;
-  - **how far back:** 1, 2, 3, 7, 14 or 30 days (one Google search per company per day);
+  - **which companies:** those matching your current filters, your daily companies (Portfolio and Perpetual watch), every monitored (non-paused) company, or a **custom selection**;
+  - **how far back:** 1, 2, 3, 7, 14 or 30 days, or **exact dates** (a from and to date, up to 60 days, ending no later than today). There is one Google search per company per day either way;
   - **articles kept per company per day:** 3, 5, 10 or 20.
+
+  A **custom selection** opens a panel. Pick companies by name (type, then Enter adds the best match) and/or by **tags** (any, or tick "require all"), **lists** (Inbox, Watchlist, Portfolio…), **size** and **research group**. A company is included if it matches every category you filled in, or if you picked it by name. Archived companies are included only when picked by name. The panel previews exactly which companies will be searched.
 
   Hovering over the button shows the number of searches and the maximum number of articles. You can pause, resume or cancel a screen. It keeps running on the server even if you close the browser.
 - **Email today's latest screen** sends an email of the developments found by the most recent screen that ran today, manual or scheduled, in the same format as the morning digest. It works while a screen is still running (the subject says so) and can be pressed again later for an updated copy.
@@ -379,7 +391,7 @@ A table of every active company showing its frequency, price status, the state o
 
 ### Settings & digest
 
-The digest time (7am Chicago by default), a preview of tomorrow's digest, AI usage for the month, and the **MCP & OpenClaw** permission slips (create, see and revoke), plus a history of background jobs.
+The digest time (7am Chicago by default), a preview of tomorrow's digest, AI usage for the month, a **Tags** card (every tag with its company count; click one to open the tag window on it), and the **MCP & OpenClaw** permission slips (create, see and revoke), plus a history of background jobs.
 
 ### How the website stays current, cheaply
 
@@ -437,7 +449,7 @@ The database holds everything as **records**. Each has a **kind** (what sort of 
 | --- | --- |
 | `company` | Everything about one company: identity, notes, thesis, status, watch points, rules, news sources, monitoring checkpoints, recent prices. |
 | `event` | One article or alert: title, link, dates, the extracted text, the AI's answers, the verdict and reason, grouping, and your Review/Save/feedback. |
-| `settings` | Digest time and on/off switch. |
+| `settings` | `main`: digest time and on/off switch. `library`: your saved-article lists and any tags created before a company carries them. |
 | `revision` | An earlier version of a company's notes or thesis. |
 | `import` | An original imported file and what was imported from it. |
 | `backup` | A daily research snapshot (kept 30 days). |
