@@ -2083,3 +2083,232 @@ span.add-warning {
 .news-batch [role="status"] {
   line-height: 1.6;
 }
+
+/* ---- Companies: list / map toggle and bubble map ------------------------ */
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid #d9e0d6;
+  border-radius: 6px;
+  overflow: hidden;
+  flex: none;
+}
+.view-toggle button {
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #6f7a69;
+}
+.view-toggle button + button {
+  border-left: 1px solid #d9e0d6;
+}
+.view-toggle button.active {
+  background: #eaf1e7;
+  color: #2c5d38;
+  font-weight: 600;
+}
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: -8px 0 16px;
+  font-size: 12px;
+  color: #6f7a69;
+}
+.map-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.map-toolbar select {
+  font-size: 12px;
+  padding: 6px;
+}
+.bubble-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11px;
+}
+.bubble-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.bubble-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid;
+}
+.bubble-pane {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #e0e5df;
+  border-radius: 8px;
+  background: #fff;
+  padding: 18px 20px 22px;
+}
+.bubble-map {
+  position: relative;
+  width: 100%;
+}
+.bubble-map.ready {
+  transition: height 200ms ease-out;
+}
+.bubble-group-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  color: #5d6a58;
+  white-space: nowrap;
+}
+.bubble-group-label small {
+  font-weight: 400;
+  color: #9aa396;
+  margin-left: 3px;
+}
+.bubble-map.ready .bubble-group-label {
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  will-change: transform;
+}
+.bubble span {
+  max-width: 40px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.bubble span.long {
+  font-size: 9px;
+}
+.bubble-map.ready .bubble {
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 150ms ease-out,
+    box-shadow 100ms;
+}
+.bubble.copy {
+  animation: bubble-in 160ms ease-out;
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+  }
+}
+.bubble.gone {
+  opacity: 0;
+  pointer-events: none;
+}
+.bubble:hover,
+.bubble.twin {
+  box-shadow: 0 0 0 3px #e4ebdf;
+  z-index: 2;
+}
+.bubble:focus-visible {
+  outline: 2px solid #6d9bd0;
+  outline-offset: 2px;
+}
+.bubble.picked {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6d9bd0;
+  z-index: 2;
+}
+.bubble.open {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2c5d38;
+  z-index: 3;
+}
+.bubble.archived {
+  border-style: dashed;
+  opacity: 0.7;
+}
+/* Same muted palette as the status badges. */
+.bubble.inbox, .bubble-dot.inbox { background: #f3f4f0; border-color: #d6dbd0; color: #6f7a69; }
+.bubble.watchlist, .bubble-dot.watchlist { background: #eef3ea; border-color: #c8d6c0; color: #4f6b45; }
+.bubble.perpetual, .bubble-dot.perpetual { background: #edf0f8; border-color: #c8d0e4; color: #56627f; }
+.bubble.owned, .bubble-dot.owned { background: #e2ecdd; border-color: #b4cba9; color: #3c6232; }
+.bubble.pass, .bubble-dot.pass { background: #f5f0eb; border-color: #dfd2c4; color: #8d7563; }
+.bubble.sold, .bubble-dot.sold { background: #f2eef3; border-color: #d8cedb; color: #7a6a80; }
+.bubble-tip {
+  position: fixed;
+  z-index: 40;
+  transform: translate(-50%, calc(-100% - 8px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 260px;
+  padding: 7px 10px;
+  background: #fff;
+  border: 1px solid #d8e0d6;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px #1b2f2224;
+  font-size: 12px;
+  pointer-events: none;
+}
+.bubble-tip small {
+  color: #7d8778;
+  font-size: 11px;
+}
+.bubble-rename {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: 200px;
+}
+.bubble-rename input {
+  box-shadow: 0 6px 20px #1b2f2224;
+}
+.bubble-empty {
+  padding: 30px 0;
+  text-align: center;
+}
+.detail.opening {
+  animation: detail-in 160ms ease-out;
+}
+@keyframes detail-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubble-map.ready .bubble,
+  .bubble-map.ready .bubble-group-label,
+  .bubble-map.ready {
+    transition: none;
+  }
+  .bubble.copy,
+  .detail.opening {
+    animation: none;
+  }
+}
+@media (max-width: 850px) {
+  .bubble-pane {
+    padding: 12px;
+  }
+  .map-toolbar {
+    margin-top: 0;
+  }
+}

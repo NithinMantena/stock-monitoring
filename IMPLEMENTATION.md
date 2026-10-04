@@ -2,6 +2,12 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Companies map view and on-demand notebook — 2026-10-03
+
+- **Map view.** `src/bubble-map.tsx` draws each company as an equal 46px bubble (ticker inside, colour = list, muted status palette). `layoutBubbles` packs each group as a hex cluster (nearest-centre lattice points) and flows groups into rows; a group wider than the pane becomes a honeycomb block. Group by list, tag (a bubble per tag; "No tag" group), size tier or research group. Animation is plain CSS: `transform` 220ms, opacity 150ms; filtered-out companies keep their bubble mounted at its last position and fade, and bubbles render in a fixed order so React never reorders nodes mid-transition. No first-paint animation; `prefers-reduced-motion` disables it. View and grouping are remembered per device (localStorage).
+- **Notebook on demand.** Clicking a company no longer writes `#company=` to the URL, so reloads open with the notebook closed; incoming `#company=` links still open once and the hash is then cleared. Escape closes the notebook. It slides in (160ms) only when opening.
+- Verified: TypeScript, new layout tests (no overlaps at 320/700/1400px, multi-tag grouping), and the review preview (grouping, filtering, click/notebook reflow, right-click, double-click rename, Escape).
+
 ## Bulk add, tag rename, right-click and multi-select — 2026-10-03
 
 - **Faster tag confirm.** `POST /companies/tags` now reads companies in chunks of 100 and writes each chunk with one atomic versioned `store.batch` (previously lock + read + write + unlock per company, i.e. four sequential database calls each). A chunk that meets a concurrent edit falls back to per-company versioned writes, so only edited companies are reported as failed. The browser no longer waits for the tag-catalogue write before closing the spinner.

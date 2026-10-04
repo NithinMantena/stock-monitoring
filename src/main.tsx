@@ -1,6 +1,6 @@
 import { api, apiText, setAccessToken } from "./api";
 import { IntegrationsPanel, JobsPanel } from "./integrations-panel";
-import { Field, chicagoDate } from "./ui";
+import { Field, InlineName, chicagoDate } from "./ui";
 import {
   NewsBatchStatus,
   ScheduledRunStatus,
@@ -13,6 +13,12 @@ import { mergeDocuments, latestBatch, latestRun } from "./sync";
 import { TagChip, TagWindow } from "./tag-window";
 import { CustomSearchPanel } from "./custom-search";
 import { AddCompaniesWindow, rowPayload } from "./add-companies";
+import {
+  BubbleLegend,
+  BubbleMap,
+  GROUP_BY_LABELS,
+  type GroupBy,
+} from "./bubble-map";
 import {
   ContextMenu,
   TagPopover,
@@ -337,11 +343,39 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     () => new URLSearchParams(location.hash.slice(1)).get("company") || "",
   );
   const [tab, setTab] = useState("research");
+  // A #company= link (from the API or MCP tools) opens that notebook once.
+  // Clicking a company no longer writes the link, so a reload starts with the
+  // notebook closed and the list or map at full width.
+  useEffect(() => {
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  }, []);
   const openCompany = useCallback((id: string) => {
     setSelected(id);
-    history.replaceState(null, "", "#company=" + encodeURIComponent(id));
     setTab("research");
   }, []);
+  // List or bubble map, and how the map groups companies (kept per device).
+  const [view, setView] = useState<"list" | "map">(() => {
+    try {
+      return localStorage.getItem("company-view") === "map" ? "map" : "list";
+    } catch {
+      return "list";
+    }
+  });
+  const [groupBy, setGroupBy] = useState<GroupBy>(() => {
+    try {
+      const v = localStorage.getItem("bubble-group-by");
+      return v && v in GROUP_BY_LABELS ? (v as GroupBy) : "status";
+    } catch {
+      return "status";
+    }
+  });
+  const remember = (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      /* storage unavailable; the choice lasts for this visit */
+    }
+  };
   const [adding, setAdding] = useState(false);
   // Companies picked with Ctrl/Shift-click, the right-click menu or tag popover
   // they act on, and the company whose name is being edited in the list.
@@ -1197,6 +1231,32 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     </span>
   ) : null;
   const selectedDoc = docs.find((c) => c.id === selected);
+  const closeCompany = useCallback(() => setSelected(""), []);
+  // The notebook slides in only when it opens, not when switching companies.
+  const lastSelected = useRef(selected);
+  const detailOpening = !!selected && !lastSelected.current;
+  useEffect(() => {
+    lastSelected.current = selected;
+  }, [selected]);
+  // Escape closes the notebook (after clearing any selection or menu first).
+  useEffect(() => {
+    if (!selected) return;
+    const key = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (
+        e.key !== "Escape" ||
+        e.defaultPrevented ||
+        live.current.picked.length ||
+        document.querySelector("dialog[open], .context-menu") ||
+        /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) ||
+        t.isContentEditable
+      )
+        return;
+      setSelected("");
+    };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [selected]);
   // Multi-select in the company list. Selections hidden by a filter are dropped.
   const pickedSet = useMemo(() => new Set(picked), [picked]);
   const pickedDocs = filtered.filter((d) => pickedSet.has(d.id));
@@ -1455,9 +1515,46 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                   >
                     # Tags
                   </button>
+                  <span className="view-toggle" role="group" aria-label="View">
+                    {(["list", "map"] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        aria-pressed={view === v}
+                        className={view === v ? "active" : ""}
+                        onClick={() => {
+                          setView(v);
+                          remember("company-view", v);
+                        }}
+                      >
+                        {v === "list" ? "List" : "Map"}
+                      </button>
+                    ))}
+                  </span>
                 </div>
               </div>
               {companyFilters}
+              {view === "map" && (
+                <div className="map-toolbar">
+                  <label>
+                    Group by
+                    <select
+                      value={groupBy}
+                      onChange={(e) => {
+                        setGroupBy(e.target.value as GroupBy);
+                        remember("bubble-group-by", e.target.value);
+                      }}
+                    >
+                      {Object.entries(GROUP_BY_LABELS).map(([k, label]) => (
+                        <option key={k} value={k}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <BubbleLegend />
+                </div>
+              )}
               {pickedDocs.length > 0 && (
                 <div className="selection-bar" role="status">
                   <b>
@@ -1496,6 +1593,22 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 </div>
               )}
               <div className="desk-columns">
+                {view === "map" ? (
+                  <div className="bubble-pane">
+                    <BubbleMap
+                      docs={docs}
+                      visible={filtered}
+                      groupBy={groupBy}
+                      selected={selected}
+                      picked={pickedSet}
+                      renamingId={renamingId}
+                      onRowClick={rowClick}
+                      onRowMenu={rowMenu}
+                      onStartRename={setRenamingId}
+                      onRename={renameCompany}
+                    />
+                  </div>
+                ) : (
                 <div
                   className={
                     "company-list " + (selectedDoc ? "with-detail" : "")
@@ -1553,21 +1666,16 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                     </table>
                   )}
                 </div>
+                )}
                 {selectedDoc && (
                   <CompanyDetail
                     key={selectedDoc.id}
                     doc={selectedDoc}
+                    opening={detailOpening}
                     tab={tab}
                     setTab={setTab}
                     edit={(patch) => edit(selectedDoc.id, patch)}
-                    close={() => {
-                      setSelected("");
-                      history.replaceState(
-                        null,
-                        "",
-                        location.pathname + location.search,
-                      );
-                    }}
+                    close={closeCompany}
                     events={data.events.filter(
                       (e) => e.data.companyId === selected,
                     )}
@@ -1830,51 +1938,6 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   );
 }
 
-// Edits a name in place: Enter or leaving the field saves, Escape cancels.
-function InlineName({
-  value,
-  className,
-  label,
-  onDone,
-}: {
-  value: string;
-  className?: string;
-  label: string;
-  onDone: (name: string | null) => void;
-}) {
-  const [text, setText] = useState(value);
-  const done = useRef(false);
-  const finish = (name: string | null) => {
-    if (done.current) return;
-    done.current = true;
-    onDone(name);
-  };
-  return (
-    <input
-      className={className}
-      aria-label={label}
-      autoFocus
-      maxLength={200}
-      value={text}
-      onFocus={(e) => e.currentTarget.select()}
-      onClick={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
-      onChange={(e) => setText(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          finish(text);
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          e.stopPropagation();
-          finish(null);
-        }
-      }}
-      onBlur={() => finish(text)}
-    />
-  );
-}
-
 const CompanyRow = React.memo(function CompanyRow({
   c,
   selected,
@@ -1979,6 +2042,7 @@ const CompanyRow = React.memo(function CompanyRow({
 
 interface DetailProps {
   doc: Doc<Company>;
+  opening?: boolean;
   tab: string;
   setTab: (s: string) => void;
   edit: (p: Partial<Company>) => void;
@@ -1995,6 +2059,7 @@ interface DetailProps {
 }
 function CompanyDetail({
   doc,
+  opening,
   tab,
   setTab,
   edit,
@@ -2014,7 +2079,10 @@ function CompanyDetail({
   const [history, setHistory] = useState<Doc<any>[]>([]);
   const [naming, setNaming] = useState(false);
   return (
-    <section className="detail" aria-label={`${c.name} details`}>
+    <section
+      className={"detail" + (opening ? " opening" : "")}
+      aria-label={`${c.name} details`}
+    >
       <div className="detail-heading">
         <p className="eyebrow">COMPANY NOTEBOOK</p>
         <button aria-label="Close company details" onClick={close}>

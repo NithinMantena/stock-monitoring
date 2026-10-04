@@ -350,6 +350,10 @@ Your list of companies, searchable and filterable by status, tag, research group
 - **Alerts:** numerical rules such as "tell me if the price falls below $40" or "if it drops 25% from my baseline". See [section 9](#9-price-alerts).
 - **Monitoring:** how this company is checked. Frequency (automatic, daily, weekly, paused), the Google News search wording, business scale and written business context (which the AI uses to judge significance), primary sources, SEC CIK number, enabled publishers, and publishers to exclude. The status of each news source is shown here too.
 
+**List or map:** the **List | Map** switch (top right of Companies, remembered on that device) changes how companies are shown. **Map** shows every company as an equal-sized bubble with its ticker, coloured by list (Inbox, Watchlist, Portfolio…, using the same muted colours as the list badges; a legend sits under the filters). **Group by** clusters the bubbles by list, tag, size or research group. A company with several tags gets a bubble in each tag's group, and hovering one highlights its other copies. The usual filters (list chips, tag, research group, search) narrow the bubbles. Changing a filter or grouping moves the bubbles in about a fifth of a second. Hover a bubble for its name, list and tags. Clicking, Ctrl/Shift-clicking, right-clicking and double-clicking (rename) work exactly as in the list.
+
+**The notebook** (a company's detail panel) only appears when you click a company, in either view, and the list or map shrinks to make room; × or Escape closes it again, giving the list (with its extra columns) or the map the full width. The desk always opens with the notebook closed.
+
 **Renaming a company:** double-click its name, either in the list or in the big title of its detail panel (or right-click → **Rename**). Enter or clicking away saves; Escape cancels.
 
 **Selecting several companies:** Ctrl-click (Cmd-click on a Mac) adds or removes one company; Shift-click selects everything between your last click and this one. A blue bar shows how many are selected; Escape or **Clear** empties the selection. A plain click still just opens the company.

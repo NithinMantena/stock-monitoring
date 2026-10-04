@@ -48,6 +48,7 @@ Integration credentials are shown once, hashed at rest, scoped, expiring and rev
 | `src/main.tsx` | Sign-in, navigation, company editor, autosave, settings, imports, monitoring health |
 | `src/news-panel.tsx` | News folders, saved lists, filters, grouped cards, feedback, reader, run status |
 | `src/tag-window.tsx`, `src/save-lists.tsx`, `src/custom-search.tsx` | Bulk tag window and tag chips; Save picker and list manager; custom news-search company picker |
+| `src/bubble-map.tsx` | Companies map view: hex-cluster layout per group (list, tag, size, research group), CSS-transition animation, legend |
 | `src/add-companies.tsx`, `src/company-menu.tsx` | Keyboard-first bulk add-companies window; right-click menus, the per-company tag popover and Ctrl/Shift multi-select helper |
 | `supabase/functions/_shared/library.ts` | Saved lists and tag catalogue (`settings/library`), list/save invariants, tag matching, company search ranking, custom-search criteria |
 | `src/api.ts` | Browser API requests, session header, timeout and HTTP error handling |
