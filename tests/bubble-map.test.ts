@@ -1,28 +1,70 @@
 import { describe, expect, it } from "vitest";
 import { newCompany } from "../supabase/functions/_shared/model.ts";
-import { groupsOf, layoutBubbles, type Placed } from "../src/bubble-map.tsx";
+import {
+  OPEN,
+  groupsOf,
+  layoutMap,
+  radiusOf,
+  type Placed,
+} from "../src/bubble-map.tsx";
 
-const items = (n: number, group = "g"): Placed[] =>
-  Array.from({ length: n }, (_, i) => ({ key: `c${i}#0`, id: `c${i}`, group }));
+const items = (n: number, group: string): Placed[] =>
+  Array.from({ length: n }, (_, i) => ({ key: `${group}${i}#0`, id: `${group}${i}`, group }));
+const LABEL_TEXT = 18;
+
+function check(placed: Placed[], groups: { key: string; label: string }[], width: number, open = "") {
+  const layout = layoutMap(placed, groups, width, open);
+  const pts = [...layout.pos.values()];
+  expect(pts).toHaveLength(placed.length);
+  // Inside the width and the height.
+  for (const p of pts) {
+    expect(p.x - p.r).toBeGreaterThanOrEqual(-0.5);
+    expect(p.x + p.r).toBeLessThanOrEqual(width + 0.5);
+    expect(p.y + p.r).toBeLessThanOrEqual(layout.height + 0.5);
+  }
+  // No two bubbles overlap, in the same group or across groups.
+  let worst = 0;
+  for (let i = 0; i < pts.length; i++)
+    for (let j = i + 1; j < pts.length; j++)
+      worst = Math.max(worst, pts[i].r + pts[j].r - Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+  expect(worst).toBeLessThan(3);
+  // No bubble covers any group's label.
+  for (const l of layout.labels)
+    for (const p of pts) {
+      const across = p.x + p.r > l.x - l.w / 2 && p.x - p.r < l.x + l.w / 2;
+      const down = p.y + p.r > l.y && p.y - p.r < l.y + LABEL_TEXT;
+      expect(across && down).toBe(false);
+    }
+  return layout;
+}
 
 describe("bubble map layout", () => {
-  it("never overlaps bubbles and stays inside the width", () => {
-    const placed = [...items(7, "a"), ...items(40, "b").map((p) => ({ ...p, key: p.key + "b", id: p.id + "b" })), ...items(300, "c").map((p) => ({ ...p, key: p.key + "c", id: p.id + "c" }))];
-    const groups = ["a", "b", "c"].map((key) => ({ key, label: key.toUpperCase() }));
-    for (const width of [320, 700, 1400]) {
-      const { pos, labels, height } = layoutBubbles(placed, groups, width);
-      expect(pos.size).toBe(placed.length);
-      expect(labels.map((l) => l.count)).toEqual([7, 40, 300]);
-      const pts = [...pos.values()];
-      for (const p of pts) {
-        expect(p.x).toBeGreaterThanOrEqual(-0.01);
-        expect(p.x + 46).toBeLessThanOrEqual(width + 0.01);
-        expect(p.y + 46).toBeLessThanOrEqual(height + 0.01);
-      }
-      for (let i = 0; i < pts.length; i++)
-        for (let j = i + 1; j < pts.length; j++)
-          expect(Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y)).toBeGreaterThan(46);
+  const placed = [...items(7, "a"), ...items(40, "b"), ...items(250, "c"), ...items(23, "d")];
+  const groups = ["a", "b", "c", "d"].map((key) => ({
+    key,
+    label: key === "d" ? "Confirm company identity" : key.toUpperCase(),
+  }));
+  it("keeps groups apart, labels clear and bubbles inside the width", () => {
+    for (const width of [360, 800, 1400]) {
+      const layout = check(placed, groups, width);
+      expect(layout.labels.map((l) => l.count)).toEqual([7, 40, 250, 23]);
     }
+  });
+  it("gives the same layout every time, and when regrouping back", () => {
+    const one = layoutMap(placed, groups, 900);
+    layoutMap(items(30, "z"), [{ key: "z", label: "Z" }], 900);
+    const two = layoutMap(placed, groups, 900);
+    expect([...two.pos]).toEqual([...one.pos]);
+  });
+  it("draws the open company larger, with room made around it", () => {
+    const layout = check(placed, groups, 900, "b5");
+    expect(layout.pos.get("b5#0")!.r).toBeCloseTo(radiusOf("b5") * OPEN);
+  });
+  it("gives each company a slightly different, stable size", () => {
+    const sizes = ["a", "b", "c", "d", "e"].map(radiusOf);
+    expect(new Set(sizes).size).toBeGreaterThan(1);
+    for (const r of sizes) expect(r).toBeGreaterThanOrEqual(23 * 0.9 - 0.001);
+    expect(radiusOf("a")).toBe(sizes[0]);
   });
   it("puts a company in every one of its tag groups, or No tag", () => {
     const c = newCompany("Alpha");

@@ -2146,6 +2146,8 @@ span.add-warning {
 .bubble-pane {
   flex: 1;
   min-width: 0;
+  /* Bubbles in motion never draw over the notebook beside the map. */
+  overflow: hidden;
   border: 1px solid #e0e5df;
   border-radius: 8px;
   background: #fff;
@@ -2156,7 +2158,7 @@ span.add-warning {
   width: 100%;
 }
 .bubble-map.ready {
-  transition: height 200ms ease-out;
+  transition: height 300ms ease-out;
 }
 .bubble-group-label {
   position: absolute;
@@ -2174,14 +2176,22 @@ span.add-warning {
   margin-left: 3px;
 }
 .bubble-map.ready .bubble-group-label {
-  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 450ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bubble-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  overflow: hidden;
+}
+.bubble-group-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .bubble {
   position: absolute;
   left: 0;
   top: 0;
-  width: 46px;
-  height: 46px;
   padding: 0;
   border-radius: 50%;
   border: 1px solid;
@@ -2196,19 +2206,29 @@ span.add-warning {
   user-select: none;
   will-change: transform;
 }
-.bubble span {
-  max-width: 40px;
+/* Position and size come from the precomputed layout (inline transform,
+   width and height). Never add scale or another transform here: it would
+   multiply the position. Movement overshoots slightly, then settles; the
+   inline transition-delay staggers it a little per bubble. Width/height share
+   the timing so a growing bubble stays centred on its path. */
+.bubble-map.ready .bubble {
+  transition-property: transform, width, height, opacity, box-shadow;
+  transition-duration: 620ms, 620ms, 620ms, 150ms, 100ms;
+  transition-timing-function:
+    cubic-bezier(0.34, 1.28, 0.64, 1), cubic-bezier(0.34, 1.28, 0.64, 1),
+    cubic-bezier(0.34, 1.28, 0.64, 1), ease-out, ease-out;
+}
+.bubble.open > span,
+.bubble.open > span.long {
+  font-size: 12px;
+}
+.bubble > span {
+  max-width: 88%;
   overflow: hidden;
   white-space: nowrap;
 }
-.bubble span.long {
+.bubble > span.long {
   font-size: 9px;
-}
-.bubble-map.ready .bubble {
-  transition:
-    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 150ms ease-out,
-    box-shadow 100ms;
 }
 .bubble.copy {
   animation: bubble-in 160ms ease-out;
@@ -2311,4 +2331,9 @@ span.add-warning {
   .map-toolbar {
     margin-top: 0;
   }
+}
+/* The map's height depends on its width; reserving the scrollbar's space
+   stops the scrollbar appearing from re-flowing the bubbles mid-layout. */
+html {
+  scrollbar-gutter: stable;
 }

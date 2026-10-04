@@ -2,6 +2,20 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Bubble map: precomputed layout — 2026-10-04 (later)
+
+- The live simulation could stop before bubbles reached a new group: forceX/forceY scale with alpha, and big groups (e.g. 216 untagged) pulled so gently that bubbles froze mid-way, over other groups' labels. Replaced with `layoutMap`: each group is settled on its own, synchronously (d3-force, 300 ticks from hash-seeded starts; deterministic and cached by members + width band), then measured, and groups are flowed into rows by their real bounding boxes with the label above each box. Groups can no longer overlap each other or labels. Very tall/wide groups pull more weakly along their long axis so they spread instead of squeezing against the side walls.
+- Motion is a CSS transition on the final positions (transform, width, height: 620ms, slight overshoot `cubic-bezier(0.34, 1.28, 0.64, 1)`, 0–70ms per-bubble delay), so bubbles always arrive even if interrupted. Labels truncate to their group's width.
+- The open company's bubble is 1.35× larger as part of the layout (its neighbours make room); size and position share timing so it grows in place.
+- Verified: tests (no overlaps, no bubble on any label, inside the width at 360/800/1400px with groups of 7/23/40/250; deterministic; open bubble size); preview: label coverage 0 across tag→list→size→research group→tag and after opening a company.
+
+## Bubble map physics — 2026-10-04
+
+- The map now uses a d3-force simulation (`d3-force` dependency) instead of a fixed hex grid: each bubble is pulled toward its group's centre (more gently for big groups, and more weakly sideways for wide ovals) and kept apart by a collision force. Positions are written straight to the DOM on each tick; React re-renders only on data, filter or hover changes. Regrouping keeps every bubble's position and velocity, so bubbles drift and settle (alpha decay 0.075, velocity decay 0.38; most motion done in about 0.5s). First paint and `prefers-reduced-motion` settle synchronously without animation.
+- Radii vary ±10% from a hash of the company id (stable). Hover shows a box with the full name, ticker, list and tags. (A first version grew the hovered bubble with CSS `scale`; the individual `scale` property is applied on top of the inline `transform`, so it multiplied the bubble's position and threw it across the map, making bubbles unclickable. Removed; bubbles must carry no transform other than the simulation's.) The map pane clips its contents so moving bubbles never draw over the notebook.
+- `html { scrollbar-gutter: stable }`, so a scrollbar appearing cannot re-flow the map mid-layout.
+- Verified: TypeScript; tests for no overlaps at 360/800/1400px with groups of 7/40/250 and stable sizes; in the preview, hovering leaves a bubble in place, shows its name, and clicking opens the notebook. The browser pane was hidden during this session, which pauses animation frames, so the motion was checked through settled-state tests rather than by eye.
+
 ## Companies map view and on-demand notebook — 2026-10-03
 
 - **Map view.** `src/bubble-map.tsx` draws each company as an equal 46px bubble (ticker inside, colour = list, muted status palette). `layoutBubbles` packs each group as a hex cluster (nearest-centre lattice points) and flows groups into rows; a group wider than the pane becomes a honeycomb block. Group by list, tag (a bubble per tag; "No tag" group), size tier or research group. Animation is plain CSS: `transform` 220ms, opacity 150ms; filtered-out companies keep their bubble mounted at its last position and fade, and bubbles render in a fixed order so React never reorders nodes mid-transition. No first-paint animation; `prefers-reduced-motion` disables it. View and grouping are remembered per device (localStorage).

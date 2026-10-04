@@ -22,6 +22,7 @@
     "@modelcontextprotocol/server": "2.0.0",
     "@mozilla/readability": "^0.6.0",
     "@supabase/supabase-js": "2.116.0",
+    "d3-force": "^3.0.0",
     "fast-xml-parser": "^5.5.0",
     "hono": "4.13.8",
     "linkedom": "^0.18.13",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",
+    "@types/d3-force": "^3.0.10",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

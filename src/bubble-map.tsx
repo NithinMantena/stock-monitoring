@@ -1,4 +1,11 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  forceCollide,
+  forceSimulation,
+  forceX,
+  forceY,
+  type SimulationNodeDatum,
+} from "d3-force";
 import type { Company, Doc } from "../supabase/functions/_shared/model";
 import { statusLabels, statuses } from "../supabase/functions/_shared/constants";
 import {
@@ -17,27 +24,22 @@ export const GROUP_BY_LABELS: Record<GroupBy, string> = {
   group: "Research group",
 };
 
-// Bubble geometry (px): diameter and centre-to-centre spacing.
-const D = 46;
-const P = 52;
+// Geometry (px). Bubbles vary about ±10% around BASE_R, fixed per company;
+// the company whose notebook is open is drawn OPEN times larger.
+const BASE_R = 23;
+export const OPEN = 1.35;
+const PAD = 1.5;
 const LABEL = 26;
-const GAP_X = 40;
-const GAP_Y = 22;
-const ROW = (P * Math.sqrt(3)) / 2;
+const GAP_X = 34;
+const GAP_Y = 24;
 
-// Hex-lattice points nearest the centre first, so a group fills as a round
-// cluster. Computed once and reused for every group.
-const HEX: { x: number; y: number }[] = (() => {
-  const pts: { x: number; y: number; d: number }[] = [];
-  const R = 30;
-  for (let r = -R; r <= R; r++)
-    for (let q = -R; q <= R; q++) {
-      const x = P * (q + r / 2),
-        y = ROW * r;
-      pts.push({ x, y, d: Math.hypot(x, y) + Math.atan2(y, x) * 1e-3 });
-    }
-  return pts.sort((a, b) => a.d - b.d);
-})();
+// A stable 0..1 number from a string, so sizes and clump shapes never change.
+function hash01(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 10000) / 10000;
+}
+export const radiusOf = (id: string) => BASE_R * (0.9 + 0.2 * hash01(id));
 
 export interface Group {
   key: string;
@@ -79,56 +81,114 @@ function groupOrder(by: GroupBy, g: Group) {
   return [1, g.label.toLowerCase()] as const;
 }
 
+interface Node extends SimulationNodeDatum {
+  key: string;
+  r: number;
+}
+interface Clump {
+  pos: { key: string; x: number; y: number; r: number }[];
+  minX: number;
+  minY: number;
+  w: number;
+  h: number;
+}
+
+// One group's bubbles, settled into a loose, organic clump around (0,0) by a
+// short physics run (pull to the centre + collisions). Starting points come
+// from a hash, so the same members always give the same clump. maxW limits the
+// clump's width; a big group then spreads into a wide band.
+const clumpCache = new Map<string, Clump>();
+function clumpOf(members: { key: string; r: number }[], maxW: number): Clump {
+  const area = members.reduce((s, m) => s + Math.PI * (m.r + PAD) ** 2, 0) / 0.7;
+  const R = Math.sqrt(area / Math.PI);
+  const half = R * 2 + 8 > maxW ? maxW / 2 - 4 : Infinity;
+  const cacheKey =
+    (half === Infinity ? "free" : Math.round(half)) +
+    "|" +
+    members.map((m) => m.key + ":" + m.r.toFixed(1)).join(",");
+  const hit = clumpCache.get(cacheKey);
+  if (hit) return hit;
+  const rx = Math.min(R, half),
+    ry = half === Infinity ? R : (area * 1.25) / (Math.PI * rx);
+  const nodes: Node[] = members.map((m) => {
+    const a = hash01(m.key) * Math.PI * 2,
+      d = Math.sqrt(hash01(m.key + "d"));
+    return { key: m.key, r: m.r, x: Math.cos(a) * d * rx, y: Math.sin(a) * d * ry };
+  });
+  const k = 0.09 * Math.min(1, Math.sqrt(15 / members.length));
+  const sim = forceSimulation<Node>(nodes)
+    .force("x", forceX<Node>(0).strength(k * Math.min(1, ry / rx)))
+    // Pull more gently along a band's long side so the crowd spreads instead
+    // of squeezing against the side walls.
+    .force("y", forceY<Node>(0).strength(k * Math.min(1, rx / ry)))
+    .force("collide", forceCollide<Node>((n) => n.r + PAD).strength(0.9).iterations(3))
+    .stop();
+  for (let i = 0; i < 300; i++) {
+    sim.tick();
+    if (half !== Infinity)
+      for (const n of nodes) n.x = Math.max(-half + n.r, Math.min(half - n.r, n.x!));
+  }
+  const minX = Math.min(...nodes.map((n) => n.x! - n.r)),
+    maxX = Math.max(...nodes.map((n) => n.x! + n.r)),
+    minY = Math.min(...nodes.map((n) => n.y! - n.r)),
+    maxY = Math.max(...nodes.map((n) => n.y! + n.r));
+  const clump: Clump = {
+    pos: nodes.map((n) => ({ key: n.key, x: n.x!, y: n.y!, r: n.r })),
+    minX,
+    minY,
+    w: maxX - minX,
+    h: maxY - minY,
+  };
+  if (clumpCache.size > 300) clumpCache.delete(clumpCache.keys().next().value!);
+  clumpCache.set(cacheKey, clump);
+  return clump;
+}
+
 export interface Layout {
-  pos: Map<string, { x: number; y: number }>;
-  labels: { key: string; label: string; count: number; x: number; y: number }[];
+  pos: Map<string, { x: number; y: number; r: number }>;
+  labels: { key: string; label: string; count: number; x: number; y: number; w: number }[];
   height: number;
 }
 
-// Lays groups out left to right, wrapping into rows. Small groups are round
-// hex clusters; a group too wide for the space becomes a honeycomb block.
-export function layoutBubbles(items: Placed[], groups: Group[], width: number): Layout {
-  const pos = new Map<string, { x: number; y: number }>();
+// The whole map: each group is settled on its own, measured, and then the
+// groups are placed left to right in rows by their real size, each label above
+// its own clump. Groups therefore never overlap each other or their labels.
+export function layoutMap(
+  items: Placed[],
+  groups: Group[],
+  width: number,
+  openId = "",
+): Layout {
+  const W = Math.max(width, BASE_R * 3);
+  const pos = new Map<string, { x: number; y: number; r: number }>();
   const labels: Layout["labels"] = [];
-  const W = Math.max(width, D + 8);
   let x = 0,
     y = 0,
     rowH = 0;
   for (const g of groups) {
-    const members = items.filter((i) => i.group === g.key);
+    const members = items
+      .filter((i) => i.group === g.key)
+      .map((i) => ({ key: i.key, r: radiusOf(i.id) * (i.id === openId ? OPEN : 1) }));
     if (!members.length) continue;
-    let pts = HEX.slice(0, members.length).map((p) => ({ x: p.x, y: p.y }));
-    let minX = Math.min(...pts.map((p) => p.x)),
-      maxX = Math.max(...pts.map((p) => p.x));
-    if (maxX - minX + D > W || members.length > HEX.length) {
-      const cols = Math.max(1, Math.floor((W - D - P / 2) / P) + 1);
-      pts = members.map((_, i) => {
-        const r = Math.floor(i / cols);
-        return { x: (i % cols) * P + (r % 2 ? P / 2 : 0), y: r * ROW };
-      });
-      minX = Math.min(...pts.map((p) => p.x));
-      maxX = Math.max(...pts.map((p) => p.x));
-    }
-    const minY = Math.min(...pts.map((p) => p.y)),
-      maxY = Math.max(...pts.map((p) => p.y));
-    const labelW = g.label.length * 7 + 40;
-    const w = Math.max(maxX - minX + D, Math.min(labelW, W));
-    const h = maxY - minY + D + LABEL;
+    const c = clumpOf(members, W);
+    const labelW = Math.min(g.label.length * 7 + 44, W);
+    const w = Math.max(c.w, labelW);
     if (x > 0 && x + w > W) {
       x = 0;
       y += rowH + GAP_Y;
       rowH = 0;
     }
-    labels.push({ key: g.key, label: g.label, count: members.length, x, y });
-    const offX = x + (w - (maxX - minX + D)) / 2 - minX;
-    members.forEach((m, i) =>
-      pos.set(m.key, { x: offX + pts[i].x, y: y + LABEL - minY + pts[i].y }),
-    );
+    labels.push({ key: g.key, label: g.label, count: members.length, x: x + w / 2, y, w });
+    const ox = x + (w - c.w) / 2 - c.minX,
+      oy = y + LABEL - c.minY;
+    for (const p of c.pos) pos.set(p.key, { x: ox + p.x, y: oy + p.y, r: p.r });
     x += w + GAP_X;
-    rowH = Math.max(rowH, h);
+    rowH = Math.max(rowH, LABEL + c.h);
   }
-  return { pos, labels, height: y + rowH };
+  return { pos, labels, height: y + rowH + 6 };
 }
+
+const delayOf = (key: string) => `${Math.round(hash01(key) * 70)}ms`;
 
 export function BubbleMap({
   docs,
@@ -155,10 +215,9 @@ export function BubbleMap({
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
-  // Skip the transition on the very first layout so bubbles don't fly in.
+  const [hover, setHover] = useState<{ key: string; id: string; x: number; y: number } | null>(null);
+  // Transitions start after the first positioned paint, so bubbles don't fly in.
   const [ready, setReady] = useState(false);
-  const last = useRef(new Map<string, { x: number; y: number }>());
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
@@ -173,7 +232,7 @@ export function BubbleMap({
     return () => cancelAnimationFrame(t);
   }, [width, ready]);
 
-  const { placed, layout } = useMemo(() => {
+  const { placed, groups } = useMemo(() => {
     const sorted = [...visible].sort((a, b) => a.data.name.localeCompare(b.data.name));
     const groupMap = new Map<string, Group>();
     const placed: Placed[] = [];
@@ -187,18 +246,24 @@ export function BubbleMap({
         [rb, kb] = groupOrder(groupBy, b);
       return ra - rb || ka.localeCompare(kb);
     });
-    return { placed, layout: layoutBubbles(placed, groups, width) };
-  }, [visible, groupBy, width]);
+    return { placed, groups };
+  }, [visible, groupBy]);
+  const layout = useMemo(
+    () => (width ? layoutMap(placed, groups, width, selected) : null),
+    [placed, groups, width, selected],
+  );
 
-  // Remember where each company was, so a filtered-out bubble fades in place.
+  // Where each bubble last was, so a filtered-out bubble fades in place and a
+  // new tag copy appears beside the company's other bubble.
+  const last = useRef(new Map<string, { x: number; y: number; r: number }>());
   useEffect(() => {
-    for (const [key, p] of layout.pos) last.current.set(key, p);
+    if (layout) for (const [key, p] of layout.pos) last.current.set(key, p);
   }, [layout]);
 
   const byId = useMemo(() => new Map(docs.map((d) => [d.id, d.data])), [docs]);
   // Every company keeps its first bubble mounted (hidden when filtered out) so
-  // filtering and regrouping animate; extra tag copies come and go. The order
-  // follows `docs`, so React never moves nodes (which would cut transitions).
+  // filtering animates; extra tag copies come and go. The order follows
+  // `docs`, so React never moves nodes (which would cut transitions short).
   const bubbles = useMemo(() => {
     const byCompany = new Map<string, Placed[]>();
     for (const p of placed) byCompany.set(p.id, [...(byCompany.get(p.id) || []), p]);
@@ -209,77 +274,90 @@ export function BubbleMap({
     );
   }, [docs, placed]);
   const hovered = hover && byId.get(hover.id);
-  const renamePos = renamingId
-    ? layout.pos.get(`${renamingId}#0`)
-    : undefined;
+  const renamePos = renamingId && layout ? layout.pos.get(`${renamingId}#0`) : undefined;
 
   return (
     <div
       ref={box}
       className={"bubble-map" + (ready ? " ready" : "")}
-      style={{ height: Math.max(layout.height, 120) }}
+      style={{ height: Math.max(layout?.height || 0, 120) }}
       role="listbox"
       aria-label="Companies as bubbles"
       aria-multiselectable="true"
     >
-      {layout.labels.map((l) => (
+      {layout?.labels.map((l) => (
         <div
           key={l.key}
           className="bubble-group-label"
-          style={{ transform: `translate(${l.x}px, ${l.y}px)` }}
+          style={{ transform: `translate(${l.x}px, ${l.y}px) translateX(-50%)`, maxWidth: l.w }}
+          title={`${l.label} · ${l.count}`}
         >
-          {l.label} <small>{l.count}</small>
+          <span>{l.label}</span> <small>{l.count}</small>
         </div>
       ))}
-      {bubbles.map((b) => {
-        const c = byId.get(b.id);
-        if (!c) return null;
-        const p = b.gone
-          ? last.current.get(b.key) || { x: 0, y: 0 }
-          : layout.pos.get(b.key)!;
-        const text = c.ticker || c.name;
-        return (
-          <button
-            key={b.key}
-            type="button"
-            role="option"
-            aria-selected={picked.has(c.id)}
-            aria-label={`${c.name}${c.ticker ? ` (${c.ticker})` : ""}, ${statusLabels[c.status]}`}
-            tabIndex={b.gone ? -1 : 0}
-            className={[
-              "bubble",
-              c.status,
-              c.archived ? "archived" : "",
-              b.gone ? "gone" : "",
-              b.key.endsWith("#0") ? "" : "copy",
-              selected === c.id ? "open" : "",
-              picked.has(c.id) ? "picked" : "",
-              hover?.id === c.id ? "twin" : "",
-            ].join(" ")}
-            style={{ transform: `translate(${p.x}px, ${p.y}px)` }}
-            onMouseDown={(e) => e.shiftKey && e.preventDefault()}
-            onClick={(e) => onRowClick(e, c.id)}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              onStartRename(c.id);
-            }}
-            onContextMenu={(e) => onRowMenu(e, c.id)}
-            onMouseEnter={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              setHover({ id: c.id, x: r.left + r.width / 2, y: r.top });
-            }}
-            onMouseLeave={() => setHover(null)}
-          >
-            <span className={text.length > 5 ? "long" : ""}>
-              {text.length > 7 ? text.slice(0, 6) + "…" : text}
-            </span>
-          </button>
-        );
-      })}
+      {layout &&
+        bubbles.map((b) => {
+          const c = byId.get(b.id);
+          if (!c) return null;
+          const p = b.gone
+            ? last.current.get(b.key)
+            : layout.pos.get(b.key) ||
+              last.current.get(b.key) ||
+              last.current.get(`${b.id}#0`);
+          const r = p?.r ?? radiusOf(c.id);
+          const at = p || { x: -100, y: -100 };
+          const text = c.ticker || c.name;
+          return (
+            <button
+              key={b.key}
+              type="button"
+              role="option"
+              aria-selected={picked.has(c.id)}
+              aria-label={`${c.name}${c.ticker ? ` (${c.ticker})` : ""}, ${statusLabels[c.status]}`}
+              tabIndex={b.gone ? -1 : 0}
+              className={[
+                "bubble",
+                c.status,
+                c.archived ? "archived" : "",
+                b.gone || !p ? "gone" : "",
+                b.key.endsWith("#0") ? "" : "copy",
+                selected === c.id ? "open" : "",
+                picked.has(c.id) ? "picked" : "",
+                hover?.id === c.id && hover.key !== b.key ? "twin" : "",
+              ].join(" ")}
+              style={{
+                width: 2 * r,
+                height: 2 * r,
+                transform: `translate(${at.x - r}px, ${at.y - r}px)`,
+                // A few milliseconds' difference per bubble keeps the move organic.
+                transitionDelay: `${delayOf(b.key)}, ${delayOf(b.key)}, ${delayOf(b.key)}, 0ms, 0ms`,
+              }}
+              onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+              onClick={(e) => onRowClick(e, c.id)}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                onStartRename(c.id);
+              }}
+              onContextMenu={(e) => onRowMenu(e, c.id)}
+              onMouseEnter={(e) => {
+                if (b.gone) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHover({ key: b.key, id: c.id, x: rect.left + rect.width / 2, y: rect.top });
+              }}
+              onMouseLeave={() => setHover((h) => (h?.key === b.key ? null : h))}
+            >
+              <span className={text.length > 5 ? "long" : ""}>
+                {text.length > 7 ? text.slice(0, 6) + "…" : text}
+              </span>
+            </button>
+          );
+        })}
       {renamingId && renamePos && (
         <div
           className="bubble-rename"
-          style={{ transform: `translate(${Math.max(0, renamePos.x - 80)}px, ${renamePos.y + D + 6}px)` }}
+          style={{
+            transform: `translate(${Math.max(0, Math.min(width - 200, renamePos.x - 100))}px, ${renamePos.y + renamePos.r + 6}px)`,
+          }}
         >
           <InlineName
             className="company-name-input"
@@ -290,23 +368,19 @@ export function BubbleMap({
         </div>
       )}
       {hovered && hover && !renamingId && (
-        <div
-          className="bubble-tip"
-          role="tooltip"
-          style={{ left: hover.x, top: hover.y }}
-        >
+        <div className="bubble-tip" role="tooltip" style={{ left: hover.x, top: hover.y }}>
           <b>{hovered.name}</b>
           <small>
             {[hovered.ticker, statusLabels[hovered.status], hovered.archived && "Archived"]
               .filter(Boolean)
               .join(" · ")}
           </small>
-          {hovered.tags.some(Boolean) && (
-            <small>{hovered.tags.filter(Boolean).join(", ")}</small>
-          )}
+          {hovered.tags.some(Boolean) && <small>{hovered.tags.filter(Boolean).join(", ")}</small>}
         </div>
       )}
-      {!placed.length && <p className="muted bubble-empty">No companies match these filters.</p>}
+      {layout && !placed.length && (
+        <p className="muted bubble-empty">No companies match these filters.</p>
+      )}
     </div>
   );
 }
