@@ -201,6 +201,50 @@ describe("bulk tagging", () => {
     expect(await tagsOf(a.id)).toEqual(["Moats", "Serial acquirers"]);
     expect((await store.get<Company>("company", a.id))!.data.revision).toBe(2);
   });
+  it("renames a tag everywhere and merges into an existing tag", async () => {
+    const { store, app } = setup();
+    const a = company("Alpha", { tags: ["Moats", "Insurers"] }),
+      b = company("Beta", { tags: ["insurers"] }),
+      c = company("Gamma", { tags: ["Moats"] });
+    for (const x of [a, b, c]) await store.put("company", x.id, x, 0);
+    const tagsOf = async (id: string) =>
+      (await store.get<Company>("company", id))!.data.tags;
+    let body = await (
+      await send(app, "/companies/tags/rename", { from: "Insurers", to: "P&C insurers" })
+    ).json();
+    expect(body.failed).toEqual([]);
+    expect(await tagsOf(a.id)).toEqual(["Moats", "P&C insurers"]);
+    expect(await tagsOf(b.id)).toEqual(["P&C insurers"]);
+    expect(body.library.tags).toContain("P&C insurers");
+    // Merging: Alpha has both tags and keeps one; Gamma moves over.
+    body = await (
+      await send(app, "/companies/tags/rename", { from: "moats", to: "P&C insurers" })
+    ).json();
+    expect(await tagsOf(a.id)).toEqual(["P&C insurers"]);
+    expect(await tagsOf(c.id)).toEqual(["P&C insurers"]);
+    expect(body.library.tags.filter((t: string) => /moats/i.test(t))).toEqual([]);
+  });
+  it("adds many companies in one write, with tags", async () => {
+    const { store, app } = setup();
+    const response = await send(app, "/companies/bulk", {
+      companies: [
+        { name: "Progressive", ticker: "PGR", status: "watchlist", tags: ["Insurers", " insurers "], ideaSource: "Screener" },
+        { name: "Kinsale", status: "inbox", marketCapUsd: 4.5e9 },
+      ],
+    });
+    expect(response.status).toBe(201);
+    const { companies } = await response.json();
+    expect(companies).toHaveLength(2);
+    const saved = await store.get<Company>("company", companies[0].id);
+    expect(saved!.data).toMatchObject({
+      name: "Progressive",
+      ticker: "PGR",
+      status: "watchlist",
+      tags: ["Insurers"],
+      ideaSource: "Screener",
+    });
+    expect((await store.get<Company>("company", companies[1].id))!.data.sizeClass).toBe("mid");
+  });
   it("reports companies it could not find", async () => {
     const { app } = setup();
     const body = await (

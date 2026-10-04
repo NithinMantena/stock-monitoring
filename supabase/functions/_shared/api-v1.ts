@@ -265,7 +265,10 @@ export function createV1Api(
         ? path.endsWith("/notes")
           ? "research:write"
           : "monitoring:write"
-        : path === "/companies" || path === "/companies/tags"
+        : path === "/companies" ||
+            path === "/companies/bulk" ||
+            path === "/companies/tags" ||
+            path === "/companies/tags/rename"
           ? "research:write"
           : /^\/companies\/[^/]+$/.test(path) && c.req.method === "PATCH"
             ? "read"

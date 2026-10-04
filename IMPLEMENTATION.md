@@ -2,6 +2,15 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Bulk add, tag rename, right-click and multi-select — 2026-10-03
+
+- **Faster tag confirm.** `POST /companies/tags` now reads companies in chunks of 100 and writes each chunk with one atomic versioned `store.batch` (previously lock + read + write + unlock per company, i.e. four sequential database calls each). A chunk that meets a concurrent edit falls back to per-company versioned writes, so only edited companies are reported as failed. The browser no longer waits for the tag-catalogue write before closing the spinner.
+- **Tag rename/merge.** `POST /companies/tags/rename {from, to}` rewrites the tag on every company (projected `tags` scan, then the same batched writes) and in `settings/library`; renaming onto an existing tag merges them without duplicates. The tag window renames on double-click or right-click → Edit name, and asks before merging.
+- **Bulk add.** `POST /companies/bulk {companies[]}` (max 200) creates every company in one atomic write; single and bulk create accept `tags`. `src/add-companies.tsx` replaces the old add form.
+- **Companies list.** Ctrl/Shift multi-select, right-click menu (open, rename, edit tags, move to list, archive), a tag popover that saves per tick, and double-click rename in the list and detail title. The manual news search toolbar was removed from Companies; it remains on News & alerts.
+- **News & alerts layout.** At ≤ 850px the stacked heading gave the toolbar a 520px flex-basis as height (the "three-quarters grey" gap); fixed. Intro text, filter box and chips now use one 12px spacing rhythm; batch action buttons have gaps.
+- Verified: TypeScript, 261/262 tests (the one failure, `egress-and-retrieval` warning count, fails identically without these changes), and the synthetic review preview in the browser (multi-select, menu, popover tagging, list and title rename, tag rename + merge, keyboard bulk add, half-width News page).
+
 ## Saved lists, tag window, custom searches, tidier run status — 2026-09-29
 
 - **Saved lists.** Save opens a picker of the owner's lists; an article can be in several. Lists live in the `settings/library` record (no new record kind or migration; included in full and essential exports, validated by restore with its own schema). Events gain `lists: string[]`; `saved` stays the folder flag and always equals "in at least one list" (`applySavePatch` in `_shared/library.ts`). Articles saved before lists count as **Review later** (`eventLists`), so nothing was migrated. `PUT /library` is version-checked; removing a list rewrites affected articles (a projected `saved,lists` index, then 50-id reads). `PATCH /developments/:id` and `update_development` accept `lists`; `saved:true` alone still means Review later.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Company, Doc } from "../supabase/functions/_shared/model";
 import { statusLabels } from "../supabase/functions/_shared/constants";
 import { formatMarketCap } from "../supabase/functions/_shared/company-size";
@@ -11,6 +11,7 @@ import {
   tagCounts,
   type Library,
 } from "../supabase/functions/_shared/library";
+import { ContextMenu } from "./company-menu";
 
 export function TagChip({
   tag,
@@ -58,6 +59,7 @@ export function TagWindow({
   onConfirm,
   onCreateTag,
   onDeleteTag,
+  onRenameTag,
 }: {
   companies: Doc<Company>[];
   library: Library;
@@ -66,6 +68,7 @@ export function TagWindow({
   onConfirm: (tag: string, add: string[], remove: string[]) => Promise<void>;
   onCreateTag: (tag: string) => Promise<void>;
   onDeleteTag: (tag: string) => Promise<void>;
+  onRenameTag: (from: string, to: string) => Promise<void>;
 }) {
   const [tag, setTag] = useState(initialTag);
   const [tagQuery, setTagQuery] = useState("");
@@ -77,6 +80,12 @@ export function TagWindow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [flash, setFlash] = useState("");
+  // Renaming a tag in the left pane, and its right-click menu.
+  const [renaming, setRenaming] = useState<{ tag: string; text: string } | null>(null);
+  const [menu, setMenu] = useState<{ tag: string; count: number; x: number; y: number } | null>(null);
+  const anchor = useRef<number | null>(null);
+  const renamingNow = useRef(renaming);
+  renamingNow.current = renaming;
   const search = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const tags = useMemo(() => tagCounts(companies, library), [companies, library]);
@@ -144,17 +153,72 @@ export function TagWindow({
   };
   const isSelected = (c: Company) =>
     adding.includes(c.id) || (hasTag(c, tag) && !removing.includes(c.id));
-  const toggle = (c: Company) => {
+  // Puts companies into (want = true) or out of the selection for this tag.
+  const setMany = (cs: Company[], want: boolean) => {
     if (!tag) return;
     setFlash("");
-    if (hasTag(c, tag))
-      setRemoving((r) =>
-        r.includes(c.id) ? r.filter((x) => x !== c.id) : [...r, c.id],
+    const has = cs.filter((c) => hasTag(c, tag)).map((c) => c.id);
+    const lacks = cs.filter((c) => !hasTag(c, tag)).map((c) => c.id);
+    setRemoving((r) =>
+      want ? r.filter((x) => !has.includes(x)) : [...new Set([...r, ...has])],
+    );
+    setAdding((a) =>
+      want
+        ? [...lacks.filter((x) => !a.includes(x)).reverse(), ...a]
+        : a.filter((x) => !lacks.includes(x)),
+    );
+  };
+  const toggle = (c: Company) => setMany([c], !isSelected(c));
+  // Shift-click selects (or clears) every row between the last click and this one.
+  const clickRow = (e: React.MouseEvent, i: number) => {
+    const c = rows[i]?.data;
+    if (!c || !tag) return;
+    const from = anchor.current;
+    if (e.shiftKey && from !== null && rows[from]) {
+      const [a, b] = [from, i].sort((x, y) => x - y);
+      setMany(
+        rows.slice(a, b + 1).map((d) => d.data),
+        isSelected(rows[from].data),
       );
-    else
-      setAdding((a) =>
-        a.includes(c.id) ? a.filter((x) => x !== c.id) : [c.id, ...a],
+    } else {
+      toggle(c);
+      anchor.current = i;
+    }
+  };
+  useEffect(() => {
+    anchor.current = null;
+  }, [query, statusFilter, tag]);
+  const rename = async (from: string, raw: string) => {
+    const to = normalizeTag(raw);
+    setRenaming(null);
+    if (!to || to === normalizeTag(from)) return;
+    if (dirty) {
+      setError("Confirm or cancel your changes before renaming a tag.");
+      return;
+    }
+    const other = tags.find((t) => sameTag(t.tag, to) && !sameTag(t.tag, from));
+    if (
+      other &&
+      !confirm(
+        `"${other.tag}" already exists. Merge "${from}" into "${other.tag}"? Companies tagged "${from}" will be tagged "${other.tag}" and "${from}" will disappear.`,
+      )
+    )
+      return;
+    setError("");
+    setBusy(true);
+    try {
+      await onRenameTag(from, other?.tag || to);
+      if (sameTag(tag, from)) setTag(other?.tag || to);
+      setFlash(
+        other
+          ? `Merged "${from}" into "${other.tag}".`
+          : `Renamed "${from}" to "${to}".`,
       );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
   const confirmChanges = async () => {
     if (!tag || !dirty || busy) return;
@@ -252,15 +316,51 @@ export function TagWindow({
             <ul className="tag-options">
               {visibleTags.map((t) => (
                 <li key={t.tag}>
-                  <button
-                    type="button"
-                    className={sameTag(t.tag, tag) ? "selected" : ""}
-                    aria-pressed={sameTag(t.tag, tag)}
-                    onClick={() => chooseTag(t.tag)}
-                  >
-                    <span>{t.tag}</span>
-                    <small>{t.count}</small>
-                  </button>
+                  {renaming && sameTag(renaming.tag, t.tag) ? (
+                    <input
+                      className="tag-rename"
+                      aria-label={`Rename tag ${t.tag}`}
+                      autoFocus
+                      maxLength={80}
+                      value={renaming.text}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) =>
+                        setRenaming({ tag: t.tag, text: e.target.value })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void rename(t.tag, renaming.text);
+                        } else if (e.key === "Escape") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setRenaming(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        // Enter and Escape already finished the rename.
+                        if (renamingNow.current) void rename(t.tag, renaming.text);
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className={sameTag(t.tag, tag) ? "selected" : ""}
+                      aria-pressed={sameTag(t.tag, tag)}
+                      title="Double-click or right-click to rename"
+                      onClick={() => chooseTag(t.tag)}
+                      onDoubleClick={() =>
+                        setRenaming({ tag: t.tag, text: t.tag })
+                      }
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setMenu({ ...t, x: e.clientX, y: e.clientY });
+                      }}
+                    >
+                      <span>{t.tag}</span>
+                      <small>{t.count}</small>
+                    </button>
+                  )}
                   {t.count === 0 && (
                     <button
                       type="button"
@@ -337,7 +437,7 @@ export function TagWindow({
             <p className="muted tag-hint">
               {rows.length} {rows.length === 1 ? "company" : "companies"}
               {query && rows[0] ? ` · Enter adds ${rows[active]?.data.name}` : ""}
-              {" · ↑↓ to move"}
+              {" · ↑↓ to move · Shift-click selects a range"}
             </p>
             <div className="tag-rows" ref={listRef} role="listbox" aria-multiselectable="true">
               {rows.map((d, i) => {
@@ -367,7 +467,8 @@ export function TagWindow({
                       state,
                       i === active && query ? "active" : "",
                     ].join(" ")}
-                    onClick={() => toggle(c)}
+                    onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+                    onClick={(e) => clickRow(e, i)}
                     onMouseEnter={() => query && setActive(i)}
                   >
                     <div className="tag-row-main">
@@ -511,6 +612,35 @@ export function TagWindow({
               : `Confirm${dirty ? ` · +${adding.length} / −${removing.length}` : ""}`}
           </button>
         </footer>
+        {menu && (
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            title={`“${menu.tag}”`}
+            onClose={() => setMenu(null)}
+            items={[
+              {
+                label: "Edit name",
+                hint: "or double-click",
+                onSelect: () => setRenaming({ tag: menu.tag, text: menu.tag }),
+              },
+              { label: "Tag companies", onSelect: () => chooseTag(menu.tag) },
+              "separator",
+              {
+                label: "Delete tag",
+                danger: true,
+                disabled: menu.count > 0,
+                hint: menu.count > 0 ? "only unused tags" : undefined,
+                onSelect: () => {
+                  if (sameTag(menu.tag, tag)) setTag("");
+                  void onDeleteTag(menu.tag).catch((e) =>
+                    setError((e as Error).message),
+                  );
+                },
+              },
+            ]}
+          />
+        )}
       </div>
     </dialog>
   );

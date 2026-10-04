@@ -12,6 +12,7 @@ import {
   newCompany,
   type Company,
   type DeskEvent,
+  type Doc,
   type Store,
 } from "./model.ts";
 import {
@@ -147,21 +148,24 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       newsBatch,
     });
   });
-  api.post("/companies", async (c) => {
-    const input = z
-      .object({
-        name: z.string().trim().min(1).max(200),
-        status: CompanySchema.shape.status,
-        ticker: z.string().max(50).optional(),
-        ideaSource: z.string().max(2000).optional(),
-        // Either a size tier or a market cap (USD); a market cap wins.
-        sizeClass: CompanySchema.shape.sizeClass.optional(),
-        marketCapUsd: z.number().positive().finite().nullable().optional(),
-      })
-      .parse(await c.req.json());
+  const NewCompanyInput = z.object({
+    name: z.string().trim().min(1).max(200),
+    status: CompanySchema.shape.status,
+    ticker: z.string().max(50).optional(),
+    ideaSource: z.string().max(2000).optional(),
+    // Either a size tier or a market cap (USD); a market cap wins.
+    sizeClass: CompanySchema.shape.sizeClass.optional(),
+    marketCapUsd: z.number().positive().finite().nullable().optional(),
+    tags: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
+  });
+  const buildCompany = (input: z.infer<typeof NewCompanyInput>) => {
     let company = newCompany(input.name, input.status);
     company.ticker = input.ticker || "";
     company.ideaSource = input.ideaSource || "";
+    for (const raw of input.tags || []) {
+      const tag = normalizeTag(raw);
+      if (tag && !company.tags.some((t) => sameTag(t, tag))) company.tags.push(tag);
+    }
     if (input.marketCapUsd) {
       company.marketCapUsd = input.marketCapUsd;
       company.marketCapAsOf = new Date().toISOString().slice(0, 10);
@@ -170,8 +174,22 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       company.sizeClass = input.sizeClass;
       company.sizeSource = "manual";
     }
-    company = normalizeSize(company);
+    return normalizeSize(company);
+  };
+  api.post("/companies", async (c) => {
+    const company = buildCompany(NewCompanyInput.parse(await c.req.json()));
     return c.json(await store.put("company", company.id, company, 0), 201);
+  });
+  // The add-companies window: every company in one atomic write.
+  api.post("/companies/bulk", async (c) => {
+    const { companies } = z
+      .object({ companies: z.array(NewCompanyInput).min(1).max(200) })
+      .parse(await c.req.json());
+    const built = companies.map(buildCompany);
+    const saved = await store.batch(
+      built.map((data) => ({ kind: "company", id: data.id, data, expected: 0 })),
+    );
+    return c.json({ companies: saved }, 201);
   });
   api.put("/companies/:id", async (c) => {
     const input = z
@@ -619,6 +637,69 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     }
     return c.json({ library: data, version: saved.version });
   });
+  // Rewrites tags on many companies at once. Companies are read and written in
+  // chunks with one atomic versioned batch each (two round trips per chunk, not
+  // four per company). A chunk that hits a concurrent edit falls back to
+  // per-company writes so only the edited companies are reported as failed.
+  const retag = async (
+    ids: string[],
+    change: (tags: string[]) => string[],
+  ) => {
+    const updated: { id: string; version: number; tags: string[]; updatedAt: string }[] = [];
+    const failed: string[] = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const docs = await store.list<Company>("company", { ids: chunk });
+      const byId = new Map(docs.map((d) => [d.id, d]));
+      const now = new Date().toISOString();
+      const writes: { kind: string; id: string; data: Company; expected: number }[] = [];
+      for (const id of chunk) {
+        const old = byId.get(id);
+        if (!old) {
+          failed.push(id);
+          continue;
+        }
+        const tags = change(old.data.tags);
+        if (JSON.stringify(tags) === JSON.stringify(old.data.tags)) {
+          updated.push({ id, version: old.version, tags, updatedAt: old.updatedAt });
+          continue;
+        }
+        if (tags.length > 50) {
+          failed.push(id);
+          continue;
+        }
+        writes.push({
+          kind: "company",
+          id,
+          expected: old.version,
+          data: { ...old.data, tags, revision: old.data.revision + 1, updatedAt: now },
+        });
+      }
+      if (!writes.length) continue;
+      try {
+        const saved = (await store.batch(writes)) as Doc<Company>[];
+        for (const doc of saved)
+          updated.push({
+            id: doc.id,
+            version: doc.version,
+            tags: doc.data.tags,
+            updatedAt: doc.updatedAt,
+          });
+      } catch (error) {
+        if (!(error instanceof ConflictError)) throw error;
+        for (const w of writes) {
+          try {
+            const doc = await store.put("company", w.id, w.data, w.expected);
+            updated.push({ id: doc.id, version: doc.version, tags: w.data.tags, updatedAt: doc.updatedAt });
+          } catch (inner) {
+            if (!(inner instanceof ConflictError)) throw inner;
+            failed.push(w.id);
+          }
+        }
+      }
+    }
+    return { updated, failed };
+  };
   // Bulk tagging from the tag window: add and remove one tag across companies.
   api.post("/companies/tags", async (c) => {
     const input = z
@@ -629,61 +710,57 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
       })
       .parse(await c.req.json());
     const tag = normalizeTag(input.tag);
-    const changes = new Map<string, "add" | "remove">([
-      ...input.add.map((id) => [id, "add"] as const),
-      ...input.remove.map((id) => [id, "remove"] as const),
-    ]);
-    const updated: { id: string; version: number; tags: string[]; updatedAt: string }[] = [];
-    const failed: string[] = [];
-    for (const [id, change] of changes) {
-      const lock = await store.claim(`company-${id}`, 30);
-      if (!lock) {
-        failed.push(id);
-        continue;
+    const removing = [...new Set(input.remove)];
+    const adding = [...new Set(input.add)].filter((id) => !removing.includes(id));
+    const added = await retag(adding, (tags) =>
+      // A company that already has the tag keeps its spelling.
+      tags.some((t) => sameTag(t, tag))
+        ? tags
+        : [...tags.filter((t) => t.trim()), tag],
+    );
+    const removed = await retag(removing, (tags) =>
+      tags.filter((t) => t.trim() && !sameTag(t, tag)),
+    );
+    return c.json({
+      tag,
+      updated: [...added.updated, ...removed.updated],
+      failed: [...added.failed, ...removed.failed],
+    });
+  });
+  // Renames a tag everywhere: on every company and in the tag catalogue. When
+  // the new name is another existing tag, the two merge into one.
+  api.post("/companies/tags/rename", async (c) => {
+    const input = z
+      .object({
+        from: z.string().trim().min(1).max(80),
+        to: z.string().trim().min(1).max(80),
+      })
+      .parse(await c.req.json());
+    const from = normalizeTag(input.from),
+      to = normalizeTag(input.to);
+    const index = await store.list<Company>("company", { fields: ["tags"] });
+    const ids = index
+      .filter((d) => (d.data.tags || []).some((t) => sameTag(t, from)))
+      .map((d) => d.id);
+    const result = await retag(ids, (tags) => {
+      const out: string[] = [];
+      for (const t of tags) {
+        const next = sameTag(t, from) ? to : t;
+        if (next.trim() && !out.some((x) => sameTag(x, next))) out.push(next);
       }
-      try {
-        const old = await store.get<Company>("company", id);
-        if (!old) {
-          failed.push(id);
-          continue;
-        }
-        const others = old.data.tags.filter((t) => t.trim() && !sameTag(t, tag));
-        // A company that already has the tag keeps its spelling.
-        const tags =
-          change === "remove"
-            ? others
-            : old.data.tags.some((t) => sameTag(t, tag))
-              ? old.data.tags
-              : [...others, tag];
-        if (JSON.stringify(tags) === JSON.stringify(old.data.tags)) {
-          updated.push({ id, version: old.version, tags, updatedAt: old.updatedAt });
-          continue;
-        }
-        if (tags.length > 50) {
-          failed.push(id);
-          continue;
-        }
-        const now = new Date().toISOString();
-        const doc = await store.put(
-          "company",
-          id,
-          {
-            ...old.data,
-            tags,
-            revision: old.data.revision + 1,
-            updatedAt: now,
-          },
-          old.version,
-        );
-        updated.push({ id, version: doc.version, tags, updatedAt: doc.updatedAt });
-      } catch (error) {
-        if (!(error instanceof ConflictError)) throw error;
-        failed.push(id);
-      } finally {
-        await store.release(`company-${id}`, lock);
-      }
-    }
-    return c.json({ tag, updated, failed });
+      return out;
+    });
+    const old = await store.get<unknown>("settings", LIBRARY_ID);
+    const library = old ? LibrarySchema.parse(old.data) : defaultLibrary();
+    const next = {
+      ...library,
+      tags: [
+        ...library.tags.filter((t) => !sameTag(t, from) && !sameTag(t, to)),
+        to,
+      ],
+    };
+    const saved = await store.put("settings", LIBRARY_ID, next, old?.version || 0);
+    return c.json({ from, to, ...result, library: next, libraryVersion: saved.version });
   });
   api.post("/monitor", async (c) => {
     const input = z

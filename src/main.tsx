@@ -12,6 +12,13 @@ import {
 import { mergeDocuments, latestBatch, latestRun } from "./sync";
 import { TagChip, TagWindow } from "./tag-window";
 import { CustomSearchPanel } from "./custom-search";
+import { AddCompaniesWindow, rowPayload } from "./add-companies";
+import {
+  ContextMenu,
+  TagPopover,
+  multiSelectClick,
+  type MenuItem,
+} from "./company-menu";
 import {
   defaultLibrary,
   emptyCriteria,
@@ -336,6 +343,17 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     setTab("research");
   }, []);
   const [adding, setAdding] = useState(false);
+  // Companies picked with Ctrl/Shift-click, the right-click menu or tag popover
+  // they act on, and the company whose name is being edited in the list.
+  const [picked, setPicked] = useState<string[]>([]);
+  const pickAnchor = useRef<string | null>(null);
+  const [menu, setMenu] = useState<{
+    kind: "company" | "tags";
+    ids: string[];
+    x: number;
+    y: number;
+  } | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const state = useRef(data);
@@ -823,7 +841,21 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       updated: { id: string; version: number; tags: string[]; updatedAt: string }[];
       failed: string[];
     }>("/companies/tags", { tag, add, remove });
-    const byId = new Map(result.updated.map((u) => [u.id, u]));
+    applyTagUpdates(result.updated);
+    // Keep the tag in the catalogue even if it ends up on no company. This
+    // does not hold up the window: the companies are already saved.
+    if (!library.tags.some((t) => sameTag(t, tag)))
+      void createTag(tag).catch(() => {});
+    void reload(since);
+    if (result.failed.length)
+      throw new Error(
+        `${result.failed.length} compan${result.failed.length === 1 ? "y was" : "ies were"} being edited elsewhere and did not change. Try again.`,
+      );
+  };
+  const applyTagUpdates = (
+    updated: { id: string; version: number; tags: string[]; updatedAt: string }[],
+  ) => {
+    const byId = new Map(updated.map((u) => [u.id, u]));
     setData(
       (old) =>
         old && {
@@ -841,14 +873,53 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
           }),
         },
     );
-    // Keep the tag in the catalogue even if it ends up on no company.
-    if (!library.tags.some((t) => sameTag(t, tag)))
-      await createTag(tag).catch(() => {});
+  };
+  // Renames (or merges) a tag on every company and in the catalogue.
+  const renameTag = async (from: string, to: string) => {
+    const since = new Date(Date.now() - 1000).toISOString();
+    const result = await api<{
+      updated: { id: string; version: number; tags: string[]; updatedAt: string }[];
+      failed: string[];
+      library: Library;
+      libraryVersion: number;
+    }>("/companies/tags/rename", { from, to });
+    applyTagUpdates(result.updated);
+    setData(
+      (old) =>
+        old && {
+          ...old,
+          library: result.library,
+          libraryVersion: result.libraryVersion,
+        },
+    );
+    if (sameTag(tagFilter, from)) setTagFilter(to);
     void reload(since);
     if (result.failed.length)
       throw new Error(
-        `${result.failed.length} compan${result.failed.length === 1 ? "y was" : "ies were"} being edited elsewhere and did not change. Try again.`,
+        `${result.failed.length} compan${result.failed.length === 1 ? "y was" : "ies were"} being edited elsewhere and kept "${from}". Rename again to finish.`,
       );
+  };
+  const addCompanies = async (rows: Parameters<typeof rowPayload>[0][]) => {
+    const result = await api<{ companies: Doc<Company>[] }>("/companies/bulk", {
+      companies: rows.map(rowPayload),
+    });
+    setData(
+      (old) => old && { ...old, companies: [...old.companies, ...result.companies] },
+    );
+    setAdding(false);
+    setSection("companies");
+    setFilter("all");
+    setGroup("");
+    setTagFilter("");
+    setQuery("");
+    if (result.companies.length === 1) openCompany(result.companies[0].id);
+    else setPicked(result.companies.map((d) => d.id));
+    setNotice(
+      result.companies.length === 1
+        ? "Company added. Start typing your notes."
+        : `${result.companies.length} companies added and selected. Right-click them to tag or move them.`,
+    );
+    void reload();
   };
   const openTags = useCallback((tag = "") => setTagWindow(tag), []);
   const docs = data?.companies || [];
@@ -1126,6 +1197,86 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     </span>
   ) : null;
   const selectedDoc = docs.find((c) => c.id === selected);
+  // Multi-select in the company list. Selections hidden by a filter are dropped.
+  const pickedSet = useMemo(() => new Set(picked), [picked]);
+  const pickedDocs = filtered.filter((d) => pickedSet.has(d.id));
+  const live = useRef({ filtered, picked, edit, openCompany });
+  live.current = { filtered, picked, edit, openCompany };
+  const rowClick = useCallback((e: React.MouseEvent, id: string) => {
+    const { filtered, picked, openCompany } = live.current;
+    const next = multiSelectClick(
+      e,
+      filtered.map((d) => d.id),
+      id,
+      picked,
+      pickAnchor.current,
+    );
+    if (!e.shiftKey) pickAnchor.current = id;
+    if (next) setPicked(next);
+    else {
+      setPicked([]);
+      openCompany(id);
+    }
+  }, []);
+  const rowMenu = useCallback((e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const { picked } = live.current;
+    const ids = picked.includes(id) ? picked : [id];
+    if (!picked.includes(id)) setPicked([]);
+    setMenu({ kind: "company", ids, x: e.clientX, y: e.clientY });
+  }, []);
+  const renameCompany = useCallback((id: string, name: string | null) => {
+    setRenamingId(null);
+    const doc = live.current.filtered.find((d) => d.id === id);
+    if (name !== null && name.trim() && doc && name.trim() !== doc.data.name)
+      live.current.edit(id, { name: name.trim() });
+  }, []);
+  useEffect(() => {
+    if (!picked.length) return;
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.querySelector("dialog[open]"))
+        setPicked([]);
+    };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [picked.length]);
+  const menuDocs = menu
+    ? docs.filter((d) => menu.ids.includes(d.id))
+    : [];
+  const companyMenuItems = (): MenuItem[] => {
+    const one = menuDocs.length === 1 ? menuDocs[0] : null;
+    const allArchived = menuDocs.every((d) => d.data.archived);
+    const each = (patch: (c: Company) => Partial<Company>) =>
+      menuDocs.forEach((d) => edit(d.id, patch(d.data)));
+    return [
+      ...(one
+        ? [
+            { label: "Open", onSelect: () => openCompany(one.id) },
+            {
+              label: "Rename",
+              hint: "or double-click the name",
+              onSelect: () => setRenamingId(one.id),
+            },
+          ]
+        : []),
+      {
+        label: "Edit tags…",
+        onSelect: () => menu && setMenu({ ...menu, kind: "tags" }),
+      },
+      "separator",
+      { heading: "Move to list" },
+      ...statuses.map((s) => ({
+        label: statusLabels[s],
+        disabled: menuDocs.every((d) => d.data.status === s),
+        onSelect: () => each(() => ({ status: s })),
+      })),
+      "separator",
+      {
+        label: allArchived ? "Unarchive" : "Archive",
+        onSelect: () => each(() => ({ archived: !allArchived })),
+      },
+    ];
+  };
   const unseen = groupNews(
     (data?.events || []).filter(
       (e) =>
@@ -1307,26 +1458,43 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 </div>
               </div>
               {companyFilters}
-              <div className="batch-toolbar">
-                {scopeControls}
-                {batchButton}
-                <span className="muted">
-                  News only. Up to{" "}
-                  {(
-                    batchCompanies.length *
-                    searchDays *
-                    batchScope.perDay
-                  ).toLocaleString()}{" "}
-                  articles.
-                </span>
-                {scopeNote}
-              </div>
-              {customPanel}
-              <NewsBatchStatus
-                batch={data.newsBatch}
-                onControl={controlBatch}
-                controlBusy={batchControlBusy}
-              />
+              {pickedDocs.length > 0 && (
+                <div className="selection-bar" role="status">
+                  <b>
+                    {pickedDocs.length}{" "}
+                    {pickedDocs.length === 1 ? "company" : "companies"} selected
+                  </b>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setMenu({ kind: "tags", ids: picked, x: r.left, y: r.bottom + 4 });
+                    }}
+                  >
+                    Edit tags
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setMenu({ kind: "company", ids: picked, x: r.left, y: r.bottom + 4 });
+                    }}
+                  >
+                    More…
+                  </button>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => setPicked([])}
+                  >
+                    Clear
+                  </button>
+                  <span className="muted">
+                    Ctrl-click adds or removes · Shift-click selects a range ·
+                    right-click for actions
+                  </span>
+                </div>
+              )}
               <div className="desk-columns">
                 <div
                   className={
@@ -1371,8 +1539,13 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                             key={c.id}
                             c={c}
                             selected={selected === c.id}
+                            picked={pickedSet.has(c.id)}
+                            renaming={renamingId === c.id}
                             showDetail={!!selectedDoc}
-                            onSelect={openCompany}
+                            onRowClick={rowClick}
+                            onRowMenu={rowMenu}
+                            onStartRename={setRenamingId}
+                            onRename={renameCompany}
                             onOpenTag={openTags}
                           />
                         ))}
@@ -1426,18 +1599,21 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 </div>
               </div>
               {customPanel}
-              <p className="muted">
-                New items appear at the top. Review to clear your inbox, or save
-                to keep. Unsaved unread items leave the inbox after 30 days.
-              </p>
-              <input
-                className="search"
-                aria-label="Search companies for news"
-                placeholder="Filter companies, tickers, notes…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {companyFilters}
+              <div className="news-scope">
+                <p className="muted">
+                  New items appear at the top. Review to clear your inbox, or
+                  save to keep. Unsaved unread items leave the inbox after 30
+                  days.
+                </p>
+                <input
+                  className="search"
+                  aria-label="Search companies for news"
+                  placeholder="Filter companies, tickers, notes…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                {companyFilters}
+              </div>
               <ScheduledRunStatus
                 run={data.newsRun}
                 history={data.newsRunHistory}
@@ -1619,149 +1795,138 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
           onConfirm={bulkTag}
           onCreateTag={createTag}
           onDeleteTag={deleteTag}
+          onRenameTag={renameTag}
         />
       )}
       {adding && (
-        <dialog
-          className="modal-backdrop"
-          aria-labelledby="add-company-title"
-          ref={(node) => {
-            if (node && !node.open) {
-              node.showModal();
-              node
-                .querySelector<HTMLInputElement>('input[name="name"]')
-                ?.focus();
-            }
-          }}
-          onCancel={(e) => {
-            e.preventDefault();
-            if (!busy) setAdding(false);
-          }}
-        >
-          <form
-            className="modal"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              await action(async () => {
-                const cap = String(f.get("marketCap") || "").trim();
-                if (cap && parseMarketCap(cap) === null)
-                  throw new Error(
-                    "Market cap not understood. Use a number such as 3.5B, 265M or 1.2T.",
-                  );
-                const doc = await api<Doc<Company>>("/companies", {
-                  name: f.get("name"),
-                  ticker: f.get("ticker"),
-                  ideaSource: f.get("ideaSource"),
-                  status: f.get("status"),
-                  sizeClass: f.get("sizeClass"),
-                  marketCapUsd: String(f.get("marketCap") || "").trim()
-                    ? parseMarketCap(String(f.get("marketCap")))
-                    : null,
-                });
-                setSelected(doc.id);
-                setTab("research");
-                setFilter("all");
-                setGroup("");
-                setQuery("");
-                setAdding(false);
-              }, "Company added. Start typing your notes.");
-            }}
-          >
-            <button
-              type="button"
-              className="dismiss"
-              aria-label="Close add company"
-              disabled={busy}
-              onClick={() => setAdding(false)}
-            >
-              ×
-            </button>
-            <p className="eyebrow">CAPTURE AN IDEA</p>
-            <h2 id="add-company-title">Add company</h2>
-            <Field label="Company name">
-              <input
-                autoFocus
-                name="name"
-                placeholder="e.g. Progressive"
-                required
-                maxLength={200}
-              />
-            </Field>
-            <div className="form-grid">
-              <Field label="Ticker (optional)">
-                <input name="ticker" placeholder="e.g. PGR" />
-              </Field>
-              <Field label="Status">
-                <select name="status" defaultValue="inbox">
-                  {statuses.map((s) => (
-                    <option key={s} value={s}>
-                      {statusLabels[s]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-            <div className="form-grid">
-              <Field label="Size">
-                <select name="sizeClass" defaultValue="unknown">
-                  <option value="unknown">Not sure yet</option>
-                  {SIZE_CLASSES.map((k) => (
-                    <option key={k} value={k}>
-                      {SIZE_BANDS[k].label} ({SIZE_BANDS[k].range})
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="…or market cap, USD">
-                <input name="marketCap" placeholder="e.g. 3.5B or 265M" />
-              </Field>
-            </div>
-            <p className="muted">
-              Size tells TypeSafe how big a development must be to matter. A
-              market cap sets the size automatically. You can link market data
-              and news sources after adding it.
-            </p>
-            <Field label="Where did you find this idea?">
-              <input
-                name="ideaSource"
-                maxLength={2000}
-                placeholder="Screener, newsletter, person, podcast or link…"
-              />
-            </Field>
-            <button className="primary" disabled={busy}>
-              {busy ? "Adding…" : "Add company"}
-            </button>
-          </form>
-        </dialog>
+        <AddCompaniesWindow
+          companies={docs}
+          known={allTags}
+          onSubmit={addCompanies}
+          onClose={() => setAdding(false)}
+        />
+      )}
+      {menu?.kind === "company" && menuDocs.length > 0 && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          title={menuDocs.length === 1 ? menuDocs[0].data.name : `${menuDocs.length} companies`}
+          items={companyMenuItems()}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {menu?.kind === "tags" && menuDocs.length > 0 && (
+        <TagPopover
+          x={menu.x}
+          y={menu.y}
+          companies={menuDocs.map((d) => d.data)}
+          known={allTags}
+          onApply={bulkTag}
+          onOpenWindow={() => openTags("")}
+          onClose={() => setMenu(null)}
+        />
       )}
     </div>
+  );
+}
+
+// Edits a name in place: Enter or leaving the field saves, Escape cancels.
+function InlineName({
+  value,
+  className,
+  label,
+  onDone,
+}: {
+  value: string;
+  className?: string;
+  label: string;
+  onDone: (name: string | null) => void;
+}) {
+  const [text, setText] = useState(value);
+  const done = useRef(false);
+  const finish = (name: string | null) => {
+    if (done.current) return;
+    done.current = true;
+    onDone(name);
+  };
+  return (
+    <input
+      className={className}
+      aria-label={label}
+      autoFocus
+      maxLength={200}
+      value={text}
+      onFocus={(e) => e.currentTarget.select()}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          finish(text);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          finish(null);
+        }
+      }}
+      onBlur={() => finish(text)}
+    />
   );
 }
 
 const CompanyRow = React.memo(function CompanyRow({
   c,
   selected,
+  picked,
+  renaming,
   showDetail,
-  onSelect,
+  onRowClick,
+  onRowMenu,
+  onStartRename,
+  onRename,
   onOpenTag,
 }: {
   c: Company;
   selected: boolean;
+  picked: boolean;
+  renaming: boolean;
   showDetail: boolean;
-  onSelect: (id: string) => void;
+  onRowClick: (e: React.MouseEvent, id: string) => void;
+  onRowMenu: (e: React.MouseEvent, id: string) => void;
+  onStartRename: (id: string) => void;
+  onRename: (id: string, name: string | null) => void;
   onOpenTag: (tag: string) => void;
 }) {
   return (
     <tr
       key={c.id}
-      className={selected ? "selected-row" : ""}
-      onClick={() => onSelect(c.id)}
+      className={[selected ? "selected-row" : "", picked ? "picked-row" : ""].join(" ")}
+      aria-selected={picked}
+      onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+      onClick={(e) => onRowClick(e, c.id)}
+      onContextMenu={(e) => onRowMenu(e, c.id)}
     >
       <td>
-        <button className="company-name" onClick={() => onSelect(c.id)}>
-          {c.name}
-        </button>
+        {renaming ? (
+          <InlineName
+            className="company-name-input"
+            label="Company name"
+            value={c.name}
+            onDone={(name) => onRename(c.id, name)}
+          />
+        ) : (
+          <button
+            className="company-name"
+            title="Double-click to rename"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onStartRename(c.id);
+            }}
+          >
+            {c.name}
+          </button>
+        )}
         <small>
           {c.ticker
             ? `${c.ticker} · ${c.exchange || "Exchange unconfirmed"}`
@@ -1847,6 +2012,7 @@ function CompanyDetail({
   const c = doc.data;
   const [preview, setPreview] = useState(false);
   const [history, setHistory] = useState<Doc<any>[]>([]);
+  const [naming, setNaming] = useState(false);
   return (
     <section className="detail" aria-label={`${c.name} details`}>
       <div className="detail-heading">
@@ -1855,12 +2021,33 @@ function CompanyDetail({
           ×
         </button>
       </div>
-      <input
-        className="name-input"
-        aria-label="Company name"
-        value={c.name}
-        onChange={(e) => edit({ name: e.target.value })}
-      />
+      {naming ? (
+        <InlineName
+          className="name-input"
+          label="Company name"
+          value={c.name}
+          onDone={(name) => {
+            setNaming(false);
+            if (name !== null && name.trim() && name.trim() !== c.name)
+              edit({ name: name.trim() });
+          }}
+        />
+      ) : (
+        <h2
+          className="name-title"
+          title="Double-click to rename"
+          tabIndex={0}
+          onDoubleClick={() => setNaming(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "F2") {
+              e.preventDefault();
+              setNaming(true);
+            }
+          }}
+        >
+          {c.name}
+        </h2>
+      )}
       <div className="detail-status">
         <StatusSelect
           value={c.status}
