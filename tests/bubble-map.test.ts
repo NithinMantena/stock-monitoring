@@ -50,6 +50,22 @@ describe("bubble map layout", () => {
       expect(layout.labels.map((l) => l.count)).toEqual([7, 40, 250, 23]);
     }
   });
+  it("uses the full width: big groups spread, rows are spaced evenly", () => {
+    const span = (layout: ReturnType<typeof layoutMap>) => {
+      const pts = [...layout.pos.values()];
+      return [Math.min(...pts.map((p) => p.x - p.r)), Math.max(...pts.map((p) => p.x + p.r))];
+    };
+    for (const width of [800, 1400]) {
+      const [lo, hi] = span(check(items(216, "n"), [{ key: "n", label: "No tag" }], width));
+      expect(hi - lo).toBeGreaterThan(width * 0.85);
+      // Two small groups sit apart across the row, not packed on the left.
+      const two = check([...items(20, "w"), ...items(10, "p")], [{ key: "w", label: "Watchlist" }, { key: "p", label: "Portfolio" }], width);
+      const [l2, h2] = span(two);
+      expect(l2).toBeGreaterThan(width * 0.1);
+      expect(h2).toBeGreaterThan(width * 0.6);
+      expect(width - h2).toBeCloseTo(l2, -1);
+    }
+  });
   it("gives the same layout every time, and when regrouping back", () => {
     const one = layoutMap(placed, groups, 900);
     layoutMap(items(30, "z"), [{ key: "z", label: "Z" }], 900);

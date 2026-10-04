@@ -101,26 +101,36 @@ const clumpCache = new Map<string, Clump>();
 function clumpOf(members: { key: string; r: number }[], maxW: number): Clump {
   const area = members.reduce((s, m) => s + Math.PI * (m.r + PAD) ** 2, 0) / 0.7;
   const R = Math.sqrt(area / Math.PI);
-  const half = R * 2 + 8 > maxW ? maxW / 2 - 4 : Infinity;
+  // A group that would take more than about half the map becomes a band across
+  // the full width, so big groups use the space instead of forming a tall circle.
+  const half = R * 2 + 8 > maxW * 0.55 ? maxW / 2 - 4 : Infinity;
   const cacheKey =
     (half === Infinity ? "free" : Math.round(half)) +
     "|" +
     members.map((m) => m.key + ":" + m.r.toFixed(1)).join(",");
   const hit = clumpCache.get(cacheKey);
   if (hit) return hit;
-  const rx = Math.min(R, half),
-    ry = half === Infinity ? R : (area * 1.25) / (Math.PI * rx);
+  // Free clumps start scattered in a circle; bands in a full-width strip.
+  const bandH = half === Infinity ? 0 : (area * 1.1) / (2 * half);
   const nodes: Node[] = members.map((m) => {
+    if (half !== Infinity)
+      return {
+        key: m.key,
+        r: m.r,
+        x: (hash01(m.key) * 2 - 1) * (half - m.r),
+        y: (hash01(m.key + "d") - 0.5) * bandH,
+      };
     const a = hash01(m.key) * Math.PI * 2,
       d = Math.sqrt(hash01(m.key + "d"));
-    return { key: m.key, r: m.r, x: Math.cos(a) * d * rx, y: Math.sin(a) * d * ry };
+    return { key: m.key, r: m.r, x: Math.cos(a) * d * R, y: Math.sin(a) * d * R };
   });
   const k = 0.09 * Math.min(1, Math.sqrt(15 / members.length));
   const sim = forceSimulation<Node>(nodes)
-    .force("x", forceX<Node>(0).strength(k * Math.min(1, ry / rx)))
-    // Pull more gently along a band's long side so the crowd spreads instead
-    // of squeezing against the side walls.
-    .force("y", forceY<Node>(0).strength(k * Math.min(1, rx / ry)))
+    // A band fills the full width: almost no sideways pull (the side walls hold
+    // it) and a moderate downward squeeze keeps it compact. A free clump is
+    // pulled evenly into a round shape.
+    .force("x", forceX<Node>(0).strength(half !== Infinity ? k * 0.03 : k))
+    .force("y", forceY<Node>(0).strength(half !== Infinity ? k * 0.35 * Math.min(1, (2 * half) / bandH) : k))
     .force("collide", forceCollide<Node>((n) => n.r + PAD).strength(0.9).iterations(3))
     .stop();
   for (let i = 0; i < 300; i++) {
@@ -150,9 +160,10 @@ export interface Layout {
   height: number;
 }
 
-// The whole map: each group is settled on its own, measured, and then the
-// groups are placed left to right in rows by their real size, each label above
-// its own clump. Groups therefore never overlap each other or their labels.
+// The whole map: each group is settled on its own and measured, then the
+// groups are placed in rows by their real size, each label above its own clump,
+// and each row is spread evenly across the full width. Groups therefore never
+// overlap each other or their labels, and the map uses the whole space.
 export function layoutMap(
   items: Placed[],
   groups: Group[],
@@ -162,30 +173,41 @@ export function layoutMap(
   const W = Math.max(width, BASE_R * 3);
   const pos = new Map<string, { x: number; y: number; r: number }>();
   const labels: Layout["labels"] = [];
-  let x = 0,
-    y = 0,
-    rowH = 0;
+  type Box = { g: Group; c: Clump; w: number; count: number };
+  const rows: Box[][] = [[]];
+  let used = 0;
   for (const g of groups) {
     const members = items
       .filter((i) => i.group === g.key)
       .map((i) => ({ key: i.key, r: radiusOf(i.id) * (i.id === openId ? OPEN : 1) }));
     if (!members.length) continue;
     const c = clumpOf(members, W);
-    const labelW = Math.min(g.label.length * 7 + 44, W);
-    const w = Math.max(c.w, labelW);
-    if (x > 0 && x + w > W) {
-      x = 0;
-      y += rowH + GAP_Y;
-      rowH = 0;
+    const w = Math.max(c.w, Math.min(g.label.length * 7 + 44, W));
+    let row = rows[rows.length - 1];
+    if (row.length && used + GAP_X + w > W) {
+      rows.push((row = []));
+      used = 0;
     }
-    labels.push({ key: g.key, label: g.label, count: members.length, x: x + w / 2, y, w });
-    const ox = x + (w - c.w) / 2 - c.minX,
-      oy = y + LABEL - c.minY;
-    for (const p of c.pos) pos.set(p.key, { x: ox + p.x, y: oy + p.y, r: p.r });
-    x += w + GAP_X;
-    rowH = Math.max(rowH, LABEL + c.h);
+    used += (row.length ? GAP_X : 0) + w;
+    row.push({ g, c, w, count: members.length });
   }
-  return { pos, labels, height: y + rowH + 6 };
+  let y = 0;
+  for (const row of rows) {
+    if (!row.length) continue;
+    const gap = (W - row.reduce((s, b) => s + b.w, 0)) / (row.length + 1);
+    let x = gap;
+    let rowH = 0;
+    for (const { g, c, w, count } of row) {
+      labels.push({ key: g.key, label: g.label, count, x: x + w / 2, y, w });
+      const ox = x + (w - c.w) / 2 - c.minX,
+        oy = y + LABEL - c.minY;
+      for (const p of c.pos) pos.set(p.key, { x: ox + p.x, y: oy + p.y, r: p.r });
+      x += w + gap;
+      rowH = Math.max(rowH, LABEL + c.h);
+    }
+    y += rowH + GAP_Y;
+  }
+  return { pos, labels, height: Math.max(0, y - GAP_Y) + 6 };
 }
 
 const delayOf = (key: string) => `${Math.round(hash01(key) * 70)}ms`;

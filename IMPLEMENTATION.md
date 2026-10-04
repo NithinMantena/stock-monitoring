@@ -2,6 +2,12 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Bubble map uses the full width — 2026-10-05
+
+- Rows are spread evenly across the map width (equal space around each group) instead of packed from the left.
+- A group whose round clump would exceed ~55% of the width becomes a full-width band: it starts scattered across a full-width strip, has almost no sideways pull (the side walls hold it) and a gentle vertical squeeze that weakens for tall strips.
+- Verified: tests (a 216-bubble group spans >85% of 800/1400px; two small groups sit evenly across the row; existing no-overlap/no-label-cover checks at 360/800/1400px); preview with 220 companies at 958px map width: bubbles span 4–954px.
+
 ## Bubble map: precomputed layout — 2026-10-04 (later)
 
 - The live simulation could stop before bubbles reached a new group: forceX/forceY scale with alpha, and big groups (e.g. 216 untagged) pulled so gently that bubbles froze mid-way, over other groups' labels. Replaced with `layoutMap`: each group is settled on its own, synchronously (d3-force, 300 ticks from hash-seeded starts; deterministic and cached by members + width band), then measured, and groups are flowed into rows by their real bounding boxes with the label above each box. Groups can no longer overlap each other or labels. Very tall/wide groups pull more weakly along their long axis so they spread instead of squeezing against the side walls.
