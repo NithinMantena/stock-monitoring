@@ -10,7 +10,9 @@ Open [Research Desk](https://research-desk-2p0.pages.dev) on any device. Enter `
 
 - One versioned read/write API for the website, MCP and OpenClaw. See [connection setup](docs/INTEGRATIONS.md) and the [API contract](docs/API.md). Settings includes scoped, expiring/revocable integration credentials and durable background-job history.
 - Add a company by name, search its notes, change its status, archive it, and use research groups and tags.
-- Edit Markdown notes and a thesis with automatic saves, revision history, device draft recovery, and conflict detection. Background market updates do not overwrite notes.
+- **Journal:** every idea (Perpetual watch, Watchlist, Potential ideas, Passed · valued / not valued) as one scrolling document modelled on the Investment Pitch List, with an outline to find and drag-reorder companies, click-to-edit notes, review dates, a quiet per-card news line and full-screen writing. See [the Journal section](docs/HOW-IT-WORKS.md#journal).
+- Edit Markdown notes (in the journal or a company's notebook) with automatic saves, revision history, device draft recovery, and conflict detection. Background market updates do not overwrite notes.
+- **Stop news** for a company from a news item, its journal card or the right-click menu: it is paused and its waiting items are cleared.
 - Keep personal watch points. TypeSafe screens each article headline-first (identity, significance, purpose, issuer and timeliness), using the text when it can be read. Reports of the same development are grouped under the best source; price and opinion pieces stay in Coverage. Only possibly major but unclear items need verification. [Screening architecture and thresholds](docs/fundamental-screening-v3.md).
 - News & alerts opens as a newest-first inbox. Review clears a development; Save moves it to Saved, where it remains without a time limit. Unsaved unread items age into History 30 days after discovery; returning an item to the inbox starts a fresh 30-day window. Saved/reviewed state survives re-screening, and full exports retain it. While the page is visible it checks for changes every 30 seconds and fetches new news every minute. Each device keeps its own copy of the articles, so reopening the desk downloads only what changed.
 - **Search news** takes up to 10 Google News items from each of the last seven UTC calendar days, including today, per selected company, preserving the feed's order within each day. Configured primary sources are also checked. Pause saves the queue, Resume continues it, and Cancel ends it while retaining completed articles. An in-flight article may finish before stopping. Progress and recorded TypeSafe tokens are shown. The saved queue continues on the hosted one-minute scheduler after the page closes, sharing each minute with the scheduled news runs; a large search can take hours. Scheduled runs and the digest have independent schedules.
@@ -89,7 +91,7 @@ The $25/month total budget is a target, not an assurance of comprehensive global
 | `server` | Local Hono server and SQLite store |
 | `supabase/functions/desk` | Authenticated cloud entry point |
 | `supabase/migrations` | Private schema, concurrency RPCs, small UI views and snapshots |
-| `tests/` | 223 automated checks: alerts, cadence, scheduling, sources, budgets, concurrency, retrieval, import and backup |
+| `tests/` | 278 automated checks: alerts, cadence, scheduling, sources, budgets, concurrency, retrieval, import and backup, journal order and pitch-list sync |
 | `scripts` | Setup, deployment verification, backups and removable local QA fixtures |
 
 The latest validation and remaining PRD scope are documented in [IMPLEMENTATION.md](IMPLEMENTATION.md).

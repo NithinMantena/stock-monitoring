@@ -162,6 +162,7 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
     let company = newCompany(input.name, input.status);
     company.ticker = input.ticker || "";
     company.ideaSource = input.ideaSource || "";
+    company.dateFound = chicagoParts().date;
     for (const raw of input.tags || []) {
       const tag = normalizeTag(raw);
       if (tag && !company.tags.some((t) => sameTag(t, tag))) company.tags.push(tag);
@@ -221,6 +222,9 @@ export function createApi(store: Store, env: Env, mode: "local" | "cloud") {
           "notes",
           "thesis",
           "passReason",
+          "passKind",
+          "passedAt",
+          "journalOrder",
           "source",
           "ideaSource",
           "newsQuery",

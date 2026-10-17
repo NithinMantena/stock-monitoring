@@ -8,7 +8,7 @@ export const statuses = [
 ] as const;
 export type Status = (typeof statuses)[number];
 export const statusLabels: Record<Status, string> = {
-  inbox: "Inbox",
+  inbox: "Potential ideas",
   watchlist: "Watchlist",
   perpetual: "Perpetual watch",
   owned: "Portfolio",

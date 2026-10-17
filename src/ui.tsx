@@ -24,6 +24,20 @@ export function chicagoDate(value: string) {
   });
 }
 
+// "Oct 17, 2026" for a timestamp (Chicago) or a plain date.
+export function shortDate(value: string) {
+  if (!value) return "";
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const at = new Date(dateOnly ? value + "T12:00:00Z" : value);
+  if (!Number.isFinite(at.getTime())) return value;
+  return at.toLocaleDateString("en-US", {
+    timeZone: dateOnly ? "UTC" : "America/Chicago",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 // Edits a name in place: Enter or leaving the field saves, Escape cancels.
 export function InlineName({
   value,

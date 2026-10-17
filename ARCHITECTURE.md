@@ -4,7 +4,7 @@ Updated September 23, 2026. This is the technical reference for maintaining the 
 
 ## The purpose
 
-Research Desk is a private company research notebook with scheduled monitoring. You maintain notes, a thesis, watch points, sources, and numerical alert rules. The server discovers articles, retrieves available text, asks TypeSafe for structured judgments, and applies deterministic rules to decide where each development appears. Missing information stays visible as missing.
+Research Desk is a private company research notebook with scheduled monitoring. You maintain notes (read and written as a journal of ideas or per company), watch points, sources, and numerical alert rules. The server discovers articles, retrieves available text, asks TypeSafe for structured judgments, and applies deterministic rules to decide where each development appears. Missing information stays visible as missing.
 
 The software separates three decisions: whether a story concerns the company, whether the underlying development matters, and which available source best represents it. A useful financial release should not disappear merely because its original document is inaccessible or several publishers repeat it.
 
@@ -45,7 +45,11 @@ Integration credentials are shown once, hashed at rest, scoped, expiring and rev
 
 | File or directory | Responsibility |
 | --- | --- |
-| `src/main.tsx` | Sign-in, navigation, company editor, autosave, settings, imports, monitoring health |
+| `src/main.tsx` | Sign-in, navigation, company editor (notebook), autosave and implied edits, full-screen mode, stop-news action, settings, imports, monitoring health |
+| `src/journal.tsx`, `src/journal.css` | Journal page: outline (search, needs-attention snapshot filter, HTML5 drag reorder), cards whose notes render when near the screen (`content-visibility: auto` skips off-screen layout), pass box, news footer, scroll tracking |
+| `src/notes-editor.tsx` | Shared Markdown notes editor: formatted view with click-to-caret mapping, auto-height textarea (CSS `field-sizing: content`; measured fallback only when text no longer fits or shrinks, restoring scroll), Tab/Shift+Tab/Enter list handling via `execCommand` (keeps undo), Insert section |
+| `supabase/functions/_shared/journal.ts` | Journal sections (status + `passKind`), `compareJournal`, `planReorder` (midpoint, renumber on exhaustion), review-overdue rule |
+| `supabase/functions/_shared/pitch-list.ts`, `scripts/sync-pitch-list.ts` | Investment Pitch List parser (sections, entry notes, dates, duplicates) and the dry-run/apply sync against the hosted store |
 | `src/news-panel.tsx` | News folders, saved lists, filters, grouped cards, feedback, reader, run status |
 | `src/tag-window.tsx`, `src/save-lists.tsx`, `src/custom-search.tsx` | Bulk tag window and tag chips; Save picker and list manager; custom news-search company picker |
 | `src/bubble-map.tsx` | Companies map view: per-group d3-force settle, measured and flowed into rows (list, tag, size, research group), CSS transitions, legend |
@@ -92,7 +96,7 @@ Other record kinds hold settings, note revisions, import originals, job attempts
 
 The store interface supports projected reads: `list(kind, { fields, ids, cluster })` and `get(kind, id, { fields })`. `fields` names dotted data paths; Supabase returns only those JSON paths, and an empty list is an existence check. Projected records are partial and must never be written back. `ids` fetches specific records (50 per request); `cluster` selects a development's members (`id` or `clusterId` equal to the key) for one company.
 
-Company edits update the browser immediately, save a device draft, and are sent after a debounce. Saves include the expected server version and the original base. If another writer changed unrelated fields, the API merges the changes. Competing edits to the same field return a conflict. Background feed checkpoints and alert episodes are excluded from editable-field comparisons and preserved by the server. Changing a rule's meaning resets its trigger episode. Notes/thesis revisions preserve earlier content.
+Company edits update the browser immediately, save a device draft, and are sent after a debounce. The browser adds implied fields to an edit: changing `notes` sets `lastReviewed` to now; changing `status` sets `journalOrder` to `-Date.now()` (top of the new journal section) and, for a pass, `passedAt`. Journal fields (`journalOrder`, `passKind`, `passedAt`) are in the server's mergeable editable list and in API v1's research keys. Reordering writes one company (the midpoint between its new neighbours) unless the gap is exhausted or a neighbour has no order, when that section is renumbered in steps of 1000. Saves include the expected server version and the original base. If another writer changed unrelated fields, the API merges the changes. Competing edits to the same field return a conflict. Background feed checkpoints and alert episodes are excluded from editable-field comparisons and preserved by the server. Changing a rule's meaning resets its trigger episode. Notes/thesis revisions preserve earlier content. The website no longer edits `thesis`; it stays in the schema, exports and screening briefings for existing data.
 
 Event actions also update immediately. While a write is pending, the UI disables conflicting actions for that development. A failed save rolls back with a visible error. Review, Save, Useful, Noise, and Undo apply to all stored members of that development, even when some are outside the current filter. An omitted feedback field preserves existing feedback; explicit `null` clears it.
 
@@ -204,6 +208,8 @@ Measured after the change (2026-09-22): an idle tick makes 6 store calls returni
 CPU: the same profile measured about 80 ms of processing per article (HTML parsing dominates), so `articlesPerTick` is 10 (~0.8 s). TypeSafe: estimated ~$3/month against the $5 server ceiling (weekly sweeps ~$1.6, daily runs ~$0.3, rescreens ≤$1). Database: about 48 MB used, and about 5 KB per stored article including cache and index.
 
 ## Import, backup, and restore
+
+`scripts/sync-pitch-list.ts` reconciles the hosted desk with the Investment Pitch List export (dry run by default; `--apply` saves an essential export to `.local/`, writes note revisions, then writes companies in atomic 50-record batches with expected versions). Matching is by normalised name (parentheticals and punctuation removed, small alias table). Owned/sold statuses are never changed; unlisted companies are left alone apart from the named corrections in the script.
 
 Markdown import first produces a preview with ambiguity/duplicate choices. Original text is retained. Rollback removes untouched imported companies and preserves edited companies. Per-company Markdown export checks HTTP success before downloading.
 

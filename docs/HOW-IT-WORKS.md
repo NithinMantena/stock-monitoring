@@ -1,6 +1,6 @@
 # How Research Desk works
 
-*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated September 25, 2026.*
+*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated October 17, 2026.*
 
 If you only read one section, read [The short version](#1-the-short-version). If you want to understand a specific behaviour, the [contents](#contents) will take you straight there. Technical detail for programmers lives in [ARCHITECTURE.md](../ARCHITECTURE.md); this guide links to it where useful but never depends on it.
 
@@ -33,7 +33,7 @@ If you only read one section, read [The short version](#1-the-short-version). If
 
 Research Desk is a private notebook for the companies you follow, paired with a tireless research assistant that reads the news for you overnight.
 
-You keep notes, a thesis and a status (Portfolio, Perpetual watch, Watchlist and so on) for each company. Every night at **1am Chicago time** the system searches Google News for the previous day's articles about your **most important companies** (those in your Portfolio or on Perpetual watch). Every **Friday at 6pm** it searches the **past seven days for every company** you have not paused. For each article it finds, it asks an AI model called **TypeSafe** a set of careful, structured questions about the headline, publisher and date, reads the article's text when it can (the text sharpens the answers but is never required), and then applies a fixed rulebook to decide whether the article is worth your time. The results land in your **News & alerts inbox**, grouped so that five articles about the same event appear as one development. At **7am** a digest email summarises what is new.
+You keep notes and a list (Portfolio, Perpetual watch, Watchlist, Potential ideas, Passed and so on) for each company, and read and write them all in one long **journal** laid out like your Investment Pitch List. Every night at **1am Chicago time** the system searches Google News for the previous day's articles about your **most important companies** (those in your Portfolio or on Perpetual watch). Every **Friday at 6pm** it searches the **past seven days for every company** you have not paused. For each article it finds, it asks an AI model called **TypeSafe** a set of careful, structured questions about the headline, publisher and date, reads the article's text when it can (the text sharpens the answers but is never required), and then applies a fixed rulebook to decide whether the article is worth your time. The results land in your **News & alerts inbox**, grouped so that five articles about the same event appear as one development. At **7am** a digest email summarises what is new.
 
 All of this happens on rented servers in the cloud. **Your computer and browser can be off.** The website is simply a window onto work that has already been done.
 
@@ -229,7 +229,7 @@ It appears in your inbox the next time the website refreshes, and in the next di
 
 Some articles deserve a second look later:
 
-- **Your edits.** When you change a company's context, thesis, watch points or name, its stored articles are re-judged with the new context.
+- **Your edits.** When you change a company's context, watch points or name, its stored articles are re-judged with the new context.
 - **A new screening version.** When the rulebook or questions are upgraded, older judgments are refreshed. With v3, about 6,400 older articles are queued; at 300 a night that takes about three weeks.
 - **Processing failures** (TypeSafe unavailable) are retried after 24 hours, up to three attempts.
 
@@ -339,26 +339,26 @@ A relevant development is marked **Important** when TypeSafe gives at least **70
 
 ## 7. What you see on the desk
 
-The website has five sections, in the left-hand navigation.
+The website has six sections, in the left-hand navigation.
 
 ### Companies
 
 Your list of companies, searchable and filterable by status, tag, research group and text. Each company's tags show under its name. Selecting one opens its detail panel with four tabs:
 
-- **Research:** notes (Markdown, saved automatically as you type), thesis, status, tags (type to add, × to remove), idea source, and full note history.
+- **Research:** date found, last reviewed (with a **✓ Reviewed** button), your notes (Markdown, saved automatically as you type; the same notes the journal shows), where you found the idea, for passed ideas which Passed list it is on and why you passed, tags (type to add, × to remove), next review date, and full note history. The notes box works like the journal's: Tab indents a bullet, Shift+Tab outdents it, Enter starts the next bullet, and **Insert section…** adds a heading (Business, Management, Growth, Competition, Capital allocation, Valuation, Risks, What to watch, or all of them). When a company has no stored price, the price strip is replaced by a single market-cap line.
 - **Watch points:** specific concerns you want every article checked against, for example "customer concentration with Walmart". Up to 20 per company.
 - **Alerts:** numerical rules such as "tell me if the price falls below $40" or "if it drops 25% from my baseline". See [section 9](#9-price-alerts).
 - **Monitoring:** how this company is checked. Frequency (automatic, daily, weekly, paused), the Google News search wording, business scale and written business context (which the AI uses to judge significance), primary sources, SEC CIK number, enabled publishers, and publishers to exclude. The status of each news source is shown here too.
 
-**List or map:** the **List | Map** switch (top right of Companies, remembered on that device) changes how companies are shown. **Map** shows every company as a bubble with its ticker (sizes vary very slightly, for an organic look; a company is always the same size), coloured by list (Inbox, Watchlist, Portfolio…, using the same muted colours as the list badges; a legend sits under the filters). **Group by** clusters the bubbles by list, tag, size or research group. A company with several tags gets a bubble in each tag's group, and hovering one highlights its other copies. The usual filters (list chips, tag, research group, search) narrow the bubbles. Bubbles clump loosely, like bubbles in a bath, and each group's name sits above its own clump. Groups are spread evenly across the full width of the map, and a large group (such as everything untagged) stretches into a band across the whole width. Changing a filter or grouping sends them gliding to their new groups with a slight overshoot as they settle, in a little over half a second (you can click while they move). The company whose notebook is open is drawn a bit larger, and its neighbours make room. Hovering a bubble shows a small box above it with the full company name, ticker, list and tags; sweep the cursor across the map to read names quickly. Clicking, Ctrl/Shift-clicking, right-clicking and double-clicking (rename) work exactly as in the list.
+**List or map:** the **List | Map** switch (top right of Companies, remembered on that device) changes how companies are shown. **Map** shows every company as a bubble with its ticker (sizes vary very slightly, for an organic look; a company is always the same size), coloured by list (Potential ideas, Watchlist, Portfolio…, using the same muted colours as the list badges; a legend sits under the filters). **Group by** clusters the bubbles by list, tag, size or research group. A company with several tags gets a bubble in each tag's group, and hovering one highlights its other copies. The usual filters (list chips, tag, research group, search) narrow the bubbles. Bubbles clump loosely, like bubbles in a bath, and each group's name sits above its own clump. Groups are spread evenly across the full width of the map, and a large group (such as everything untagged) stretches into a band across the whole width. Changing a filter or grouping sends them gliding to their new groups with a slight overshoot as they settle, in a little over half a second (you can click while they move). The company whose notebook is open is drawn a bit larger, and its neighbours make room. Hovering a bubble shows a small box above it with the full company name, ticker, list and tags; sweep the cursor across the map to read names quickly. Clicking, Ctrl/Shift-clicking, right-clicking and double-clicking (rename) work exactly as in the list.
 
-**The notebook** (a company's detail panel) only appears when you click a company, in either view, and the list or map shrinks to make room; × or Escape closes it again, giving the list (with its extra columns) or the map the full width. The desk always opens with the notebook closed.
+**The notebook** (a company's detail panel) only appears when you click a company, in either view, and the list or map shrinks to make room; × or Escape closes it again, giving the list (with its extra columns) or the map the full width. The desk always opens with the notebook closed. The **⤢** button beside × makes the notebook full screen (see [Full screen](#full-screen)). A notebook opened from the journal shows **← Journal**, and closing it returns you to that company's card.
 
 **Renaming a company:** double-click its name, either in the list or in the big title of its detail panel (or right-click → **Rename**). Enter or clicking away saves; Escape cancels.
 
 **Selecting several companies:** Ctrl-click (Cmd-click on a Mac) adds or removes one company; Shift-click selects everything between your last click and this one. A blue bar shows how many are selected; Escape or **Clear** empties the selection. A plain click still just opens the company.
 
-**Right-click a company** (or a selection) for **Open**, **Rename**, **Edit tags…**, **Move to list** (Inbox, Watchlist, Portfolio…) and **Archive**. **Edit tags…** opens a small tag box at the pointer: tick a tag to add it, untick to remove it. Each tick saves straight away. With several companies selected, a tag only some of them carry shows as partly ticked; ticking it gives it to all of them. Type in the box to find a tag, or type a new name and press Enter to create and add it.
+**Right-click a company** (or a selection) for **Open**, **Rename**, **Edit tags…**, **Move to list** (Potential ideas, Watchlist, Portfolio…), **Show in journal**, **Stop news** (or **Turn news on**) and **Archive**. For a single company, Stop news also clears its waiting news items; for a selection it only pauses news. **Edit tags…** opens a small tag box at the pointer: tick a tag to add it, untick to remove it. Each tick saves straight away. With several companies selected, a tag only some of them carry shows as partly ticked; ticking it gives it to all of them. Type in the box to find a tag, or type a new name and press Enter to create and add it.
 
 **Adding companies** (**+ Add company**, top right) opens a window for adding one or many at once, all by keyboard. Fill in the left side (name, ticker, status, size or market cap, where you found the idea, tags) using Tab to move between fields, and press Enter: the company moves into the **To add** list on the right and the form clears for the next one. Status, idea source and tags carry over to the next company, since a batch often comes from the same place. In the Tags field, Enter or a comma adds the typed tag; Enter on an empty Tags field adds the company. Click a listed company to edit it, × to remove it, or Ctrl/Shift-click several and press Delete. A company already on your desk is flagged (you can still add it). Nothing is saved until **Add N companies** (or Ctrl+Enter); they are then saved together, and left selected so you can right-click to tag or move them.
 
@@ -370,6 +370,23 @@ Your list of companies, searchable and filterable by status, tag, research group
 
 Nothing is saved until **Confirm**. The window then stays open, so you can pick another tag and carry on; **Done** closes it.
 
+### Journal
+
+Your Investment Pitch List, inside the desk: every idea in one long, scrolling document, so you can read and write about companies the way you do in the Google Doc. Portfolio and sold companies are not in it; it is for ideas.
+
+- **Sections**, top to bottom: **Perpetual watch** (well-researched ideas on the bench), **Watchlist** (researched, with questions still open), **Potential ideas** (not yet looked at deeply), **Passed · valued** and **Passed · not valued**. These are the same lists as everywhere else on the desk; the two Passed sections are the Passed list split by whether you valued the idea.
+- **The outline** on the left lists every company by section. Click a name to jump to its card. Type in **Find a company or phrase…** to narrow both the outline and the page to companies whose name or notes contain it (Enter jumps to the first). **Needs attention** shows only ideas with new news since you last reviewed them, or perpetual and watchlist ideas not reviewed for a while (90 and 180 days). The list is taken when you switch it on, so a card stays put while you work on it; switch it off and on again to refresh it. Click a section's name to fold it away (remembered on that device). The name of the card at the top of the page is highlighted as you scroll, and an orange dot marks companies with new news.
+- **Order is yours.** Drag a name in the outline to move it up or down, or into another section. A new idea, or one you move to another list from anywhere on the desk, goes to the top of its section. The order is saved with the company, so it is the same on every device.
+- **Each card** shows the company's name (double-click to rename), a small line of facts (country, market cap, where you found it, date found, date passed, and when you last reviewed it, in amber when it is overdue), why you passed (for passed ideas) and your notes. The notes are shown formatted; click anywhere in them to edit, and the cursor lands where you clicked. Tab and Shift+Tab indent and outdent bullets, Enter starts the next bullet, and Escape or clicking away shows them formatted again. Everything saves as you type.
+- **Card tools** appear when you point at a card: **Insert section…** (adds a heading at the cursor, or at the end), the section the card is in (choose another to move it), **✓ Reviewed** (you looked again and have nothing to add) and **Notebook** (opens the full notebook for that company).
+- **Last reviewed** is set automatically whenever you change a company's notes, and by **✓ Reviewed**. Moving a card into Passed opens a small box in the card: pick valued or not valued and, if you like, say why you passed and what would change your mind; the date you passed is recorded.
+- **The news footer** at the bottom of each card is deliberately quiet: "No new news since your last review", or "2 new developments since your last review ▾" (click to see the headlines, with links), or "News off · Turn on". **Stop news** there stops news for that company (see below). Reviewing the company clears the count; the items themselves stay on the News page until you review them there.
+- **+ Add idea** opens the usual add window; new ideas appear at the top of their section and the journal scrolls to the first one.
+
+<a id="full-screen"></a>**Full screen.** The **⤢** button (on the journal, and on the notebook) hides the top bar and the left-hand navigation, and asks the browser for real full screen, leaving just the outline and your writing (or just the notebook, centred). The save status ("All changes saved") moves to the bottom-right corner. **⤡** or Escape returns to the normal layout. Leaving the journal or closing the notebook also leaves full screen.
+
+**Where the journal came from.** Each company's notes, section and position were copied from the Investment Pitch List (Google Doc exported as Markdown) by `scripts/sync-pitch-list.ts`. The company line became the card title and any date on it the review date; earlier notes are in Note history. From now on the journal is the place to write. The script is only needed again if you go back to editing the doc.
+
 ### News & alerts
 
 The inbox of developments, newest first.
@@ -378,7 +395,8 @@ The inbox of developments, newest first.
 - **Saved lists:** saved items live in lists you name, like playlists. Two come ready-made: **Review later** (everything saved before lists existed went here) and **Favorites**. Inside Saved, chips show each list and its count; **Manage lists** creates, renames and deletes lists. Deleting a list takes its items out of it; an item left in no list moves to History.
 - **Views:** **Relevant developments** (one card per development, led by its best source), **Needs verification** (rare: possibly major but unclear), **Coverage / commentary** (price and opinion pieces about a real development), **Screened out / noise**, and **All events**.
 - **Filters:** keyword, company, publisher, importance and publication date range.
-- **Actions** on each card: Review, **Save ▾** (opens your lists; tick one or more, or create a new list on the spot), Useful, Noise, Undo, and **Read available text**, which fetches the article text for you without any AI cost or change to the verdict. News cards also show the company's tags.
+- **Actions** on each card: Review, **Save ▾** (opens your lists; tick one or more, or create a new list on the spot), Useful, Noise, Undo, **Stop news for <company>**, and **Read available text**, which fetches the article text for you without any AI cost or change to the verdict. News cards also show the company's tags.
+- **Stop news for <company>** takes a company off the news entirely: after you confirm, its monitoring is set to Paused (no more daily, weekly or manual searches for it) and every item waiting for it in the inbox is marked reviewed. Turn it back on from its journal card (**Turn on**), the right-click menu (**Turn news on**) or its Monitoring tab.
 - **The "Scheduled news runs" panel** shows the current or last nightly run (companies done, articles checked, new items, warnings), whether it is waiting because Google asked it to slow down, and **Recent runs**: the last few scheduled runs and your last manual search.
 - **Your own search's panel** appears in full while it is running or paused. Once it finishes or is cancelled it shrinks to a short summary with a ×, and disappears by itself after a day. Either way its summary stays under Recent runs. (Dismissing is remembered on that device only.)
 - **Search news** (at the top of this page; it is no longer on Companies) starts your own screen, separate from the scheduled daily and weekly runs. Three choices beside the button set its size, and are remembered on that device:
@@ -386,7 +404,7 @@ The inbox of developments, newest first.
   - **how far back:** 1, 2, 3, 7, 14 or 30 days, or **exact dates** (a from and to date, up to 60 days, ending no later than today). There is one Google search per company per day either way;
   - **articles kept per company per day:** 3, 5, 10 or 20.
 
-  A **custom selection** opens a panel. Pick companies by name (type, then Enter adds the best match) and/or by **tags** (any, or tick "require all"), **lists** (Inbox, Watchlist, Portfolio…), **size** and **research group**. A company is included if it matches every category you filled in, or if you picked it by name. Archived companies are included only when picked by name. The panel previews exactly which companies will be searched.
+  A **custom selection** opens a panel. Pick companies by name (type, then Enter adds the best match) and/or by **tags** (any, or tick "require all"), **lists** (Potential ideas, Watchlist, Portfolio…), **size** and **research group**. A company is included if it matches every category you filled in, or if you picked it by name. Archived companies are included only when picked by name. The panel previews exactly which companies will be searched.
 
   Hovering over the button shows the number of searches and the maximum number of articles. You can pause, resume or cancel a screen. It keeps running on the server even if you close the browser.
 - **Email today's latest screen** sends an email of the developments found by the most recent screen that ran today, manual or scheduled, in the same format as the morning digest. It works while a screen is still running (the subject says so) and can be pressed again later for an updated copy.
@@ -416,8 +434,8 @@ The digest time (7am Chicago by default), a preview of tomorrow's digest, AI usa
 
 - **Autosave with a safety copy.** Every change to a company is saved on your device immediately, then sent to the server a moment later. If the network drops or the tab closes, the draft is recovered next time.
 - **Conflict protection.** Each record carries a version number. If something else changed the same company in the meantime (another tab, an assistant, or a nightly run), the server merges changes to different fields automatically and refuses only a genuine clash on the same field, so nothing is silently overwritten.
-- **Background work never overwrites research.** Price updates and monitoring checkpoints are kept separate from your notes and thesis.
-- **Note history.** Every notes and thesis change keeps the previous version.
+- **Background work never overwrites research.** Price updates and monitoring checkpoints are kept separate from your notes.
+- **Note history.** Every notes change keeps the previous version.
 
 ---
 
@@ -459,10 +477,10 @@ The database holds everything as **records**. Each has a **kind** (what sort of 
 
 | Kind | What it holds |
 | --- | --- |
-| `company` | Everything about one company: identity, notes, thesis, status, watch points, rules, news sources, monitoring checkpoints, recent prices. |
+| `company` | Everything about one company: identity, notes, status (list), journal position, passed list and reason, review dates, watch points, rules, news sources, monitoring checkpoints, recent prices. (A `thesis` field remains for older data and assistants; the website no longer shows it.) |
 | `event` | One article or alert: title, link, dates, the extracted text, the AI's answers, the verdict and reason, grouping, and your Review/Save/feedback. |
 | `settings` | `main`: digest time and on/off switch. `library`: your saved-article lists and any tags created before a company carries them. |
-| `revision` | An earlier version of a company's notes or thesis. |
+| `revision` | An earlier version of a company's notes. |
 | `import` | An original imported file and what was imported from it. |
 | `backup` | A daily research snapshot (kept 30 days). |
 | `news_batch` | A news run's progress: `latest` is your manual search, `scheduled` is the current nightly run. |
@@ -639,7 +657,11 @@ What would make the biggest difference, roughly in order:
 
 | Where | What lives there |
 | --- | --- |
-| `src/main.tsx` | The website: sign-in, navigation, company editor, autosave, settings, import screens, monitoring table. |
+| `src/main.tsx` | The website: sign-in, navigation, company editor (notebook), autosave, full screen, settings, import screens, monitoring table. |
+| `src/journal.tsx`, `src/journal.css` | The Journal page: outline, cards, drag-to-reorder, the pass box and the news footer. |
+| `src/notes-editor.tsx` | The notes editor shared by the journal and the notebook: formatted view, click-to-edit, bullet keys, Insert section. |
+| `supabase/functions/_shared/journal.ts` | Journal sections, ordering arithmetic and the review-overdue rule. |
+| `supabase/functions/_shared/pitch-list.ts`, `scripts/sync-pitch-list.ts` | Reading the Investment Pitch List export and bringing the desk in line with it. |
 | `src/news-panel.tsx` | The News & alerts screen: folders, views, filters, cards, the scheduled-run and search-progress panels. |
 | `src/news-cache.ts` | The browser's own copy of your articles, so opening the desk downloads only changes. |
 | `src/drafts.ts` | The on-device safety copy of unsaved company edits. |
@@ -664,7 +686,7 @@ What would make the biggest difference, roughly in order:
 | `supabase/functions/_shared/constants.ts` | Statuses, default settings, and the nightly schedule (`NEWS_SCHEDULE`). |
 | `supabase/migrations/` | The database's structure and its guarded write functions. |
 | `client/`, `mcp/`, `bot/`, `openclaw/` | How AI assistants connect, using the same operations as the website. |
-| `tests/` | 223 automated checks, run with `npm test`. |
+| `tests/` | 278 automated checks, run with `npm test`. |
 | `scripts/` | Maintenance, diagnostics and one-off tools. Some make paid AI calls; read before running. |
 
 ---

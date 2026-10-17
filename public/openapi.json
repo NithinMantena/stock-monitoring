@@ -103,6 +103,27 @@
             "type": "string",
             "maxLength": 10000
           },
+          "passKind": {
+            "default": "",
+            "type": "string",
+            "enum": [
+              "",
+              "valued",
+              "unvalued"
+            ]
+          },
+          "passedAt": {
+            "default": "",
+            "type": "string",
+            "maxLength": 40
+          },
+          "journalOrder": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ]
+          },
           "source": {
             "default": "",
             "type": "string",
@@ -995,6 +1016,27 @@
                             "default": "",
                             "type": "string",
                             "maxLength": 10000
+                          },
+                          "passKind": {
+                            "default": "",
+                            "type": "string",
+                            "enum": [
+                              "",
+                              "valued",
+                              "unvalued"
+                            ]
+                          },
+                          "passedAt": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 40
+                          },
+                          "journalOrder": {
+                            "default": null,
+                            "type": [
+                              "number",
+                              "null"
+                            ]
                           },
                           "ideaSource": {
                             "default": "",

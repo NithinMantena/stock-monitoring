@@ -355,6 +355,7 @@ export function EventList({
   onCompanyFilterChange,
   listActions,
   onOpenTag,
+  onStopNews,
 }: {
   docs: Doc<DeskEvent>[];
   companies: Doc<Company>[];
@@ -365,6 +366,8 @@ export function EventList({
   onCompanyFilterChange?: (id: string) => void;
   listActions: ListActions;
   onOpenTag?: (tag: string) => void;
+  // Pauses news for the company and clears its waiting items.
+  onStopNews?: (companyId: string) => void;
 }) {
   const [show, setShow] = useState<NewsView>("relevant");
   const [folder, setFolder] = useState<EventFolder>("inbox");
@@ -946,6 +949,16 @@ export function EventList({
                     }
                   >
                     Undo feedback
+                  </button>
+                )}
+                {onStopNews && e.kind === "news" && (
+                  <button
+                    className="stop-news"
+                    disabled={saving}
+                    title="Stop searching news for this company and clear its waiting items"
+                    onClick={() => onStopNews(e.companyId)}
+                  >
+                    Stop news for {names.get(e.companyId) || "this company"}
                   </button>
                 )}
                 {saving && <span role="status">Saving…</span>}

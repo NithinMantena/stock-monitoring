@@ -1,6 +1,6 @@
 import { api, apiText, setAccessToken } from "./api";
 import { IntegrationsPanel, JobsPanel } from "./integrations-panel";
-import { Field, InlineName, chicagoDate } from "./ui";
+import { Field, InlineName, chicagoDate, shortDate } from "./ui";
 import {
   NewsBatchStatus,
   ScheduledRunStatus,
@@ -38,6 +38,14 @@ import {
   type Library,
 } from "../supabase/functions/_shared/library";
 import { loadNewsCache, saveNewsCache } from "./news-cache";
+import { Journal } from "./journal";
+import {
+  FormattedNotes,
+  NotesEditor,
+  SectionPicker,
+  type NotesEditorHandle,
+} from "./notes-editor";
+import { journalSection } from "../supabase/functions/_shared/journal";
 import React, {
   useCallback,
   useDeferredValue,
@@ -48,7 +56,6 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import { createClient, type Session } from "@supabase/supabase-js";
-const ReactMarkdown = React.lazy(() => import("react-markdown"));
 import {
   defaultSettings,
   statusLabels,
@@ -64,6 +71,7 @@ import {
 } from "../supabase/functions/_shared/model";
 import {
   cadenceOf,
+  chicagoParts,
   formatMoney,
   quoteState,
 } from "../supabase/functions/_shared/engine";
@@ -77,6 +85,7 @@ import {
   sizeFromMarketCap,
 } from "../supabase/functions/_shared/company-size";
 import "./style.css";
+import "./journal.css";
 
 type ScreenScope = {
   companies: "filtered" | "daily" | "all" | "custom";
@@ -352,6 +361,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const openCompany = useCallback((id: string) => {
     setSelected(id);
     setTab("research");
+    setFromJournal(false);
   }, []);
   // List or bubble map, and how the map groups companies (kept per device).
   const [view, setView] = useState<"list" | "map">(() => {
@@ -377,6 +387,11 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     }
   };
   const [adding, setAdding] = useState(false);
+  // Full-screen writing (journal or notebook), the card to scroll the journal
+  // to, and whether the open notebook was opened from the journal.
+  const [focus, setFocus] = useState(false);
+  const [journalJump, setJournalJump] = useState("");
+  const [fromJournal, setFromJournal] = useState(false);
   // Companies picked with Ctrl/Shift-click, the right-click menu or tag popover
   // they act on, and the company whose name is being edited in the list.
   const [picked, setPicked] = useState<string[]>([]);
@@ -705,10 +720,22 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
   const edit = (id: string, patch: Partial<Company>) => {
     const doc = state.current?.companies.find((c) => c.id === id);
     if (!doc) return;
-    const company = {
-      ...(pending.current.get(id)?.data || doc.data),
-      ...patch,
-    };
+    const current = pending.current.get(id)?.data || doc.data;
+    // Writing notes counts as reviewing the idea; a company moved to another
+    // list lands at the top of its journal section.
+    const implied: Partial<Company> = {};
+    if (
+      patch.notes !== undefined &&
+      patch.notes !== current.notes &&
+      patch.lastReviewed === undefined
+    )
+      implied.lastReviewed = new Date().toISOString();
+    if (patch.status && patch.status !== current.status) {
+      if (patch.journalOrder === undefined) implied.journalOrder = -Date.now();
+      if (patch.status === "pass" && patch.passedAt === undefined)
+        implied.passedAt = chicagoParts().date;
+    }
+    const company = { ...current, ...implied, ...patch };
     const previous = pending.current.get(id);
     pending.current.set(id, {
       data: company,
@@ -799,6 +826,25 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       for (const d of members) eventWrites.current.delete(d.id);
       setSavingEvents(new Set(eventWrites.current.keys()));
     }
+  };
+  // Stops news for a company and clears what is waiting for it in the inbox.
+  const stopNews = async (companyId: string) => {
+    const doc = state.current?.companies.find((d) => d.id === companyId);
+    if (!doc) return;
+    const waiting = groupNews(
+      (state.current?.events || []).filter(
+        (e) => e.data.companyId === companyId && inEventFolder(e.data, "inbox"),
+      ),
+    );
+    if (
+      !window.confirm(
+        `Stop news for ${doc.data.name}?${waiting.length ? ` Its ${waiting.length} waiting item${waiting.length === 1 ? "" : "s"} will be marked reviewed.` : ""} You can turn news back on from the journal card, the right-click menu or the Monitoring tab.`,
+      )
+    )
+      return;
+    edit(companyId, { cadence: "paused" });
+    for (const g of waiting) await updateEvent(g.lead, { reviewed: true });
+    setNotice(`News stopped for ${doc.data.name}.`);
   };
   const library = data?.library || defaultLibrary();
   // Library writes use the stored version; a conflict reloads and asks to retry.
@@ -941,6 +987,19 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       (old) => old && { ...old, companies: [...old.companies, ...result.companies] },
     );
     setAdding(false);
+    if (section === "journal") {
+      const ideas = result.companies.filter((d) => journalSection(d.data));
+      setNotice(
+        !ideas.length
+          ? "Added. Portfolio and sold companies are not in the journal; find them under Companies."
+          : ideas.length === 1
+            ? "Idea added at the top of its section. Click its notes to start writing."
+            : `${ideas.length} ideas added at the top of their sections.`,
+      );
+      if (ideas.length) setJournalJump(ideas[0].id);
+      void reload();
+      return;
+    }
     setSection("companies");
     setFilter("all");
     setGroup("");
@@ -1231,7 +1290,66 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     </span>
   ) : null;
   const selectedDoc = docs.find((c) => c.id === selected);
-  const closeCompany = useCallback(() => setSelected(""), []);
+  // A notebook opened from the journal closes back to that card.
+  const closeCompany = useCallback(() => {
+    if (fromJournal && selected) {
+      setSection("journal");
+      setJournalJump(selected);
+      setFromJournal(false);
+    }
+    setSelected("");
+  }, [fromJournal, selected]);
+  const openFromJournal = useCallback(
+    (id: string) => {
+      openCompany(id);
+      setFromJournal(true);
+      setSection("companies");
+    },
+    [openCompany],
+  );
+  const clearJump = useCallback(() => setJournalJump(""), []);
+  const leaveFocus = useCallback(() => {
+    setFocus(false);
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  }, []);
+  const toggleFocus = useCallback(() => {
+    if (focus) return leaveFocus();
+    setFocus(true);
+    // Real full screen where the browser allows it; the app chrome hides either way.
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  }, [focus, leaveFocus]);
+  useEffect(() => {
+    const change = () => {
+      if (!document.fullscreenElement) setFocus(false);
+    };
+    document.addEventListener("fullscreenchange", change);
+    return () => document.removeEventListener("fullscreenchange", change);
+  }, []);
+  // Escape leaves full screen before it closes anything else.
+  useEffect(() => {
+    if (!focus) return;
+    const key = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (
+        e.key !== "Escape" ||
+        e.defaultPrevented ||
+        document.fullscreenElement ||
+        document.querySelector("dialog[open], .context-menu") ||
+        /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) ||
+        t.isContentEditable
+      )
+        return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setFocus(false);
+    };
+    document.addEventListener("keydown", key, true);
+    return () => document.removeEventListener("keydown", key, true);
+  }, [focus]);
+  useEffect(() => {
+    if (focus && !(section === "journal" || (section === "companies" && selected)))
+      leaveFocus();
+  }, [focus, section, selected, leaveFocus]);
   // The notebook slides in only when it opens, not when switching companies.
   const lastSelected = useRef(selected);
   const detailOpening = !!selected && !lastSelected.current;
@@ -1252,11 +1370,11 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         t.isContentEditable
       )
         return;
-      setSelected("");
+      closeCompany();
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [selected]);
+  }, [selected, closeCompany]);
   // Multi-select in the company list. Selections hidden by a filter are dropped.
   const pickedSet = useMemo(() => new Set(picked), [picked]);
   const pickedDocs = filtered.filter((d) => pickedSet.has(d.id));
@@ -1331,18 +1449,45 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
         onSelect: () => each(() => ({ status: s })),
       })),
       "separator",
+      ...(one && journalSection(one.data)
+        ? [
+            {
+              label: "Show in journal",
+              onSelect: () => {
+                setSection("journal");
+                setJournalJump(one.id);
+              },
+            },
+          ]
+        : []),
+      menuDocs.every((d) => cadenceOf(d.data) === "paused")
+        ? {
+            label: "Turn news on",
+            onSelect: () => each(() => ({ cadence: "auto" })),
+          }
+        : {
+            label: "Stop news",
+            hint: one ? "and clear its waiting items" : undefined,
+            onSelect: () =>
+              one ? void stopNews(one.id) : each(() => ({ cadence: "paused" })),
+          },
       {
         label: allArchived ? "Unarchive" : "Archive",
         onSelect: () => each(() => ({ archived: !allArchived })),
       },
     ];
   };
-  const unseen = groupNews(
-    (data?.events || []).filter(
-      (e) =>
-        inEventFolder(e.data, "inbox") && newsBucket(e.data) === "relevant",
-    ),
-  ).length;
+  // Only when articles change, not on every keystroke in the notes.
+  const unseen = useMemo(
+    () =>
+      groupNews(
+        (data?.events || []).filter(
+          (e) =>
+            inEventFolder(e.data, "inbox") && newsBucket(e.data) === "relevant",
+        ),
+      ).length,
+    [data?.events],
+  );
   if (!data)
     return (
       <main className="login">
@@ -1353,7 +1498,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
       </main>
     );
   return (
-    <div className="app">
+    <div className={"app" + (focus ? " focus-mode" : "")}>
       <header className="topbar">
         <a
           className="brand"
@@ -1382,7 +1527,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
             className="primary"
             onClick={() => {
               setAdding(true);
-              setSection("companies");
+              if (section !== "journal") setSection("companies");
             }}
           >
             + Add company
@@ -1397,6 +1542,12 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
             onClick={() => setSection("companies")}
           >
             Companies <span>{docs.filter((c) => !c.data.archived).length}</span>
+          </button>
+          <button
+            className={section === "journal" ? "nav active" : "nav"}
+            onClick={() => setSection("journal")}
+          >
+            Journal <span>{docs.filter((c) => journalSection(c.data)).length}</span>
           </button>
           <button
             className={section === "news" ? "nav active" : "nav"}
@@ -1436,7 +1587,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
             )}
           </div>
         </aside>
-        <main className="workspace">
+        <main className={"workspace" + (section === "journal" ? " journal-mode" : "")}>
           {loadError && (
             <div className="notice" role="alert">
               {loadError} <button onClick={() => reload()}>Retry</button>
@@ -1687,10 +1838,27 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                     listActions={listActions}
                     tags={allTags}
                     onOpenTag={openTags}
+                    focus={focus}
+                    onToggleFocus={toggleFocus}
+                    fromJournal={fromJournal}
                   />
                 )}
               </div>
             </>
+          )}
+          {section === "journal" && (
+            <Journal
+              docs={docs}
+              events={data.events}
+              edit={edit}
+              openNotebook={openFromJournal}
+              onStopNews={stopNews}
+              onAdd={() => setAdding(true)}
+              focus={focus}
+              onToggleFocus={toggleFocus}
+              jumpTo={journalJump}
+              onJumped={clearJump}
+            />
           )}
           {section === "news" && (
             <>
@@ -1741,6 +1909,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 savingEvents={savingEvents}
                 listActions={listActions}
                 onOpenTag={openTags}
+                onStopNews={stopNews}
               />
             </>
           )}
@@ -1894,6 +2063,11 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
           )}
         </main>
       </div>
+      {focus && (
+        <span className={"focus-save" + (pendingCount ? " pending" : "")} role="status">
+          {pendingCount ? `${pendingCount} unsaved` : "All changes saved"}
+        </span>
+      )}
       {tagWindow !== null && (
         <TagWindow
           companies={docs}
@@ -2056,6 +2230,9 @@ interface DetailProps {
   listActions: ListActions;
   tags: { tag: string; count: number }[];
   onOpenTag: (tag: string) => void;
+  focus: boolean;
+  onToggleFocus: () => void;
+  fromJournal: boolean;
 }
 function CompanyDetail({
   doc,
@@ -2073,11 +2250,15 @@ function CompanyDetail({
   listActions,
   tags,
   onOpenTag,
+  focus,
+  onToggleFocus,
+  fromJournal,
 }: DetailProps) {
   const c = doc.data;
   const [preview, setPreview] = useState(false);
   const [history, setHistory] = useState<Doc<any>[]>([]);
   const [naming, setNaming] = useState(false);
+  const notesEditor = useRef<NotesEditorHandle>(null);
   return (
     <section
       className={"detail" + (opening ? " opening" : "")}
@@ -2085,9 +2266,25 @@ function CompanyDetail({
     >
       <div className="detail-heading">
         <p className="eyebrow">COMPANY NOTEBOOK</p>
-        <button aria-label="Close company details" onClick={close}>
-          ×
-        </button>
+        <span className="detail-heading-actions">
+          {fromJournal && (
+            <button className="link back-link" onClick={close}>
+              ← Journal
+            </button>
+          )}
+          <button
+            className="icon-button"
+            aria-pressed={focus}
+            aria-label={focus ? "Leave full screen" : "Full screen"}
+            title={focus ? "Leave full screen (Esc)" : "Full screen"}
+            onClick={onToggleFocus}
+          >
+            {focus ? "⤡" : "⤢"}
+          </button>
+          <button aria-label="Close company details" onClick={close}>
+            ×
+          </button>
+        </span>
       </div>
       {naming ? (
         <InlineName
@@ -2129,6 +2326,14 @@ function CompanyDetail({
           {c.archived ? "Unarchive" : "Archive"}
         </button>
       </div>
+      {!c.quote ? (
+        <p className="quote-source slim">
+          {c.marketCapUsd
+            ? `Market cap ${formatMarketCap(c.marketCapUsd)}${c.marketCapAsOf ? ` (as of ${c.marketCapAsOf})` : ""} · ${sizeLabel(c)}`
+            : `Market cap not set · ${sizeLabel(c)}`}
+        </p>
+      ) : (
+      <>
       <div className="quote-strip">
         <div>
           <small>Last close</small>
@@ -2151,10 +2356,10 @@ function CompanyDetail({
       </div>
       <p className="quote-source">
         {quoteState(c)}
-        {c.quote
-          ? ` · ${c.quote.session} · ${c.quote.source}`
-          : " · Link a source under Monitoring"}
+        {` · ${c.quote.session} · ${c.quote.source}`}
       </p>
+      </>
+      )}
       <nav className="detail-tabs" aria-label="Company sections">
         {["research", "watch points", "alerts", "monitoring"].map((t) => (
           <button
@@ -2169,6 +2374,52 @@ function CompanyDetail({
       <div className="detail-body">
         {tab === "research" && (
           <>
+            <div className="review-strip">
+              <label>
+                <span>Found</span>
+                <input
+                  type="date"
+                  value={c.dateFound.slice(0, 10)}
+                  onChange={(e) => edit({ dateFound: e.target.value })}
+                />
+              </label>
+              <span>
+                <span>Last reviewed</span>
+                <b>{c.lastReviewed ? shortDate(c.lastReviewed) : "Not yet"}</b>
+              </span>
+              <button
+                type="button"
+                onClick={() => edit({ lastReviewed: new Date().toISOString() })}
+                title="You looked at this idea again; nothing to add"
+              >
+                ✓ Reviewed
+              </button>
+            </div>
+            <div className="field-heading">
+              <b>Notes</b>
+              <span className="notes-tools">
+                {!preview && (
+                  <SectionPicker onInsert={(block) => notesEditor.current?.insert(block)} />
+                )}
+                <button className="link" onClick={() => setPreview(!preview)}>
+                  {preview ? "Edit notes" : "Read formatted"}
+                </button>
+              </span>
+            </div>
+            {preview ? (
+              <div className="markdown">
+                <FormattedNotes value={c.notes} empty="No notes yet." />
+              </div>
+            ) : (
+              <NotesEditor
+                ref={notesEditor}
+                edit="always"
+                label="Research notes"
+                placeholder="Write or paste your notes. Markdown is supported: Tab indents a bullet, Shift+Tab outdents. Changes save automatically."
+                value={c.notes}
+                onChange={(notes) => edit({ notes })}
+              />
+            )}
             <Field label="Where did you find this idea?">
               <textarea
                 rows={2}
@@ -2178,52 +2429,27 @@ function CompanyDetail({
                 onChange={(e) => edit({ ideaSource: e.target.value })}
               />
             </Field>
-            <Field label="My thesis / one-line summary">
-              <textarea
-                rows={2}
-                placeholder="Why this business is worth following…"
-                value={c.thesis}
-                onChange={(e) => edit({ thesis: e.target.value })}
-              />
-            </Field>
             {c.status === "pass" && (
-              <Field label="Why I passed / what would change my mind">
-                <textarea
-                  rows={3}
-                  value={c.passReason}
-                  onChange={(e) => edit({ passReason: e.target.value })}
-                />
-              </Field>
-            )}
-            <div className="field-heading">
-              <b>Research notes</b>
-              <button className="link" onClick={() => setPreview(!preview)}>
-                {preview ? "Edit notes" : "Read formatted"}
-              </button>
-            </div>
-            {preview ? (
-              <div className="markdown">
-                <React.Suspense fallback={<p>Formatting notes…</p>}>
-                  <ReactMarkdown
-                    skipHtml
-                    components={{
-                      a: (props) => (
-                        <a {...props} target="_blank" rel="noreferrer" />
-                      ),
-                    }}
+              <>
+                <Field label="Passed list">
+                  <select
+                    value={c.passKind === "valued" ? "valued" : "unvalued"}
+                    onChange={(e) =>
+                      edit({ passKind: e.target.value as Company["passKind"] })
+                    }
                   >
-                    {c.notes || "*No notes yet.*"}
-                  </ReactMarkdown>
-                </React.Suspense>
-              </div>
-            ) : (
-              <textarea
-                className="notes"
-                aria-label="Research notes"
-                placeholder="Write or paste your notes. Markdown is supported. Changes save automatically."
-                value={c.notes}
-                onChange={(e) => edit({ notes: e.target.value })}
-              />
+                    <option value="valued">Valued (or want to value)</option>
+                    <option value="unvalued">Not valued</option>
+                  </select>
+                </Field>
+                <Field label="Why I passed / what would change my mind">
+                  <textarea
+                    rows={3}
+                    value={c.passReason}
+                    onChange={(e) => edit({ passReason: e.target.value })}
+                  />
+                </Field>
+              </>
             )}
             <div className="form-grid">
               <Field label="Tags">
@@ -2281,7 +2507,7 @@ function CompanyDetail({
                 <pre>{r.data.notes}</pre>
                 <button
                   onClick={() => {
-                    edit({ notes: r.data.notes, thesis: r.data.thesis });
+                    edit({ notes: r.data.notes });
                     setHistory([]);
                   }}
                 >

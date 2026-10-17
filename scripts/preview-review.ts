@@ -66,6 +66,23 @@ if (process.argv.includes("--framework")) {
   });
 }
 
+// --pitch-list <file>: journal preview with the Investment Pitch List's companies
+// (in memory only). Synthetic articles are spread across them.
+const pitchList = process.argv[process.argv.indexOf("--pitch-list") + 1];
+if (process.argv.includes("--pitch-list") && pitchList) {
+  const { readFileSync } = await import("node:fs");
+  const { parsePitchList, planPitchListSync } =
+    await import("../supabase/functions/_shared/pitch-list.ts");
+  const ideas = planPitchListSync(
+    parsePitchList(readFileSync(pitchList, "utf8")),
+    [],
+  ).creates.map((c) => ({ ...c, feeds: [] }));
+  fixture.companies = [...fixture.companies.slice(0, 2), ...ideas];
+  fixture.events = fixture.events.slice(0, 600).map((d, i) => ({
+    ...d,
+    data: { ...d.data, companyId: fixture.companies[(i * 7) % fixture.companies.length].id },
+  }));
+}
 for (const c of fixture.companies) await store.put("company", c.id, c, 0);
 for (const e of fixture.events) await store.put("event", e.id, e.data, 0);
 const at = new Date().toISOString();

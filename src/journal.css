@@ -1,0 +1,551 @@
+/* Journal page, shared notes editor, notebook additions and full screen. */
+.workspace.journal-mode {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 86px);
+  overflow: hidden;
+}
+.workspace.journal-mode > .banner,
+.workspace.journal-mode > .notice {
+  margin: 12px 24px 0;
+}
+.journal {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+}
+.journal-outline {
+  overflow-y: auto;
+  border-right: 1px solid #e1e6e0;
+  background: #fbfcf9;
+  padding: 0 10px 40px;
+}
+.outline-tools {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fbfcf9;
+  padding: 16px 2px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.outline-tools .chip {
+  align-self: flex-start;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+.outline-search {
+  font-size: 13px;
+  padding: 7px 9px;
+  letter-spacing: 0;
+  width: 100%;
+}
+.outline-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 10px 6px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: #5b7a5f;
+}
+.outline-heading small {
+  margin-left: auto;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #9aa49a;
+}
+.outline-section ol {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0 0 2px;
+  border-bottom: 2px solid transparent;
+}
+.outline-section ol.drop-end {
+  border-bottom-color: #3d7a5a;
+}
+.outline-section li {
+  display: flex;
+  align-items: center;
+  border-radius: 5px;
+  border-top: 2px solid transparent;
+}
+.outline-section li.drop-before {
+  border-top-color: #3d7a5a;
+}
+.outline-section li.dragged {
+  opacity: 0.4;
+}
+.outline-name {
+  flex: 1;
+  min-width: 0;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  color: #3e4b40;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: grab;
+}
+.outline-name:focus-visible {
+  outline: 2px solid #6aaa91;
+  outline-offset: -2px;
+}
+.outline-name:hover {
+  background: #eef3ec;
+}
+.outline-section li.active .outline-name {
+  background: #e3ece0;
+  color: #1f4a35;
+  font-weight: 600;
+}
+.outline-empty {
+  font-size: 11px;
+  color: #a2aba2;
+  padding: 2px 8px;
+}
+.outline-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c4851f;
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+.outline-hint {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: #a2aba2;
+  margin: 0;
+  padding: 0 2px;
+}
+.journal-doc {
+  overflow-y: auto;
+  padding: 0 40px 160px;
+}
+.journal-head,
+.journal-section {
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.journal-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f7f8f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 0 12px;
+  border-bottom: 1px solid #e3e8e1;
+}
+.journal-head .eyebrow {
+  margin-bottom: 6px;
+}
+.journal-head h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.journal-head h1 span {
+  font-size: 14px;
+  color: #8a958a;
+  font-weight: 500;
+}
+.journal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.focus-save {
+  position: fixed;
+  right: 14px;
+  bottom: 10px;
+  z-index: 20;
+  font-size: 11px;
+  color: #77857c;
+  background: #ffffffd9;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+.focus-save.pending {
+  color: #986214;
+}
+.icon-button {
+  font-size: 17px;
+  line-height: 1;
+  padding: 6px 10px;
+}
+.journal-section h2 {
+  margin: 38px 0 12px;
+  font-size: 12px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #4f7154;
+}
+.journal-section h2 small {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: #9aa49a;
+  margin-left: 8px;
+}
+.journal-empty {
+  font-size: 12px;
+}
+.jcard {
+  background: #fff;
+  border: 1px solid #e3e8e1;
+  border-radius: 8px;
+  padding: 16px 24px 10px;
+  margin: 0 0 14px;
+  scroll-margin-top: 96px;
+  /* Off-screen cards are skipped by layout, so typing stays fast. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+.jcard.flash {
+  animation: jcard-flash 1.4s ease-out;
+}
+@keyframes jcard-flash {
+  from {
+    box-shadow: 0 0 0 3px #9fcfb1;
+  }
+  to {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+.jcard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+}
+.jcard-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  color: #1e2b2a;
+}
+.jcard-name-input {
+  font-size: 18px;
+  font-weight: 650;
+  padding: 2px 6px;
+}
+.jcard-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.jcard:hover .jcard-tools,
+.jcard:focus-within .jcard-tools {
+  opacity: 1;
+}
+@media (hover: none) {
+  .jcard-tools {
+    opacity: 1;
+  }
+}
+.jcard-tools select,
+.jcard-tools button,
+.section-picker {
+  font-size: 11px;
+  letter-spacing: 0;
+  padding: 4px 7px;
+  color: #56665a;
+}
+.jcard-facts {
+  margin: 2px 0 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #8a958a;
+}
+.jcard-facts span + span::before {
+  content: " · ";
+  color: #c3cac2;
+}
+.jcard-facts .stale {
+  color: #a8701d;
+}
+.jcard-pass {
+  font-size: 12.5px;
+  line-height: 1.6;
+  background: #faf7f3;
+  color: #6d5d50;
+  padding: 8px 12px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  margin: 0 0 10px;
+}
+.jcard-placeholder {
+  background: repeating-linear-gradient(#fff 0 18px, #f4f6f2 18px 20px);
+  opacity: 0.6;
+}
+.notes-view {
+  cursor: text;
+  border-radius: 6px;
+}
+.jcard-notes.notes-view {
+  font-size: 14px;
+  line-height: 1.7;
+  min-height: 0;
+  padding: 2px 8px;
+  margin: 0 -8px;
+}
+.jcard-notes.notes-view:hover {
+  background: #fafbf7;
+}
+.notes-view > :first-child {
+  margin-top: 0;
+}
+.notes-view > :last-child {
+  margin-bottom: 0;
+}
+.notes-view ul,
+.notes-view ol {
+  padding-left: 22px;
+}
+.notes-view li {
+  margin: 3px 0;
+}
+.markdown h3,
+.markdown h4 {
+  font-size: 11.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #4f7154;
+  margin: 16px 0 4px;
+}
+.markdown hr {
+  border: 0;
+  border-top: 1px dashed #dfe5dd;
+  margin: 14px 0;
+}
+.notes-empty {
+  color: #a6afa5;
+  font-style: italic;
+  margin: 4px 0;
+}
+.notes-edit {
+  resize: none;
+  overflow: hidden;
+  letter-spacing: 0;
+  field-sizing: content;
+}
+textarea.jcard-notes {
+  display: block;
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 2px 8px;
+  min-height: 90px;
+  border-color: #cfe0d2;
+  background: #fdfefb;
+}
+.jcard-news {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px dashed #eef1ec;
+  font-size: 11px;
+  color: #a3aca3;
+}
+.jcard-news .link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #4d7a5b;
+}
+.jcard-news .news-count {
+  color: #a8701d;
+}
+.jcard-news .quiet {
+  margin-left: auto;
+  color: #a3aca3;
+}
+.jcard-news ul {
+  flex-basis: 100%;
+  margin: 2px 0 4px;
+  padding-left: 16px;
+}
+.jcard-news li {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #4a5a4c;
+}
+.jcard-news li small {
+  color: #a3aca3;
+}
+.pass-box {
+  background: #faf6f1;
+  border: 1px solid #eadfd2;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 4px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.pass-kind {
+  display: flex;
+  gap: 16px;
+}
+.pass-box textarea {
+  font-size: 13px;
+  letter-spacing: 0;
+  width: 100%;
+}
+.pass-actions {
+  display: flex;
+  gap: 8px;
+}
+.stop-news {
+  color: #8a6a4a;
+}
+
+/* Notebook additions */
+.detail-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.detail-heading .icon-button {
+  font-size: 17px;
+  padding: 2px 6px;
+}
+.detail-heading .back-link {
+  font-size: 12px;
+  padding: 3px 8px;
+  color: #4d7a5b;
+}
+.quote-source.slim {
+  padding: 12px 23px;
+  font-size: 11px;
+}
+.review-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #77846e;
+  margin-bottom: 4px;
+}
+.review-strip label,
+.review-strip > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.review-strip input {
+  font-size: 12px;
+  padding: 5px 6px;
+  letter-spacing: 0;
+}
+.review-strip b {
+  font-size: 12px;
+  font-weight: 550;
+  color: #3e4b40;
+  padding: 6px 0;
+}
+.review-strip button {
+  font-size: 11px;
+  padding: 6px 9px;
+}
+.notes-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field-heading .section-picker {
+  font-size: 11px;
+}
+
+/* Full screen writing: no app chrome, just the journal or the notebook. */
+.focus-mode .topbar,
+.focus-mode .sidebar {
+  display: none;
+}
+.focus-mode .layout {
+  min-height: 100vh;
+}
+.focus-mode .workspace.journal-mode {
+  height: 100vh;
+}
+.focus-mode .workspace:not(.journal-mode) > .page-heading,
+.focus-mode .workspace:not(.journal-mode) > .filters,
+.focus-mode .map-toolbar,
+.focus-mode .selection-bar,
+.focus-mode .company-list,
+.focus-mode .bubble-pane {
+  display: none;
+}
+.focus-mode .desk-columns {
+  justify-content: center;
+}
+.focus-mode .detail {
+  width: 100%;
+  max-width: 940px;
+  min-width: 0;
+  position: static;
+  max-height: none;
+  overflow: visible;
+}
+.focus-mode .detail .notes {
+  min-height: 65vh;
+  font-size: 14px;
+}
+
+@media (max-width: 850px) {
+  .workspace.journal-mode {
+    height: calc(100vh - 75px);
+  }
+  .journal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .journal-outline {
+    max-height: 32vh;
+    border-right: 0;
+    border-bottom: 1px solid #e1e6e0;
+  }
+  .journal-doc {
+    padding: 0 14px 120px;
+  }
+  .journal-head {
+    flex-wrap: wrap;
+  }
+  .jcard {
+    padding: 14px 14px 8px;
+  }
+  .jcard-head,
+  .jcard-tools {
+    flex-wrap: wrap;
+  }
+  .focus-mode .detail {
+    position: static;
+    width: 100%;
+  }
+}

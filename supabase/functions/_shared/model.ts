@@ -59,6 +59,11 @@ export const CompanySchema = z.object({
   notes: text(500000).default(""),
   thesis: text(3000).default(""),
   passReason: text(10000).default(""),
+  // Journal sub-section for passed ideas ("" shows with the un-valued ones).
+  passKind: z.enum(["", "valued", "unvalued"]).default(""),
+  passedAt: text(40).default(""),
+  // Manual position within a journal section (lower first; see journal.ts).
+  journalOrder: z.number().finite().nullable().default(null),
   source: text(2000).default(""),
   ideaSource: text(2000).default(""),
   newsQuery: text(500).default(""),
@@ -159,6 +164,8 @@ export function newCompany(name: string, status: Status = "inbox"): Company {
     id: crypto.randomUUID(),
     name: name.trim(),
     status,
+    // New ideas start at the top of their journal section.
+    journalOrder: -Date.now(),
     createdAt: now,
     updatedAt: now,
     feeds: [

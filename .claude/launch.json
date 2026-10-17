@@ -4,13 +4,22 @@
     {
       "name": "review-api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "preview:review"],
+      "runtimeArgs": [
+        "run",
+        "preview:review"
+      ],
       "port": 8788
     },
     {
       "name": "review-web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--host", "127.0.0.1", "--port", "5174"],
+      "runtimeArgs": [
+        "vite",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5174"
+      ],
       "port": 5174,
       "env": {
         "REVIEW_API_TARGET": "http://127.0.0.1:8788",
