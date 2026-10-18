@@ -351,6 +351,37 @@ describe("v3 grouping: several reports of one development, best source first", (
     expect(groups[0].lead.id).toBe(second.id);
     expect(groups[0].coverage.map((d) => d.id)).toEqual([first.id]);
   });
+  it("files a new report of an already reviewed development as reviewed", async () => {
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: any, init?: any) => {
+        if (!String(u).includes("api.typesafe.ai"))
+          return new Response("", { status: 429 });
+        call++;
+        return new Response(
+          JSON.stringify(
+            modelResponse(
+              call > 1 ? { relation0: { type: "noul", noul: 0.95 } } : {},
+              JSON.parse(init.body),
+            ),
+          ),
+        );
+      }),
+    );
+    const s = store(),
+      c = newCompany("Acme");
+    const first = await processArticle(
+      c,
+      headline({ id: "mb", source: "MarketBeat" }),
+      s,
+      env,
+    );
+    await s.markReviewed([first.id]);
+    const second = await processArticle(c, headline({ id: "rt" }), s, env);
+    expect(second.clusterId).toBe(first.id);
+    expect(second.reviewed).toBe(true);
+  });
   it("uses the purpose answer for commentary about a development", async () => {
     vi.stubGlobal(
       "fetch",

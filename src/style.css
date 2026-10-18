@@ -2337,3 +2337,8 @@ span.add-warning {
 html {
   scrollbar-gutter: stable;
 }
+.inbox-folders .review-all {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 6px 10px;
+}

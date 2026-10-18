@@ -1,6 +1,6 @@
 # How Research Desk works
 
-*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated October 17, 2026.*
+*A plain-language guide to the whole system: what each part does, what happens every minute, night and week, how a news article becomes something in your inbox, and where to look when something seems wrong. Written for the owner, not for programmers. Last updated October 18, 2026.*
 
 If you only read one section, read [The short version](#1-the-short-version). If you want to understand a specific behaviour, the [contents](#contents) will take you straight there. Technical detail for programmers lives in [ARCHITECTURE.md](../ARCHITECTURE.md); this guide links to it where useful but never depends on it.
 
@@ -213,6 +213,8 @@ The best source is chosen by provenance, not by how much text happened to be rea
 
 An article whose text was read gets a small bonus. Analysis pieces are listed as additions alongside the lead.
 
+If you have already reviewed (or saved) that development, the new article joins it already reviewed, so a story you have dealt with does not come back to your inbox just because another outlet covered it. You still see it among the development's sources in History.
+
 Grouping never deletes anything. Every article remains inspectable.
 
 ### Step 8: saved and shown
@@ -396,6 +398,7 @@ The inbox of developments, newest first.
 - **Views:** **Relevant developments** (one card per development, led by its best source), **Needs verification** (rare: possibly major but unclear), **Coverage / commentary** (price and opinion pieces about a real development), **Screened out / noise**, and **All events**.
 - **Filters:** keyword, company, publisher, importance and publication date range.
 - **Actions** on each card: Review, **Save ▾** (opens your lists; tick one or more, or create a new list on the spot), Useful, Noise, Undo, **Stop news for <company>**, and **Read available text**, which fetches the article text for you without any AI cost or change to the verdict. News cards also show the company's tags.
+- **Mark all reviewed** (right of the Inbox / Saved / History chips) clears the whole inbox in one go, after you confirm: every waiting item for the companies currently shown, in every view (relevant, coverage and screened out), moves to History. Saved items are not affected. Use the company filters first to clear only some companies.
 - **Stop news for <company>** takes a company off the news entirely: after you confirm, its monitoring is set to Paused (no more daily, weekly or manual searches for it) and every item waiting for it in the inbox is marked reviewed. Turn it back on from its journal card (**Turn on**), the right-click menu (**Turn news on**) or its Monitoring tab.
 - **The "Scheduled news runs" panel** shows the current or last nightly run (companies done, articles checked, new items, warnings), whether it is waiting because Google asked it to slow down, and **Recent runs**: the last few scheduled runs and your last manual search.
 - **Your own search's panel** appears in full while it is running or paused. Once it finishes or is cancelled it shrinks to a short summary with a ×, and disappears by itself after a day. Either way its summary stays under Recent runs. (Dismissing is remembered on that device only.)
@@ -686,7 +689,7 @@ What would make the biggest difference, roughly in order:
 | `supabase/functions/_shared/constants.ts` | Statuses, default settings, and the nightly schedule (`NEWS_SCHEDULE`). |
 | `supabase/migrations/` | The database's structure and its guarded write functions. |
 | `client/`, `mcp/`, `bot/`, `openclaw/` | How AI assistants connect, using the same operations as the website. |
-| `tests/` | 278 automated checks, run with `npm test`. |
+| `tests/` | 280 automated checks, run with `npm test`. |
 | `scripts/` | Maintenance, diagnostics and one-off tools. Some make paid AI calls; read before running. |
 
 ---

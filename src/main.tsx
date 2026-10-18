@@ -846,6 +846,44 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
     for (const g of waiting) await updateEvent(g.lead, { reviewed: true });
     setNotice(`News stopped for ${doc.data.name}.`);
   };
+  // Mark all reviewed: the server flips only the reviewed flag.
+  const reviewAll = async (ids: string[]) => {
+    setError("");
+    try {
+      let changed = 0;
+      for (let i = 0; i < ids.length; i += 5000) {
+        const result = await api<{
+          items: { id: string; version: number; updatedAt: string }[];
+        }>("/developments/review", { ids: ids.slice(i, i + 5000) });
+        const byId = new Map(result.items.map((x) => [x.id, x]));
+        changed += byId.size;
+        setData(
+          (old) =>
+            old && {
+              ...old,
+              events: old.events.map((d) => {
+                const u = byId.get(d.id);
+                return u
+                  ? {
+                      ...d,
+                      version: u.version,
+                      updatedAt: u.updatedAt,
+                      data: { ...d.data, reviewed: true },
+                    }
+                  : d;
+              }),
+            },
+        );
+      }
+      setNotice(
+        `Marked ${changed.toLocaleString()} article${changed === 1 ? "" : "s"} reviewed. They are in History.`,
+      );
+      return changed;
+    } catch (error) {
+      setError(`Could not mark everything reviewed: ${(error as Error).message}`);
+      return 0;
+    }
+  };
   const library = data?.library || defaultLibrary();
   // Library writes use the stored version; a conflict reloads and asks to retry.
   const saveLibrary = async (change: (old: Library) => Library) => {
@@ -1910,6 +1948,7 @@ function App({ onLogout, owner }: { onLogout?: () => void; owner: string }) {
                 listActions={listActions}
                 onOpenTag={openTags}
                 onStopNews={stopNews}
+                onReviewAll={reviewAll}
               />
             </>
           )}

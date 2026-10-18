@@ -229,6 +229,11 @@ export interface Store {
   ): Promise<Doc<T> | null>;
   put<T>(kind: string, id: string, data: T, expected: number): Promise<Doc<T>>;
   remove(kind: string, id: string, expected: number): Promise<void>;
+  // Sets reviewed=true on these articles (skipping saved and already reviewed
+  // ones) without reading or resending them. Returns the changed versions.
+  markReviewed(
+    ids: string[],
+  ): Promise<{ id: string; version: number; updatedAt: string }[]>;
   claim(key: string, seconds: number): Promise<string | null>;
   release(key: string, token: string): Promise<void>;
   reserve(amount: number, cap: number): Promise<string>;

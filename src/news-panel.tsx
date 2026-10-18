@@ -356,6 +356,7 @@ export function EventList({
   listActions,
   onOpenTag,
   onStopNews,
+  onReviewAll,
 }: {
   docs: Doc<DeskEvent>[];
   companies: Doc<Company>[];
@@ -368,6 +369,8 @@ export function EventList({
   onOpenTag?: (tag: string) => void;
   // Pauses news for the company and clears its waiting items.
   onStopNews?: (companyId: string) => void;
+  // Marks these articles reviewed; resolves to how many changed.
+  onReviewAll?: (ids: string[]) => Promise<number>;
 }) {
   const [show, setShow] = useState<NewsView>("relevant");
   const [folder, setFolder] = useState<EventFolder>("inbox");
@@ -524,6 +527,28 @@ export function EventList({
     ],
   );
   const groups = useMemo(() => groupNews(filtered), [filtered]);
+  // Everything waiting in the inbox for the companies in scope, in every view.
+  const waiting = useMemo(
+    () => scoped.filter((d) => inEventFolder(d.data, "inbox", now)),
+    [scoped, now],
+  );
+  const [reviewingAll, setReviewingAll] = useState(false);
+  const reviewAll = async () => {
+    if (!onReviewAll || !waiting.length || reviewingAll) return;
+    const developments = new Set(waiting.map((d) => eventGroupKey(d.data))).size;
+    if (
+      !window.confirm(
+        `Mark all ${developments} development${developments === 1 ? "" : "s"} in your inbox as reviewed? This covers the companies currently shown and includes every view (relevant, coverage and screened out). They move to History; saved items are not affected.`,
+      )
+    )
+      return;
+    setReviewingAll(true);
+    try {
+      await onReviewAll(waiting.map((d) => d.id));
+    } finally {
+      setReviewingAll(false);
+    }
+  };
   return (
     <div className={compact ? "event-list compact" : "event-list"}>
       <div
@@ -544,6 +569,16 @@ export function EventList({
             {counts.folders[f].size})
           </button>
         ))}
+        {folder === "inbox" && onReviewAll && (
+          <button
+            className="review-all"
+            disabled={!waiting.length || reviewingAll}
+            onClick={reviewAll}
+            title="Mark everything waiting in the inbox as reviewed, for the companies in your current filter"
+          >
+            {reviewingAll ? "Marking reviewed…" : "Mark all reviewed"}
+          </button>
+        )}
       </div>
       {folder === "saved" && (
         <>

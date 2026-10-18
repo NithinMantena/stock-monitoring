@@ -174,6 +174,18 @@ export class SupabaseStore implements Store {
     if (error) throw new Error("Database delete failed.");
     if (!data?.length) throw new ConflictError();
   }
+  async markReviewed(ids: string[]) {
+    const changed: { id: string; version: number; updatedAt: string }[] = [];
+    for (let i = 0; i < ids.length; i += 1000) {
+      const { data, error } = await this.db.rpc("desk_mark_reviewed", {
+        p_owner: this.owner,
+        p_ids: ids.slice(i, i + 1000),
+      });
+      if (error) throw new Error("Marking articles reviewed failed.");
+      changed.push(...((data as any[]) || []));
+    }
+    return changed;
+  }
   async batch(
     writes: { kind: string; id: string; data: unknown; expected: number }[],
   ) {

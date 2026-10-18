@@ -143,6 +143,25 @@ export class LocalStore implements Store {
       throw error;
     }
   }
+  async markReviewed(ids: string[]) {
+    const at = new Date().toISOString();
+    const update = this.db.prepare(
+      "UPDATE records SET data=json_set(data,'$.reviewed',json('true')),version=version+1,updated_at=? WHERE kind='event' AND id=? AND coalesce(json_extract(data,'$.reviewed'),0)=0 AND coalesce(json_extract(data,'$.saved'),0)=0 RETURNING id,version",
+    );
+    const changed: { id: string; version: number; updatedAt: string }[] = [];
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const id of ids) {
+        const row = update.get(at, id) as { id: string; version: number } | undefined;
+        if (row) changed.push({ id: row.id, version: row.version, updatedAt: at });
+      }
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+    return changed;
+  }
   async remove(kind: string, id: string, expected: number) {
     if (
       !this.db

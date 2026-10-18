@@ -658,6 +658,14 @@ export function createV1Api(
       ),
     });
   });
+  // Mark all reviewed: only the reviewed flag of these articles changes.
+  app.post("/developments/review", async (c) => {
+    const { ids } = z
+      .object({ ids: z.array(z.string().min(1).max(300)).min(1).max(5000) })
+      .strict()
+      .parse(await c.req.json());
+    return c.json({ items: await store.markReviewed([...new Set(ids)]) });
+  });
   app.get("/settings", async (c) =>
     c.json(
       (await store.get("settings", "main")) || {

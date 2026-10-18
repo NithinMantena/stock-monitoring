@@ -275,3 +275,33 @@ it("reports incremental changes and makes uncertain client writes inspectable", 
     expect((e as DeskError).requestKey).toBe("retained-key");
   }
 });
+it("marks many articles reviewed at once without touching saved ones", async () => {
+  const { store, app } = setup();
+  const at = new Date().toISOString();
+  const event = (id: string, extra = {}) => ({
+    id,
+    companyId: "c1",
+    title: id,
+    kind: "news",
+    priority: "normal",
+    body: "",
+    url: "https://example.com/" + id,
+    publishedAt: at,
+    discoveredAt: at,
+    reviewed: false,
+    ...extra,
+  });
+  await store.put("event", "a", event("a"), 0);
+  await store.put("event", "b", event("b", { saved: true }), 0);
+  await store.put("event", "c", event("c", { reviewed: true }), 0);
+  const response = await send(app, "/developments/review", {
+    ids: ["a", "b", "c", "missing"],
+  });
+  expect(response.status).toBe(200);
+  const { items } = await response.json();
+  expect(items.map((x: any) => [x.id, x.version])).toEqual([["a", 2]]);
+  expect((await store.get<any>("event", "a"))!.data.reviewed).toBe(true);
+  expect((await store.get<any>("event", "a"))!.data.title).toBe("a");
+  expect((await store.get<any>("event", "b"))!.data.reviewed).toBe(false);
+  expect((await send(app, "/developments/review", { ids: [] })).status).toBe(400);
+});

@@ -65,6 +65,8 @@ const HISTORY_FIELDS = [
   "publishedAt",
   "discoveredAt",
   "clusterId",
+  "reviewed",
+  "saved",
   "screening.version",
   "screening.documentHash",
   "screening.primary",
@@ -386,6 +388,15 @@ async function processUnlockedArticle(
             e.publishedAt === article.publishedAt,
         );
         if (exact) event.clusterId = exact.clusterId || exact.id;
+        // Another report of a development you already reviewed (or saved)
+        // joins it quietly instead of bringing it back to the inbox.
+        if (!existing && event.clusterId) {
+          const members = history.filter(
+            (e) => (e.clusterId || e.id) === event.clusterId,
+          );
+          if (members.length && members.every((e) => e.reviewed || e.saved))
+            event.reviewed = true;
+        }
         event.priority = newsPriority({
           ...result,
           screening: event.screening,

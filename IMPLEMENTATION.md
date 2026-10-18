@@ -2,6 +2,13 @@
 
 For how the current system works end to end, see [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) (plain language) and [ARCHITECTURE.md](ARCHITECTURE.md) (technical). This file is a dated log of what shipped and how it was verified.
 
+## Mark all reviewed and quieter repeat coverage — 2026-10-18
+
+- Owner reported reviewed articles "popping back up". Investigation (live data, read-only): no reviews were lost — all 666 articles reviewed before the 2026-10-17 backup were still reviewed. The inbox refilled from Friday's weekly 7-day sweep (2,435 new articles; 78 of the 85 relevant developments then waiting were first found by it), and 15 were developments already reviewed that a new article had joined, which made them unread again.
+- New articles that join a development whose stored members are all reviewed or saved are now created reviewed.
+- **Mark all reviewed** on the News page clears the inbox for the companies shown, in every view, after confirmation. Server side it is one field update per article (`desk_mark_reviewed`), so it costs almost no egress.
+- Verified: 280 tests (new: bulk review skips saved/reviewed articles and changes only `reviewed`; a new report of a reviewed development is filed reviewed); build; local preview: 354 developments cleared in one click, state kept after reload, no console errors.
+
 ## Journal, notebook rework and pitch-list sync — 2026-10-17
 
 - New **Journal** page: all ideas (not portfolio/sold) in Investment Pitch List sections — Perpetual watch, Watchlist, Potential ideas, Passed · valued, Passed · not valued — as one scrolling document with an outline sidebar (search, Needs attention, collapsible sections, drag to reorder or move between sections). Cards render notes formatted and switch to editing at the clicked position; a quiet footer shows relevant developments since the last review, with Stop news / Turn on.
